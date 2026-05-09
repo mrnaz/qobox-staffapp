@@ -6,11 +6,6 @@ import {
     TextInput,
     TouchableOpacity,
     FlatList,
-    Modal,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Alert,
     ActivityIndicator,
     RefreshControl,
 } from 'react-native';
@@ -19,11 +14,10 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import TicketFormModal from '../components/TicketFormModal';
 import {
-    PRIORITIES,
     PRIORITY_META,
     STATUS_META,
-    DEFAULT_CATEGORIES,
     deriveStatus,
 } from '../utils/tickets';
 
@@ -82,17 +76,11 @@ export default function TicketsScreen() {
         [showAll, search]
     );
 
-    // Reload on focus + when filters change
     useFocusEffect(useCallback(() => { load(); }, [load]));
 
     const onRefresh = () => {
         setIsRefreshing(true);
         load({ refresh: true });
-    };
-
-    const handleCreated = async () => {
-        setCreateOpen(false);
-        await load({ refresh: true });
     };
 
     const renderItem = ({ item }) => {
@@ -207,196 +195,12 @@ export default function TicketsScreen() {
                 <Ionicons name="add" size={28} color="#fff" />
             </TouchableOpacity>
 
-            <CreateTicketModal
+            <TicketFormModal
                 visible={createOpen}
                 onClose={() => setCreateOpen(false)}
-                onCreated={handleCreated}
+                onSaved={async () => { setCreateOpen(false); await load({ refresh: true }); }}
                 staff={staff}
-                colors={colors}
             />
-        </View>
-    );
-}
-
-function CreateTicketModal({ visible, onClose, onCreated, staff, colors }) {
-    const [title, setTitle] = useState('');
-    const [location, setLocation] = useState('');
-    const [categoryId, setCategoryId] = useState(null);
-    const [priority, setPriority] = useState('N');
-    const [description, setDescription] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [categories, setCategories] = useState([]);
-
-    useEffect(() => {
-        if (!visible) return;
-        setTitle(''); setLocation(''); setCategoryId(null);
-        setPriority('N'); setDescription('');
-        // Load categories on open. If none exist on the server, we hide the field.
-        (async () => {
-            try {
-                const res = await api.getMaintenanceCategories();
-                const list = res?.data || res || [];
-                setCategories(Array.isArray(list) ? list : []);
-            } catch {
-                setCategories([]);
-            }
-        })();
-    }, [visible]);
-
-    const submit = async () => {
-        if (!title.trim()) {
-            Alert.alert('Validation', 'Please enter a title.');
-            return;
-        }
-        if (!staff?.id) {
-            Alert.alert('Error', 'Could not determine your staff profile. Please sign in again.');
-            return;
-        }
-        try {
-            setSubmitting(true);
-            await api.createMaintenanceReport({
-                title: title.trim(),
-                description: description.trim() || null,
-                location: location.trim() || null,
-                category_id: categoryId,
-                priority,
-                reported_by: staff.id,
-            });
-            onCreated();
-        } catch (err) {
-            console.error('Create ticket error', err);
-            Alert.alert(
-                'Could not save ticket',
-                err.body?.message || err.body?.errors?.title?.[0] || err.message || 'Please try again.'
-            );
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={{ flex: 1, backgroundColor: colors.background }}
-            >
-                <View style={[styles.modalHeader, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
-                    <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
-                        <Ionicons name="close" size={24} color={colors.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New ticket</Text>
-                    <TouchableOpacity onPress={submit} disabled={submitting} style={styles.iconBtn}>
-                        {submitting ? (
-                            <ActivityIndicator color={colors.primary} />
-                        ) : (
-                            <Text style={{ color: colors.primary, fontWeight: '700' }}>Save</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-
-                <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
-                    <Field label="Title *" colors={colors}>
-                        <TextInput
-                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                            placeholder="Short summary"
-                            placeholderTextColor={colors.textSecondary}
-                            value={title}
-                            onChangeText={setTitle}
-                            autoFocus
-                        />
-                    </Field>
-
-                    <Field label="Location" colors={colors}>
-                        <TextInput
-                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                            placeholder="Where is this happening?"
-                            placeholderTextColor={colors.textSecondary}
-                            value={location}
-                            onChangeText={setLocation}
-                        />
-                    </Field>
-
-                    {categories.length > 0 ? (
-                        <Field label="Category" colors={colors}>
-                            <View style={styles.chipRow}>
-                                {categories.map((cat) => {
-                                    const active = categoryId === cat.id;
-                                    return (
-                                        <TouchableOpacity
-                                            key={cat.id}
-                                            onPress={() => setCategoryId(active ? null : cat.id)}
-                                            style={[styles.chip, {
-                                                borderColor: active ? colors.primary : colors.border,
-                                                backgroundColor: active ? colors.primary + '22' : colors.cardBackground,
-                                            }]}
-                                        >
-                                            <Text style={{ color: active ? colors.primary : colors.textPrimary, fontSize: 13 }}>
-                                                {cat.label || cat.name}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        </Field>
-                    ) : (
-                        <View style={[styles.note, { borderColor: colors.border }]}>
-                            <Ionicons name="information-circle-outline" size={13} color={colors.textSecondary} />
-                            <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1 }}>
-                                No categories configured for this site. Suggested labels: {DEFAULT_CATEGORIES.join(', ')}.
-                                Add them in the web admin to enable category selection.
-                            </Text>
-                        </View>
-                    )}
-
-                    <Field label="Priority" colors={colors}>
-                        <View style={styles.chipRow}>
-                            {PRIORITIES.map((p) => {
-                                const active = priority === p.value;
-                                const meta = PRIORITY_META[p.value];
-                                const c = meta.color(colors);
-                                return (
-                                    <TouchableOpacity
-                                        key={p.value}
-                                        onPress={() => setPriority(p.value)}
-                                        style={[styles.chip, {
-                                            borderColor: active ? c : colors.border,
-                                            backgroundColor: active ? c + '22' : colors.cardBackground,
-                                        }]}
-                                    >
-                                        <Ionicons name={meta.icon} size={13} color={active ? c : colors.textSecondary} />
-                                        <Text style={{ color: active ? c : colors.textPrimary, fontSize: 13 }}>
-                                            {p.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </Field>
-
-                    <Field label="Description" colors={colors}>
-                        <TextInput
-                            style={[styles.textarea, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                            placeholder="Provide details so we can act on it"
-                            placeholderTextColor={colors.textSecondary}
-                            value={description}
-                            onChangeText={setDescription}
-                            multiline
-                            textAlignVertical="top"
-                        />
-                    </Field>
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </Modal>
-    );
-}
-
-function Field({ label, children, colors }) {
-    return (
-        <View style={{ gap: 6 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                {label}
-            </Text>
-            {children}
         </View>
     );
 }
@@ -451,30 +255,4 @@ const styles = StyleSheet.create({
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-    },
-    modalTitle: { fontSize: 16, fontWeight: '700' },
-    iconBtn: { paddingHorizontal: 12, paddingVertical: 6, minWidth: 60, alignItems: 'center' },
-    input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
-    textarea: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, minHeight: 100 },
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        borderWidth: 1, borderRadius: 999,
-        paddingHorizontal: 12, paddingVertical: 6,
-    },
-    note: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 6,
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 10,
-    },
 });

@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import ConfirmDialog from '../components/ConfirmDialog';
+import TicketFormModal from '../components/TicketFormModal';
 import {
     PRIORITY_META,
     STATUS_META,
@@ -50,6 +51,7 @@ export default function TicketDetailScreen() {
     const [busy, setBusy] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
 
     const load = useCallback(async () => {
         try {
@@ -175,9 +177,14 @@ export default function TicketDetailScreen() {
                     <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
                         Ticket #{ticket.report_ref}
                     </Text>
-                    <TouchableOpacity onPress={handleDelete} disabled={busy} style={styles.iconBtn}>
-                        <Ionicons name="trash-outline" size={20} color={colors.error || colors.warning} />
-                    </TouchableOpacity>
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity onPress={() => setEditOpen(true)} disabled={busy} style={styles.iconBtn}>
+                            <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleDelete} disabled={busy} style={styles.iconBtn}>
+                            <Ionicons name="trash-outline" size={20} color={colors.error || colors.warning} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <ScrollView
@@ -356,6 +363,14 @@ export default function TicketDetailScreen() {
                 onCancel={() => setConfirmDeleteOpen(false)}
                 onConfirm={performDelete}
             />
+
+            <TicketFormModal
+                visible={editOpen}
+                onClose={() => setEditOpen(false)}
+                onSaved={async () => { setEditOpen(false); await load(); }}
+                staff={staff}
+                existing={ticket}
+            />
         </SafeAreaView>
     );
 }
@@ -381,6 +396,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     iconBtn: { padding: 8, minWidth: 40, alignItems: 'center' },
+    headerActions: { flexDirection: 'row', alignItems: 'center' },
     headerTitle: { fontSize: 16, fontWeight: '700', flex: 1, textAlign: 'center' },
     body: { padding: 16, gap: 14, paddingBottom: 24 },
     card: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 12 },

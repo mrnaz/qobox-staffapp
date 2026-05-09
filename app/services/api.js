@@ -137,6 +137,11 @@ class ApiService {
         return this.get(endpoints.GET_ACADEMIC_PERIODS);
     }
 
+    // Dashboard / staff noticeboard feed
+    async getDashboardNoticeboard(params = {}) {
+        return this.get(endpoints.GET_DASHBOARD_NOTICEBOARD, params);
+    }
+
     // Reports
     async getReportClassesCourses(params = {}) {
         return this.get(endpoints.GET_REPORT_CLASSES_COURSES, params);

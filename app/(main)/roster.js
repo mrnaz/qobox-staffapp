@@ -18,15 +18,33 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-// Match the Vue staff portal's check-in time format: device-local 'YYYY-MM-DD HH:mm'
-// (see resources/js/_staff/views/pages/staff/shift-log/dialogs/StoreUpdateShiftLogDialog.vue
-// where it sends dayjs().format("YYYY-MM-DD HH:mm")). The backend's read-side
-// timezone conversion assumes the stored value is local-naive — so we follow
-// the same contract as the web app, not raw UTC.
-const nowForApi = () => {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+// Match the Vue staff portal's check-in time format: 'YYYY-MM-DD HH:mm' in the
+// SITE's local timezone. The Vue web works because users browse from the same
+// timezone as the site; on mobile we can't assume that, so we use Intl to
+// format `now` in the provided timezone (which we get from the shift item).
+//
+// Falls back to device-local time if no timezone is supplied.
+const nowForApi = (timezone) => {
+    const now = new Date();
+    if (!timezone) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+    try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: timezone,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+            hour12: false,
+        }).formatToParts(now);
+        const get = (t) => parts.find((p) => p.type === t)?.value || '00';
+        // Note: 'en-CA' returns 24-hour times even in 'hour12: false' mode and
+        // formats date as YYYY-MM-DD natively — handy.
+        return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
+    } catch {
+        // Bad timezone string — fall back to device-local
+        return nowForApi(undefined);
+    }
 };
 
 // Mirrors the staff portal's 8-day check-in window.
@@ -141,10 +159,16 @@ export default function RosterScreen() {
     };
 
 
+    // Backend response shapes vary:
+    //   POST /staff-roster-log         → { data: {...} }
+    //   PUT  /staff-roster-log/{id}    → { message, rosterLog: { data: {...} } }
+    const unwrapShift = (res) =>
+        res?.rosterLog?.data || res?.rosterLog || res?.data || res;
+
     // Replace the matched item in `shifts` with the freshly returned one,
     // so we don't drop already-loaded pages by re-fetching.
     const spliceShift = (oldItem, updated) => {
-        if (!updated) return;
+        if (!updated || typeof updated !== 'object' || !updated.id) return;
         setShifts((prev) => {
             const idx = prev.findIndex((s) => {
                 if (oldItem.id && s.id === oldItem.id) return true;
@@ -161,7 +185,7 @@ export default function RosterScreen() {
     const handleCheckIn = async (item) => {
         try {
             setActingOnId(item.id || item.staff_roster_id);
-            const now = nowForApi();
+            const now = nowForApi(item.timezone);
             let res;
             if (item.id) {
                 res = await api.updateShiftLog(item.id, {
@@ -182,10 +206,18 @@ export default function RosterScreen() {
                     actual_start: now,
                 });
             }
-            spliceShift(item, res?.data || res);
+            spliceShift(item, unwrapShift(res));
         } catch (err) {
             console.error('Check-in error', err);
-            Alert.alert('Check-in failed', err.body?.message || err.message || 'Please try again.');
+            const isActiveShiftError =
+                err.status === 422 &&
+                /already has an active shift/i.test(err.body?.message || '');
+            Alert.alert(
+                'Check-in failed',
+                isActiveShiftError
+                    ? 'You already have an open shift. Toggle "Show past shifts" to find it and check out first.'
+                    : (err.body?.message || err.message || 'Please try again.')
+            );
         } finally {
             setActingOnId(null);
         }
@@ -194,18 +226,21 @@ export default function RosterScreen() {
     const handleCheckOut = async (item) => {
         try {
             setActingOnId(item.id);
-            const now = nowForApi();
+            const now = nowForApi(item.timezone);
+            // Send the full payload the backend expects (matches Vue web flow).
+            // All time fields are in the SITE's timezone; the backend's repository
+            // converts them to UTC for storage, so the round-trip is idempotent.
             const res = await api.updateShiftLog(item.id, {
                 id: item.id,
                 staff_id: staff.id,
                 site_id: Number(siteId),
                 staff_roster_id: item.staff_roster_id || null,
                 claimed_start: item.claimed_start,
-                claimed_end: item.claimed_end || now,
+                claimed_end: now,
                 actual_start: item.actual_start,
                 actual_end: now,
             });
-            spliceShift(item, res?.data || res);
+            spliceShift(item, unwrapShift(res));
         } catch (err) {
             console.error('Check-out error', err);
             Alert.alert('Check-out failed', err.body?.message || err.message || 'Please try again.');
@@ -227,18 +262,22 @@ export default function RosterScreen() {
         setAbsentTarget(item);
     };
 
-    const performMarkAbsent = async () => {
+    const performMarkAbsent = async (reason) => {
         const item = absentTarget;
         if (!item) return;
         try {
             setActingOnId(item.staff_roster_id);
+            // Backend's UpdateStaffRosterRequest expects:
+            //   - staff_roster_id (NOT `id`)
+            //   - absent_notes (required when absent === true)
             await api.updateStaffRoster(item.staff_roster_id, {
-                id: item.staff_roster_id,
+                staff_roster_id: item.staff_roster_id,
                 staff_id: staff.id,
                 site_id: Number(siteId),
                 rostered_start: item.rostered_start,
                 rostered_end: item.rostered_end,
                 absent: true,
+                absent_notes: reason || 'Marked absent via mobile app',
             });
             spliceShift(item, { ...item, absent: true });
             setAbsentTarget(null);
@@ -538,8 +577,12 @@ export default function RosterScreen() {
                 confirmLabel="Mark absent"
                 destructive
                 busy={actingOnId === absentTarget?.staff_roster_id}
+                inputLabel="Reason"
+                inputPlaceholder="e.g. Sick, family emergency, etc."
+                inputRequired
+                inputMultiline
                 onCancel={() => setAbsentTarget(null)}
-                onConfirm={performMarkAbsent}
+                onConfirm={(reason) => performMarkAbsent(reason)}
             />
         </View>
     );

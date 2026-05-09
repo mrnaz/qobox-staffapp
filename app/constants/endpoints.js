@@ -16,6 +16,9 @@ export const endpoints = {
     // Academic periods
     GET_ACADEMIC_PERIODS: 'academic-periods',
 
+    // Dashboard / staff noticeboard feed
+    GET_DASHBOARD_NOTICEBOARD: 'dashboard',
+
     // Reports
     GET_REPORT_CLASSES_COURSES: 'report-schedules/courses-classes',
 
