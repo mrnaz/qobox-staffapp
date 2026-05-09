@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     View,
     Text,
-    Modal,
     StyleSheet,
     ScrollView,
     ActivityIndicator,
     TouchableOpacity,
     RefreshControl,
+    Dimensions,
 } from 'react-native';
+import RenderHtml from 'react-native-render-html';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -88,7 +89,7 @@ export default function DashboardScreen() {
     const [events, setEvents] = useState([]);
     const [notices, setNotices] = useState([]);
     const [openShift, setOpenShift] = useState(null);
-    const [pickedNotice, setPickedNotice] = useState(null);
+    const [expandedNoticeId, setExpandedNoticeId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -370,10 +371,11 @@ export default function DashboardScreen() {
                     notices.map((n) => {
                         const paletteKey = SCOPE_PALETTE[n.post_scope] || 'indigo';
                         const palette = colors[paletteKey];
+                        const isExpanded = expandedNoticeId === n.id;
                         return (
                             <TouchableOpacity
                                 key={n.id}
-                                onPress={() => setPickedNotice(n)}
+                                onPress={() => setExpandedNoticeId(isExpanded ? null : n.id)}
                                 activeOpacity={0.8}
                                 style={[styles.noticeCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
                             >
@@ -399,13 +401,63 @@ export default function DashboardScreen() {
                                     ) : null}
                                 </View>
                                 {n.title ? (
-                                    <Text style={[styles.noticeTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+                                    <Text
+                                        style={[styles.noticeTitle, { color: colors.textPrimary }]}
+                                        numberOfLines={isExpanded ? undefined : 2}
+                                    >
                                         {n.title}
                                     </Text>
                                 ) : null}
-                                <Text style={[styles.noticeBody, { color: colors.textSecondary }]} numberOfLines={2}>
-                                    {stripHtml(n.body || '')}
-                                </Text>
+
+                                {n.body ? (
+                                    isExpanded ? (
+                                        <View style={{ marginTop: 4 }}>
+                                            <RenderHtml
+                                                contentWidth={Dimensions.get('window').width - 64}
+                                                source={{ html: n.body }}
+                                                baseStyle={{
+                                                    fontSize: 13,
+                                                    color: colors.textSecondary,
+                                                    lineHeight: 19,
+                                                }}
+                                                tagsStyles={{
+                                                    p:  { marginVertical: 4, color: colors.textSecondary },
+                                                    h1: { fontSize: 18, fontWeight: 'bold', marginVertical: 8, color: colors.textPrimary },
+                                                    h2: { fontSize: 16, fontWeight: 'bold', marginVertical: 6, color: colors.textPrimary },
+                                                    h3: { fontSize: 15, fontWeight: '600', marginVertical: 4, color: colors.textPrimary },
+                                                    b: { fontWeight: 'bold', color: colors.textSecondary },
+                                                    strong: { fontWeight: 'bold', color: colors.textSecondary },
+                                                    i: { fontStyle: 'italic', color: colors.textSecondary },
+                                                    em: { fontStyle: 'italic', color: colors.textSecondary },
+                                                    a: { color: colors.primary, textDecorationLine: 'underline' },
+                                                    ul: { marginVertical: 4, paddingLeft: 16 },
+                                                    ol: { marginVertical: 4, paddingLeft: 16 },
+                                                    li: { marginVertical: 2, color: colors.textSecondary },
+                                                }}
+                                            />
+                                        </View>
+                                    ) : (
+                                        <Text
+                                            style={[styles.noticeBody, { color: colors.textSecondary }]}
+                                            numberOfLines={4}
+                                        >
+                                            {stripHtml(n.body)}
+                                        </Text>
+                                    )
+                                ) : null}
+
+                                {n.body && stripHtml(n.body).length > 100 ? (
+                                    <View style={styles.expandHint}>
+                                        <Text style={[styles.expandHintText, { color: colors.primary }]}>
+                                            {isExpanded ? 'Show less' : 'Read more'}
+                                        </Text>
+                                        <Ionicons
+                                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                                            size={14}
+                                            color={colors.primary}
+                                        />
+                                    </View>
+                                ) : null}
                             </TouchableOpacity>
                         );
                     })
@@ -422,63 +474,6 @@ export default function DashboardScreen() {
                 </View>
             </Section>
         </ScrollView>
-
-        {/* Notice detail */}
-        <Modal
-            visible={!!pickedNotice}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={() => setPickedNotice(null)}
-        >
-            <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-                <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => setPickedNotice(null)} style={styles.modalCloseBtn}>
-                        <Ionicons name="close" size={24} color={colors.textPrimary} />
-                    </TouchableOpacity>
-                    <Text style={[styles.modalHeaderTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                        Notice
-                    </Text>
-                    <View style={{ width: 32 }} />
-                </View>
-                {pickedNotice ? (() => {
-                    const paletteKey = SCOPE_PALETTE[pickedNotice.post_scope] || 'indigo';
-                    const palette = colors[paletteKey];
-                    return (
-                        <ScrollView contentContainerStyle={styles.modalBody}>
-                            <View style={styles.noticeHeader}>
-                                <Avatar uri={pickedNotice.photo} name={pickedNotice.author_name} size={36} />
-                                <View style={{ flex: 1 }}>
-                                    <Text style={[styles.noticeAuthor, { color: colors.textPrimary }]}>
-                                        {pickedNotice.author_name || 'Unknown'}
-                                    </Text>
-                                    <Text style={[styles.noticeTime, { color: colors.textSecondary }]}>
-                                        {relativeTime(pickedNotice.scheduled || pickedNotice.created_at)}
-                                    </Text>
-                                </View>
-                            </View>
-                            {pickedNotice.chip_label ? (
-                                <View style={[styles.chip, styles.chipModal, {
-                                    backgroundColor: palette?.background || colors.primary + '22',
-                                    borderColor: palette?.border || colors.primary,
-                                }]}>
-                                    <Text style={[styles.chipText, { color: palette?.text || colors.primary }]}>
-                                        {pickedNotice.chip_label}
-                                    </Text>
-                                </View>
-                            ) : null}
-                            {pickedNotice.title ? (
-                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                                    {pickedNotice.title}
-                                </Text>
-                            ) : null}
-                            <Text style={[styles.modalBodyText, { color: colors.textPrimary }]}>
-                                {stripHtml(pickedNotice.body || '')}
-                            </Text>
-                        </ScrollView>
-                    );
-                })() : null}
-            </View>
-        </Modal>
         </>
     );
 }
@@ -590,22 +585,12 @@ const styles = StyleSheet.create({
     },
     chipText: { fontSize: 11, fontWeight: '600' },
     noticeTitle: { fontSize: 14, fontWeight: '600' },
-    noticeBody: { fontSize: 12, lineHeight: 17 },
-
-    // Notice detail modal
-    modalContainer: { flex: 1 },
-    modalHeader: {
+    noticeBody: { fontSize: 13, lineHeight: 19 },
+    expandHint: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderBottomWidth: 1,
+        gap: 4,
+        marginTop: 6,
     },
-    modalCloseBtn: { padding: 6, width: 32, alignItems: 'center' },
-    modalHeaderTitle: { fontSize: 15, fontWeight: '700' },
-    modalBody: { padding: 20, gap: 12 },
-    chipModal: { alignSelf: 'flex-start', maxWidth: '100%' },
-    modalTitle: { fontSize: 20, fontWeight: '700' },
-    modalBodyText: { fontSize: 14, lineHeight: 22 },
+    expandHintText: { fontSize: 12, fontWeight: '600' },
 });

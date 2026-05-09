@@ -38,7 +38,8 @@ export default function TicketsScreen() {
     const [staff, setStaff] = useState(null);
     const [tickets, setTickets] = useState([]);
     const [search, setSearch] = useState('');
-    const [showAll, setShowAll] = useState(true);
+    // 'submitted' = tickets I reported · 'assigned' = tickets assigned to me
+    const [filter, setFilter] = useState('submitted');
     const [createOpen, setCreateOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -56,8 +57,11 @@ export default function TicketsScreen() {
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
+                // Always fetch the full set the user has access to. Filtering
+                // (submitted vs assigned) happens client-side against the
+                // current staff id so both tabs are scoped to the logged-in user.
                 const res = await api.getMaintenanceReports({
-                    show_all: showAll ? 'true' : 'false',
+                    show_all: 'true',
                     search: search.trim() || undefined,
                     sortBy: 'reported',
                     orderBy: 'desc',
@@ -73,8 +77,21 @@ export default function TicketsScreen() {
                 setIsRefreshing(false);
             }
         },
-        [showAll, search]
+        [search]
     );
+
+    // Filtered list for the active tab.
+    const visibleTickets = (() => {
+        if (!staff?.id) return [];
+        if (filter === 'submitted') {
+            return tickets.filter((t) => t.reported_by?.id === staff.id);
+        }
+        // 'assigned'
+        return tickets.filter((t) =>
+            t.assigned_to_me === true ||
+            (t.assigned_to && t.assigned_to.id === staff.id)
+        );
+    })();
 
     useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -146,14 +163,26 @@ export default function TicketsScreen() {
                     ) : null}
                 </View>
                 <View style={styles.filterRow}>
-                    <TouchableOpacity onPress={() => setShowAll(false)} style={[styles.tab, !showAll && { borderColor: colors.primary }]}>
-                        <Text style={{ color: !showAll ? colors.primary : colors.textSecondary, fontWeight: !showAll ? '600' : '400' }}>
-                            Mine
+                    <TouchableOpacity
+                        onPress={() => setFilter('submitted')}
+                        style={[styles.tab, filter === 'submitted' && { borderColor: colors.primary }]}
+                    >
+                        <Text style={{
+                            color: filter === 'submitted' ? colors.primary : colors.textSecondary,
+                            fontWeight: filter === 'submitted' ? '600' : '400',
+                        }}>
+                            Submitted
                         </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setShowAll(true)} style={[styles.tab, showAll && { borderColor: colors.primary }]}>
-                        <Text style={{ color: showAll ? colors.primary : colors.textSecondary, fontWeight: showAll ? '600' : '400' }}>
-                            All
+                    <TouchableOpacity
+                        onPress={() => setFilter('assigned')}
+                        style={[styles.tab, filter === 'assigned' && { borderColor: colors.primary }]}
+                    >
+                        <Text style={{
+                            color: filter === 'assigned' ? colors.primary : colors.textSecondary,
+                            fontWeight: filter === 'assigned' ? '600' : '400',
+                        }}>
+                            Assigned
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -171,7 +200,7 @@ export default function TicketsScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={tickets}
+                    data={visibleTickets}
                     keyExtractor={(it) => String(it.id)}
                     renderItem={renderItem}
                     contentContainerStyle={styles.list}
@@ -180,7 +209,11 @@ export default function TicketsScreen() {
                         <View style={styles.center}>
                             <Ionicons name="receipt-outline" size={32} color={colors.textSecondary} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                {search ? 'No tickets match your search.' : 'No tickets yet. Tap + to create one.'}
+                                {search
+                                    ? 'No tickets match your search.'
+                                    : filter === 'submitted'
+                                        ? 'You haven\'t submitted any tickets yet. Tap + to create one.'
+                                        : 'No tickets are assigned to you.'}
                             </Text>
                         </View>
                     }

@@ -66,8 +66,12 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "72ae77a7-e98a-4778-bb65-5302905762ca"
       }
     },
-    "runtimeVersion": "1.0.0"
+    "runtimeVersion": "1.0.0",
+    "owner": "anllqdev"
   }
 }
