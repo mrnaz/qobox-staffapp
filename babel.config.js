@@ -11,7 +11,7 @@ module.exports = function (api) {
         "safe": false,
         "allowUndefined": true
       }],
-      "react-native-reanimated/plugin" // Must be last
+      "react-native-worklets/plugin" // Must be last
     ],
   };
 };
