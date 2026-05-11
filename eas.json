@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.9.1"
+    "version": ">= 5.9.1",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -20,10 +21,14 @@
       "channel": "production"
     },
     "apk": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
-      "channel": "apk"
+      "channel": "apk",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://st.qobox.com"
+      }
     }
   },
   "submit": {
