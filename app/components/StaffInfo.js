@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView, Image, Modal } from 'react-native';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ActivityIndicator, TouchableOpacity, Image, Modal } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
 import Theme from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
 
-const TABS = [
-    { name: 'Dashboard',   route: 'index',      path: '/(main)/' },
-    { name: 'Attendance',  route: 'attendance', path: '/(main)/attendance' },
-    { name: 'My Roster',   route: 'roster',     path: '/(main)/roster' },
-    { name: 'My Timetable', route: 'timetable', path: '/(main)/timetable' },
-    { name: 'My Calendar', route: 'calendar',   path: '/(main)/calendar' },
-    { name: 'Classes',     route: 'classes',    path: '/(main)/classes' },
-    { name: 'Tickets',     route: 'tickets',    path: '/(main)/tickets' },
+const JUMP_TABS = [
+    { name: 'Dashboard',    route: 'index',      path: '/(main)/',           icon: 'home' },
+    { name: 'Attendance',   route: 'attendance', path: '/(main)/attendance', icon: 'check-square-o' },
+    { name: 'My Roster',    route: 'roster',     path: '/(main)/roster',     icon: 'calendar-check-o' },
+    { name: 'My Timetable', route: 'timetable',  path: '/(main)/timetable',  icon: 'clock-o' },
+    { name: 'My Calendar',  route: 'calendar',   path: '/(main)/calendar',   icon: 'calendar' },
+    { name: 'Classes',      route: 'classes',    path: '/(main)/classes',    icon: 'graduation-cap' },
+    { name: 'Tickets',      route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
 ];
 
-const KNOWN_ROUTES = TABS.map(t => t.route).filter(r => r !== 'index');
+const KNOWN_ROUTES = JUMP_TABS.map(t => t.route).filter(r => r !== 'index');
 
 export default function StaffInfo() {
     const { useTheme } = Theme;
@@ -26,19 +26,14 @@ export default function StaffInfo() {
     const segments = useSegments();
     const router = useRouter();
 
+    const isMessagesTab = segments.includes('messages');
+
     const [staff, setStaff] = useState(null);
     const [currentSite, setCurrentSite] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isMenuVisible, setIsMenuVisible] = useState(false);
-    const [showLeftArrow, setShowLeftArrow] = useState(false);
-    const [showRightArrow, setShowRightArrow] = useState(false);
+    const [isJumpVisible, setIsJumpVisible] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
-
-    const scrollViewRef = useRef(null);
-    const tabLayoutsRef = useRef({});
-    const scrollViewWidthRef = useRef(0);
-    const contentWidthRef = useRef(0);
-    const scrollOffsetRef = useRef(0);
 
     useEffect(() => { loadStaffData(); }, []);
 
@@ -53,7 +48,6 @@ export default function StaffInfo() {
             try {
                 const parsed = staffJson ? JSON.parse(staffJson) : null;
                 setStaff(parsed);
-                // Backend MeTransformer puts unread message count under `has_unread`.
                 if (parsed && typeof parsed.has_unread === 'number') {
                     setUnreadCount(parsed.has_unread);
                 }
@@ -82,28 +76,11 @@ export default function StaffInfo() {
     const lastSegment = segments[segments.length - 1] || '';
     const currentRoute = KNOWN_ROUTES.includes(lastSegment) ? lastSegment : 'index';
 
-    const updateArrows = (offsetX) => {
-        const maxOffset = contentWidthRef.current - scrollViewWidthRef.current;
-        setShowLeftArrow(offsetX > 4);
-        setShowRightArrow(maxOffset > 4 && offsetX < maxOffset - 4);
-    };
-
-    const scrollToTab = (route, animated = true) => {
-        const layout = tabLayoutsRef.current[route];
-        if (!layout || !scrollViewRef.current || scrollViewWidthRef.current === 0) return;
-        const targetX = layout.x + layout.width / 2 - scrollViewWidthRef.current / 2;
-        scrollViewRef.current.scrollTo({ x: Math.max(0, targetX), animated });
-    };
-
-    useEffect(() => {
-        const t = setTimeout(() => scrollToTab(currentRoute, true), 80);
-        return () => clearTimeout(t);
-    }, [currentRoute]);
-
     const handleTabPress = (tab) => {
         router.push(tab.path);
-        scrollToTab(tab.route, true);
     };
+
+    if (isMessagesTab) return null;
 
     if (loading) {
         return (
@@ -127,17 +104,31 @@ export default function StaffInfo() {
             flexDirection: 'row',
             alignItems: 'center',
             paddingHorizontal: 12,
-            paddingVertical: 6,
+            paddingVertical: 8,
+            gap: 10,
         }}>
 
-            {/* Avatar with unread badge — opens menu */}
-            <TouchableOpacity onPress={() => setIsMenuVisible(true)} style={{ marginRight: 6 }}>
+            {/* Jump to button */}
+            <TouchableOpacity
+                onPress={() => setIsJumpVisible(true)}
+                style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1, borderColor: colors.border,
+                    alignItems: 'center', justifyContent: 'center',
+                }}
+            >
+                <FontAwesome name="th" size={15} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Avatar — opens menu */}
+            <TouchableOpacity onPress={() => setIsMenuVisible(true)} style={{ width: 36, height: 36 }}>
                 <View>
                     {staff?.photo ? (
-                        <Image source={{ uri: staff.photo }} style={{ width: 34, height: 34, borderRadius: 17 }} />
+                        <Image source={{ uri: staff.photo }} style={{ width: 36, height: 36, borderRadius: 18 }} />
                     ) : (
                         <View style={{
-                            width: 34, height: 34, borderRadius: 17,
+                            width: 36, height: 36, borderRadius: 18,
                             backgroundColor: colors.primary,
                             justifyContent: 'center', alignItems: 'center',
                         }}>
@@ -161,67 +152,92 @@ export default function StaffInfo() {
                 </View>
             </TouchableOpacity>
 
-            {/* Scrollable tabs */}
-            <View style={{ flex: 1, position: 'relative' }}>
-                {showLeftArrow && (
-                    <View pointerEvents="none" style={{
-                        position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 10,
-                        justifyContent: 'center', paddingRight: 6, backgroundColor: colors.background,
-                    }}>
-                        <Ionicons name="chevron-back" size={14} color={colors.textDisabled} />
-                    </View>
-                )}
-                <ScrollView
-                    ref={scrollViewRef}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 2 }}
-                    onLayout={e => { scrollViewWidthRef.current = e.nativeEvent.layout.width; updateArrows(scrollOffsetRef.current); }}
-                    onContentSizeChange={w => { contentWidthRef.current = w; updateArrows(scrollOffsetRef.current); }}
-                    onScroll={e => { scrollOffsetRef.current = e.nativeEvent.contentOffset.x; updateArrows(scrollOffsetRef.current); }}
-                    scrollEventThrottle={16}
-                >
-                    {TABS.map(tab => {
-                        const isActive = currentRoute === tab.route;
-                        return (
-                            <TouchableOpacity
-                                key={tab.route}
-                                onPress={() => handleTabPress(tab)}
-                                onLayout={e => {
-                                    tabLayoutsRef.current[tab.route] = {
-                                        x: e.nativeEvent.layout.x,
-                                        width: e.nativeEvent.layout.width,
-                                    };
-                                }}
-                                style={{ paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center' }}
-                            >
-                                <Text style={{
-                                    color: isActive ? colors.primary : colors.textSecondary,
-                                    fontSize: 14,
-                                    fontWeight: isActive ? '600' : '400',
-                                }}>
-                                    {tab.name}
-                                </Text>
-                                <View style={{
-                                    height: 2, marginTop: 3, borderRadius: 1,
-                                    backgroundColor: isActive ? colors.primary : 'transparent',
-                                    alignSelf: 'stretch',
-                                }} />
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-                {showRightArrow && (
-                    <View pointerEvents="none" style={{
-                        position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 10,
-                        justifyContent: 'center', paddingLeft: 6, backgroundColor: colors.background,
-                    }}>
-                        <Ionicons name="chevron-forward" size={14} color={colors.textDisabled} />
-                    </View>
-                )}
+            {/* Staff name + site name */}
+            <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
+                    {fullName || 'Staff'}
+                </Text>
+                {currentSite?.siteName ? (
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
+                        {currentSite.siteName}
+                    </Text>
+                ) : null}
             </View>
 
-            {/* Avatar menu modal */}
+            {/* Jump To modal */}
+            <Modal visible={isJumpVisible} transparent animationType="slide" onRequestClose={() => setIsJumpVisible(false)}>
+                <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+                    activeOpacity={1}
+                    onPress={() => setIsJumpVisible(false)}
+                >
+                    <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+                        <View style={{
+                            backgroundColor: colors.cardBackground,
+                            borderTopLeftRadius: 20, borderTopRightRadius: 20,
+                            borderTopWidth: 1, borderColor: colors.border,
+                            paddingBottom: 28,
+                        }}>
+                            {/* Handle + title */}
+                            <View style={{
+                                alignItems: 'center', paddingTop: 12, paddingBottom: 16,
+                                borderBottomWidth: 1, borderBottomColor: colors.border,
+                            }}>
+                                <View style={{
+                                    width: 36, height: 4, borderRadius: 2,
+                                    backgroundColor: colors.border, marginBottom: 12,
+                                }} />
+                                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700' }}>Jump to</Text>
+                            </View>
+
+                            {/* 3-column grid */}
+                            <View style={{
+                                flexDirection: 'row', flexWrap: 'wrap',
+                                justifyContent: 'center',
+                                paddingHorizontal: 16, paddingTop: 16, gap: 12,
+                            }}>
+                                {JUMP_TABS.map(tab => {
+                                    const isActive = currentRoute === tab.route;
+                                    return (
+                                        <TouchableOpacity
+                                            key={tab.route}
+                                            onPress={() => { setIsJumpVisible(false); handleTabPress(tab); }}
+                                            style={{
+                                                width: '30%',
+                                                paddingVertical: 16,
+                                                borderRadius: 16,
+                                                backgroundColor: isActive ? colors.primary + '18' : colors.surface,
+                                                borderWidth: 1.5,
+                                                borderColor: isActive ? colors.primary : colors.border,
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            <View style={{
+                                                width: 40, height: 40, borderRadius: 20,
+                                                backgroundColor: isActive ? colors.primary : colors.primary + '18',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                marginBottom: 6,
+                                            }}>
+                                                <FontAwesome name={tab.icon} size={18} color={isActive ? '#fff' : colors.primary} />
+                                            </View>
+                                            <Text style={{
+                                                color: isActive ? colors.primary : colors.textPrimary,
+                                                fontSize: 12,
+                                                fontWeight: isActive ? '700' : '500',
+                                                textAlign: 'center',
+                                            }}>
+                                                {tab.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Avatar menu modal — centered */}
             <Modal visible={isMenuVisible} transparent animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
                 <TouchableOpacity
                     style={{
@@ -278,7 +294,7 @@ export default function StaffInfo() {
                                 }}
                             >
                                 <FontAwesome name="envelope-o" size={16} color={colors.primary} />
-                                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '500', flex: 1 }}>
+                                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '500' }}>
                                     Messages
                                 </Text>
                                 {unreadCount > 0 && (
@@ -287,13 +303,15 @@ export default function StaffInfo() {
                                         borderRadius: 10,
                                         minWidth: 20, height: 20,
                                         justifyContent: 'center', alignItems: 'center',
-                                        paddingHorizontal: 5,
+                                        paddingHorizontal: 5, marginLeft: 6,
                                     }}>
                                         <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
                                             {unreadCount > 99 ? '99+' : unreadCount}
                                         </Text>
                                     </View>
                                 )}
+                                <View style={{ flex: 1 }} />
+                                <FontAwesome name="chevron-right" size={12} color={colors.textDisabled} />
                             </TouchableOpacity>
 
                             {/* Site context */}
@@ -323,9 +341,9 @@ export default function StaffInfo() {
                             ) : null}
 
                             {/* Settings body */}
-                            <View style={{ padding: 16, gap: 10 }}>
-                                <ThemeToggle />
-                                <LogoutButton />
+                            <View style={{ padding: 16, flexDirection: 'row', gap: 10 }}>
+                                <View style={{ flex: 1 }}><ThemeToggle /></View>
+                                <View style={{ flex: 1 }}><LogoutButton /></View>
                             </View>
                         </View>
                     </TouchableOpacity>

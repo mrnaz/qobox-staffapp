@@ -13,7 +13,7 @@ function Header() {
         <>
             <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
             <SafeAreaView
-                style={{ backgroundColor: colors.background, paddingBottom: 6 }}
+                style={{ backgroundColor: colors.background }}
                 edges={['top']}
             >
                 <StaffInfo />
