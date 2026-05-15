@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import DailyAttendanceModal from '../components/DailyAttendanceModal';
 
 const fmtDate = (s) => {
     if (!s) return '—';
@@ -41,6 +42,7 @@ export default function AttendanceScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
+    const [openDay, setOpenDay] = useState(null); // { date, attendanceId, status }
 
     useEffect(() => {
         (async () => {
@@ -107,7 +109,15 @@ export default function AttendanceScreen() {
             : colors.warning || colors.primary;
 
         return (
-            <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+            <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setOpenDay({
+                    date: item.academic_date || item.date,
+                    attendanceId: item.id || item.attendance_id || null,
+                    status: item.status,
+                })}
+                style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            >
                 <View style={styles.cardHeader}>
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.date, { color: colors.textPrimary }]}>
@@ -135,19 +145,12 @@ export default function AttendanceScreen() {
                     <Stat label="Late" value={late} color={colors.warning || colors.primary} colors={colors} />
                     <Stat label="Total" value={total} color={colors.textPrimary} colors={colors} />
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={styles.note}>
-                <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
-                <Text style={[styles.noteText, { color: colors.textSecondary }]}>
-                    Global view only. Per-class attendance is taken inside each class.
-                </Text>
-            </View>
-
             {isLoading && items.length === 0 ? (
                 <View style={styles.center}>
                     <ActivityIndicator color={colors.primary} />
@@ -175,6 +178,20 @@ export default function AttendanceScreen() {
                     }
                 />
             )}
+
+            <DailyAttendanceModal
+                visible={Boolean(openDay)}
+                date={openDay?.date}
+                academicPeriodId={period?.id}
+                siteId={siteId}
+                attendanceId={openDay?.attendanceId}
+                canSubmit={openDay?.status !== 'completed' && openDay?.status !== 'closed'}
+                onClose={() => setOpenDay(null)}
+                onSaved={() => {
+                    setOpenDay(null);
+                    load({ refresh: true });
+                }}
+            />
         </View>
     );
 }
@@ -190,14 +207,6 @@ function Stat({ label, value, color, colors }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    note: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-    },
-    noteText: { fontSize: 12, flex: 1 },
     list: { padding: 16, paddingTop: 4, paddingBottom: 32, gap: 10 },
     card: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 8 },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

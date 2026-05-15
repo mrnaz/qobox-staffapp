@@ -80,7 +80,6 @@ export default function DashboardScreen() {
     const router = useRouter();
 
     const [staff, setStaff] = useState(null);
-    const [currentSite, setCurrentSite] = useState(null);
     const [orgId, setOrgId] = useState(null);
     const [siteId, setSiteId] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
@@ -95,24 +94,12 @@ export default function DashboardScreen() {
 
     useEffect(() => {
         (async () => {
-            const [s, siteIdValue, rolesJson, org] = await Promise.all([
+            const [s, siteIdValue, org] = await Promise.all([
                 AsyncStorage.getItem('staff'),
                 AsyncStorage.getItem('siteId'),
-                AsyncStorage.getItem('roles'),
                 AsyncStorage.getItem('organisationId'),
             ]);
             try { setStaff(s ? JSON.parse(s) : null); } catch { setStaff(null); }
-            try {
-                const roles = rolesJson ? JSON.parse(rolesJson) : [];
-                const match = roles.find((r) => String(r.site_id) === String(siteIdValue));
-                if (match) {
-                    setCurrentSite({
-                        siteName: match.site_name,
-                        orgName: match.org_name,
-                        roleName: match.role_name,
-                    });
-                }
-            } catch { /* ignore */ }
             setOrgId(org);
             setSiteId(siteIdValue);
             setProfileLoaded(true);
@@ -246,16 +233,9 @@ export default function DashboardScreen() {
         >
             {/* Welcome */}
             <View style={styles.greeting}>
-                <Text style={[styles.greetingLabel, { color: colors.textSecondary }]}>{greeting},</Text>
                 <Text style={[styles.greetingName, { color: colors.textPrimary }]}>
-                    {staff?.fname ? staff.fname : 'Staff'}
+                    {greeting}, {staff?.fname ? staff.fname : 'Staff'}
                 </Text>
-                {currentSite ? (
-                    <Text style={[styles.greetingSub, { color: colors.textSecondary }]}>
-                        {currentSite.siteName}
-                        {currentSite.orgName ? ` · ${currentSite.orgName}` : ''}
-                    </Text>
-                ) : null}
             </View>
 
             {/* Running shift banner */}
@@ -505,9 +485,7 @@ function QuickLink({ label, icon, onPress, colors }) {
 const styles = StyleSheet.create({
     container: { padding: 20, paddingBottom: 40 },
     greeting: { marginBottom: 20 },
-    greetingLabel: { fontSize: 14 },
-    greetingName: { fontSize: 26, fontWeight: '700', marginTop: 2 },
-    greetingSub: { fontSize: 13, marginTop: 4 },
+    greetingName: { fontSize: 26, fontWeight: '700' },
     sectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
     emptyCard: { borderWidth: 1, borderRadius: 12, padding: 24, alignItems: 'center', gap: 6 },
     emptyCardTitle: { fontSize: 14, fontWeight: '600' },

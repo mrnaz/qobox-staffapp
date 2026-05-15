@@ -95,6 +95,23 @@ class ApiService {
         return this.request(endpoint, { method: 'DELETE' });
     }
 
+    // For multipart/form-data uploads (photos, files). FormData body — do NOT
+    // set Content-Type ourselves so the runtime appends the boundary.
+    async requestForm(endpoint, method = 'POST', formData) {
+        const url = `${this.baseURL}/${endpoint}`;
+        const headers = { 'Accept': 'application/json' };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        const response = await fetch(url, { method, headers, body: formData });
+        const body = await response.json().catch(() => null);
+        if (!response.ok) {
+            const error = new Error(body?.message || `HTTP error ${response.status}`);
+            error.status = response.status;
+            error.body = body;
+            throw error;
+        }
+        return body;
+    }
+
     // Authentication
     async login(credentials) {
         return this.post(endpoints.LOGIN, credentials);
@@ -187,6 +204,26 @@ class ApiService {
 
     async getMonthlyAttendanceSummary(params = {}) {
         return this.get(endpoints.GET_MONTHLY_ATTENDANCE_SUMMARY, params);
+    }
+
+    async createDailyAttendance(data) {
+        return this.post(endpoints.CREATE_DAILY_ATTENDANCE, data);
+    }
+
+    async toggleDailyAttendance(data) {
+        return this.post(endpoints.TOGGLE_DAILY_ATTENDANCE, data);
+    }
+
+    async submitDailyAttendance(data) {
+        return this.post(endpoints.SUBMIT_DAILY_ATTENDANCE, data);
+    }
+
+    async getDailyAttendanceClients(id) {
+        return this.get(endpoints.GET_DAILY_ATTENDANCE_CLIENTS.replace('{id}', id));
+    }
+
+    async getClients(params = {}) {
+        return this.get(endpoints.GET_CLIENTS, params);
     }
 
     // Classes (staff)

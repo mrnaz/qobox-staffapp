@@ -23,13 +23,15 @@ export const deriveStatus = (report) => {
     return 'open';
 };
 
-// Map priority code → icon + theme color resolver.
-// We use functions for color so the same metadata works in any theme.
+// Priority icon + color — mirrors the web staff portal
+// (MaintenanceReporting.vue priorityIcon / priorityColor) so the visual
+// language matches across mobile and web. Colors are hex constants from the
+// web app, not theme tokens, so they stay consistent in both light/dark.
 export const PRIORITY_META = {
-    L: { label: 'Low',      icon: 'flag-outline', color: (c) => c.textSecondary },
-    N: { label: 'Normal',   icon: 'flag-outline', color: (c) => c.info     || c.primary },
-    H: { label: 'High',     icon: 'flag',         color: (c) => c.warning  || c.primary },
-    C: { label: 'Critical', icon: 'flag',         color: (c) => c.error    || c.warning },
+    L: { label: 'Low',      icon: 'arrow-down-circle', color: () => '#008ae6' },
+    N: { label: 'Normal',   icon: 'remove-circle',     color: () => '#00cc66' },
+    H: { label: 'High',     icon: 'arrow-up-circle',   color: () => '#ffcc00' },
+    C: { label: 'Critical', icon: 'arrow-up-circle',   color: () => '#ff3300' },
 };
 
 // Map derived status (see `deriveStatus`) → display label + bg/fg resolvers.
@@ -39,6 +41,3 @@ export const STATUS_META = {
     closed:      { label: 'Closed',      bg: (c) => c.divider,                       fg: (c) => c.textSecondary },
 };
 
-// Suggested categories shown when the backend has no categories configured
-// (purely informational — categories must be created via the web admin).
-export const DEFAULT_CATEGORIES = ['Maintenance', 'IT / Tech', 'Facilities', 'HR', 'Other'];

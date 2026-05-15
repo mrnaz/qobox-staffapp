@@ -11,11 +11,13 @@ import {
     Platform,
     ActivityIndicator,
     Alert,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import { PRIORITIES, PRIORITY_META, DEFAULT_CATEGORIES } from '../utils/tickets';
+import { PRIORITIES, PRIORITY_META } from '../utils/tickets';
+import { capturePhotoCompressed, pickPhotoCompressed, appendPhotoToForm } from '../utils/photo';
 
 // Reusable Create / Edit ticket form.
 // `existing` (optional) — when provided, the modal switches to edit mode and
@@ -34,6 +36,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [categories, setCategories] = useState([]);
+    const [photos, setPhotos] = useState([]); // [{ uri, width, height, mimeType }]
 
     useEffect(() => {
         if (!visible) return;
@@ -47,6 +50,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
             ? existing.category.id
             : (existing?.category_id ?? null);
         setCategoryId(existingCatId);
+        setPhotos([]);
         // Load categories
         (async () => {
             try {
@@ -58,6 +62,30 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
             }
         })();
     }, [visible, existing]);
+
+    const handleCapturePhoto = async () => {
+        try {
+            const photo = await capturePhotoCompressed();
+            if (photo) setPhotos((prev) => [...prev, photo]);
+        } catch (err) {
+            console.error('Camera error', err);
+            Alert.alert('Camera error', err.message || 'Could not capture photo.');
+        }
+    };
+
+    const handlePickPhoto = async () => {
+        try {
+            const photo = await pickPhotoCompressed();
+            if (photo) setPhotos((prev) => [...prev, photo]);
+        } catch (err) {
+            console.error('Image picker error', err);
+            Alert.alert('Photo library', err.message || 'Could not pick photo.');
+        }
+    };
+
+    const removePhoto = (i) => {
+        setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+    };
 
     const submit = async () => {
         if (!title.trim()) {
@@ -83,6 +111,29 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                 saved = res?.maintenanceReport || res?.data || res;
             } else {
                 saved = await api.createMaintenanceReport({ ...payload, reported_by: staff.id });
+            }
+
+            // Upload any attached photos to the maintenance-reports/files endpoint.
+            // Photos are already scaled to fit in 2000x2000 and re-encoded as
+            // JPG @ 90% by capturePhotoCompressed.
+            const savedId = saved?.id ?? saved?.maintenanceReport?.id ?? saved?.data?.id ?? existing?.id;
+            if (photos.length > 0 && savedId) {
+                const form = new FormData();
+                form.append('id', String(savedId));
+                for (let i = 0; i < photos.length; i++) {
+                    await appendPhotoToForm(
+                        form,
+                        `files[${i}]`,
+                        photos[i],
+                        `ticket_${savedId}_${i + 1}.jpg`,
+                    );
+                }
+                try {
+                    await api.requestForm('maintenance-reports/files', 'POST', form);
+                } catch (uploadErr) {
+                    console.error('Photo upload error', uploadErr);
+                    Alert.alert('Photos not uploaded', 'The ticket was saved, but photos failed to upload. Please try again from the ticket detail.');
+                }
             }
             onSaved?.(saved);
         } catch (err) {
@@ -169,8 +220,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                         <View style={[styles.note, { borderColor: colors.border }]}>
                             <Ionicons name="information-circle-outline" size={13} color={colors.textSecondary} />
                             <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1 }}>
-                                No categories configured for this site. Suggested labels: {DEFAULT_CATEGORIES.join(', ')}.
-                                Add them in the web admin to enable category selection.
+                                No categories are configured.
                             </Text>
                         </View>
                     )}
@@ -210,6 +260,40 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                             multiline
                             textAlignVertical="top"
                         />
+                    </Field>
+
+                    <Field label="Photos" colors={colors}>
+                        <View style={styles.photoActions}>
+                            <TouchableOpacity
+                                onPress={handleCapturePhoto}
+                                style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                            >
+                                <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
+                                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>Take photo</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handlePickPhoto}
+                                style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                            >
+                                <Ionicons name="image-outline" size={18} color={colors.textPrimary} />
+                                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>From library</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {photos.length > 0 ? (
+                            <View style={styles.thumbnailRow}>
+                                {photos.map((p, i) => (
+                                    <View key={p.uri} style={styles.thumbnailWrap}>
+                                        <Image source={{ uri: p.uri }} style={styles.thumbnail} />
+                                        <TouchableOpacity
+                                            onPress={() => removePhoto(i)}
+                                            style={[styles.thumbnailRemove, { backgroundColor: colors.error || '#ff3300' }]}
+                                        >
+                                            <Ionicons name="close" size={14} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        ) : null}
                     </Field>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -254,5 +338,19 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 8,
         padding: 10,
+    },
+    photoActions: { flexDirection: 'row', gap: 10 },
+    photoBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingHorizontal: 12, paddingVertical: 10,
+        borderWidth: 1, borderRadius: 8, flex: 1, justifyContent: 'center',
+    },
+    thumbnailRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+    thumbnailWrap: { position: 'relative' },
+    thumbnail: { width: 84, height: 84, borderRadius: 8 },
+    thumbnailRemove: {
+        position: 'absolute', top: -6, right: -6,
+        width: 22, height: 22, borderRadius: 11,
+        alignItems: 'center', justifyContent: 'center',
     },
 });

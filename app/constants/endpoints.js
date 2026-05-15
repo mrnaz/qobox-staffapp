@@ -38,6 +38,11 @@ export const endpoints = {
     // Attendance (global)
     GET_DAILY_ATTENDANCE: 'attendances/daily',
     GET_MONTHLY_ATTENDANCE_SUMMARY: 'attendances/monthly-summary',
+    CREATE_DAILY_ATTENDANCE: 'attendances/daily',
+    TOGGLE_DAILY_ATTENDANCE: 'attendances/daily/toggle',
+    SUBMIT_DAILY_ATTENDANCE: 'attendances/daily/submit',
+    GET_DAILY_ATTENDANCE_CLIENTS: 'attendances/daily/{id}/clients',
+    GET_CLIENTS: 'clients',
 
     // Classes (staff)
     GET_STAFF_CLASSES: 'staff/classes/{staff_id}',

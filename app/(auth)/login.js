@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -15,9 +15,12 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { routePostAuth, startMfa, clearAuthStorage } from '../utils/authFlow';
+
+const LAST_EMAIL_KEY = 'lastLoginEmail';
 
 export default function LoginScreen() {
     const { useTheme } = Theme;
@@ -29,6 +32,12 @@ export default function LoginScreen() {
     const [showPassword, setShowPassword] = useState(false);
 
     const router = useRouter();
+
+    useEffect(() => {
+        AsyncStorage.getItem(LAST_EMAIL_KEY)
+            .then((saved) => { if (saved) setEmail(saved); })
+            .catch(() => {});
+    }, []);
 
     const validate = () => {
         const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
@@ -54,9 +63,11 @@ export default function LoginScreen() {
         try {
             setIsLoading(true);
             await clearAuthStorage();
-            const response = await api.login({ email: email.toLowerCase().trim(), password });
+            const normalisedEmail = email.toLowerCase().trim();
+            const response = await api.login({ email: normalisedEmail, password });
 
             if (response?.otpToken) {
+                try { await AsyncStorage.setItem(LAST_EMAIL_KEY, normalisedEmail); } catch {}
                 await startMfa(response.otpToken, response.maskedMFA, router);
                 return;
             }
@@ -66,6 +77,7 @@ export default function LoginScreen() {
                 return;
             }
 
+            try { await AsyncStorage.setItem(LAST_EMAIL_KEY, normalisedEmail); } catch {}
             await routePostAuth(response, router);
         } catch (error) {
             console.error('Login error:', error);
@@ -90,7 +102,7 @@ export default function LoginScreen() {
         router.push('/(auth)/forgot-password');
     };
 
-    const backgroundImage = require('../../assets/login-page-client.webp');
+    const backgroundImage = require('../../assets/login-page-bg.webp');
 
     return (
         <KeyboardAvoidingView
