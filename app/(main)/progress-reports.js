@@ -274,9 +274,10 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginHorizontal: 16,
         marginTop: 12,
+        marginBottom: 8,
         paddingVertical: 8,
     },
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingTop: 8, paddingBottom: 32, gap: 10 },
     card: {
         flexDirection: 'row',
         alignItems: 'center',

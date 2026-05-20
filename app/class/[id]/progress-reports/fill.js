@@ -8,7 +8,6 @@ import {
     TouchableOpacity,
     TextInput,
     Modal,
-    Alert,
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
@@ -19,6 +18,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
 import Avatar from '../../../components/Avatar';
+import Toast from '../../../components/Toast';
+import ConfirmDialog from '../../../components/ConfirmDialog';
 
 // Assessment types come from the backend `progress_report_assessments.type`
 // column: 'P' pass/fail, 'S' score, 'R' rubric, 'C' comment-only.
@@ -54,6 +55,8 @@ export default function FillProgressReportScreen() {
     const [error, setError] = useState('');
 
     const [picker, setPicker] = useState(null); // { type: 'student' | 'assessment', assessment? }
+    const [toast, setToast] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -133,12 +136,15 @@ export default function FillProgressReportScreen() {
     };
 
     const save = async (asCompleted) => {
+        // The save buttons are disabled when these conditions fail, but we
+        // still defensively guard here in case the disabled-state ever
+        // regresses or is bypassed.
         if (!formStudentId) {
-            Alert.alert('Missing student', 'Please select a student first.');
+            setToast({ message: 'Please select a student first.', variant: 'error' });
             return;
         }
         if (!staff?.id) {
-            Alert.alert('Profile error', 'Please sign in again.');
+            setToast({ message: 'Profile not loaded. Please sign in again.', variant: 'error' });
             return;
         }
         // Strip empty outcomes (no input AND no comment) so we don't persist noise.
@@ -169,10 +175,17 @@ export default function FillProgressReportScreen() {
             } else {
                 await api.storeProgressReportResult(payload);
             }
-            router.back();
+            // Show success briefly, then go back. Using a short delay so the
+            // user can see the confirmation on screens where navigation is
+            // instant.
+            setToast({ message: asCompleted ? 'Saved & completed' : 'Draft saved', variant: 'success' });
+            setTimeout(() => router.back(), 700);
         } catch (err) {
             console.error('Save progress report error', err);
-            Alert.alert('Save failed', err.body?.message || err.message || 'Could not save the report.');
+            setToast({
+                message: err.body?.message || err.message || 'Could not save the report.',
+                variant: 'error',
+            });
         } finally {
             setIsSaving(false);
         }
@@ -180,28 +193,25 @@ export default function FillProgressReportScreen() {
 
     const onDelete = () => {
         if (!isEditMode) return;
-        Alert.alert(
-            'Delete result?',
-            'This will remove all answers for this student.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setIsSaving(true);
-                            await api.deleteProgressReportResult(resultId);
-                            router.back();
-                        } catch (err) {
-                            Alert.alert('Delete failed', err.body?.message || err.message || 'Could not delete.');
-                        } finally {
-                            setIsSaving(false);
-                        }
-                    },
-                },
-            ]
-        );
+        setConfirmDelete(true);
+    };
+
+    const doDelete = async () => {
+        try {
+            setIsSaving(true);
+            await api.deleteProgressReportResult(resultId);
+            setConfirmDelete(false);
+            setToast({ message: 'Result deleted', variant: 'success' });
+            setTimeout(() => router.back(), 600);
+        } catch (err) {
+            setConfirmDelete(false);
+            setToast({
+                message: err.body?.message || err.message || 'Could not delete.',
+                variant: 'error',
+            });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (isLoading) {
@@ -368,24 +378,44 @@ export default function FillProgressReportScreen() {
                             paddingBottom: 12 + (insets.bottom || 0),
                         },
                     ]}>
-                        <TouchableOpacity
-                            onPress={() => save(false)}
-                            disabled={isSaving}
-                            style={[styles.btnSecondary, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                        >
-                            <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Save draft</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => save(true)}
-                            disabled={isSaving}
-                            style={[styles.btnPrimary, { backgroundColor: colors.primary }]}
-                        >
-                            {isSaving ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={{ color: '#fff', fontWeight: '700' }}>Save & complete</Text>
-                            )}
-                        </TouchableOpacity>
+                        {!formStudentId ? (
+                            <Text style={[styles.saveHint, { color: colors.textSecondary }]}>
+                                Select a student to enable saving
+                            </Text>
+                        ) : null}
+                        <View style={styles.saveBtnRow}>
+                            <TouchableOpacity
+                                onPress={() => save(false)}
+                                disabled={isSaving || !formStudentId}
+                                style={[
+                                    styles.btnSecondary,
+                                    {
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.cardBackground,
+                                        opacity: (!formStudentId || isSaving) ? 0.5 : 1,
+                                    },
+                                ]}
+                            >
+                                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Save draft</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => save(true)}
+                                disabled={isSaving || !formStudentId}
+                                style={[
+                                    styles.btnPrimary,
+                                    {
+                                        backgroundColor: colors.primary,
+                                        opacity: (!formStudentId || isSaving) ? 0.5 : 1,
+                                    },
+                                ]}
+                            >
+                                {isSaving ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={{ color: '#fff', fontWeight: '700' }}>Save & complete</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 ) : null}
             </KeyboardAvoidingView>
@@ -429,6 +459,19 @@ export default function FillProgressReportScreen() {
                     />
                 ) : null}
             </PickerModal>
+
+            <ConfirmDialog
+                visible={confirmDelete}
+                title="Delete result?"
+                message="This will remove all answers for this student. This cannot be undone."
+                confirmLabel="Delete"
+                destructive
+                busy={isSaving}
+                onCancel={() => setConfirmDelete(false)}
+                onConfirm={doDelete}
+            />
+
+            <Toast toast={toast} onHide={() => setToast(null)} />
         </SafeAreaView>
     );
 }
@@ -826,8 +869,14 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderRadius: 8, padding: 6,
     },
     saveBar: {
-        flexDirection: 'row', gap: 8,
         padding: 12, borderTopWidth: 1,
+        gap: 8,
+    },
+    saveBtnRow: {
+        flexDirection: 'row', gap: 8,
+    },
+    saveHint: {
+        fontSize: 12, textAlign: 'center', fontStyle: 'italic',
     },
     btnSecondary: {
         flex: 1, alignItems: 'center', justifyContent: 'center',
