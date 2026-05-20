@@ -217,13 +217,6 @@ export default function DashboardScreen() {
         );
     }
 
-    const greeting = (() => {
-        const h = new Date().getHours();
-        if (h < 12) return 'Good morning';
-        if (h < 18) return 'Good afternoon';
-        return 'Good evening';
-    })();
-
     return (
         <>
         <ScrollView
@@ -231,13 +224,6 @@ export default function DashboardScreen() {
             contentContainerStyle={styles.container}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         >
-            {/* Welcome */}
-            <View style={styles.greeting}>
-                <Text style={[styles.greetingName, { color: colors.textPrimary }]}>
-                    {greeting}, {staff?.fname ? staff.fname : 'Staff'}
-                </Text>
-            </View>
-
             {/* Running shift banner */}
             {openShift ? (
                 <TouchableOpacity

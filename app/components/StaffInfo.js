@@ -13,8 +13,10 @@ const JUMP_TABS = [
     { name: 'My Roster',    route: 'roster',     path: '/(main)/roster',     icon: 'calendar-check-o' },
     { name: 'My Timetable', route: 'timetable',  path: '/(main)/timetable',  icon: 'clock-o' },
     { name: 'My Calendar',  route: 'calendar',   path: '/(main)/calendar',   icon: 'calendar' },
-    { name: 'Classes',      route: 'classes',    path: '/(main)/classes',    icon: 'graduation-cap' },
-    { name: 'Tickets',      route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
+    { name: 'My Classes',   route: 'classes',    path: '/(main)/classes',    icon: 'graduation-cap' },
+    { name: 'My Students',  route: 'students',   path: '/(main)/students',   icon: 'users' },
+    { name: 'Reports',      route: 'progress-reports', path: '/(main)/progress-reports', icon: 'file-text-o' },
+    { name: 'My Tickets',   route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
 ];
 
 const KNOWN_ROUTES = JUMP_TABS.map(t => t.route).filter(r => r !== 'index');
@@ -207,7 +209,7 @@ export default function StaffInfo() {
                                                 paddingVertical: 16,
                                                 borderRadius: 16,
                                                 backgroundColor: isActive ? colors.primary + '18' : colors.surface,
-                                                borderWidth: 1.5,
+                                                borderWidth: 1,
                                                 borderColor: isActive ? colors.primary : colors.border,
                                                 alignItems: 'center',
                                             }}

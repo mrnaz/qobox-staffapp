@@ -52,6 +52,22 @@ export const endpoints = {
     GET_CLASS_ASSIGNMENTS: 'education/classes/{class_id}/assignments',
     GET_CLASS_ASSIGNMENT: 'education/classes/{class_id}/assignments/{assignment_id}',
 
+    // Progress Reports (mirrors qobox web staff endpoints)
+    //  - templates linked to a class:      education/classes/{class_id}/progress-reports
+    //  - filled results for a class:       education/classes/{class_id}/progress-report-results
+    //  - filled results for a student:     education/clients/{client_id}/progress-report-results
+    //  - full template w/ assessments:     progress-reports/{id}
+    //  - CRUD on a single filled result:   education/progress-report-results[/{id}]
+    GET_CLASS_STUDENTS: 'education/classes/{class_id}/students',
+    GET_CLASS_PROGRESS_REPORTS: 'education/classes/{class_id}/progress-reports',
+    GET_CLASS_PROGRESS_REPORT_RESULTS: 'education/classes/{class_id}/progress-report-results',
+    GET_STUDENT_PROGRESS_REPORT_RESULTS: 'education/clients/{client_id}/progress-report-results',
+    GET_PROGRESS_REPORT_TEMPLATE: 'progress-reports/{id}',
+    STORE_PROGRESS_REPORT_RESULT: 'education/progress-report-results',
+    GET_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
+    UPDATE_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
+    DELETE_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
+
     // Tickets / Service Requests (Maintenance Reports)
     GET_MAINTENANCE_REPORTS: 'maintenance-reports',
     GET_MAINTENANCE_REPORT: 'maintenance-reports/{id}',

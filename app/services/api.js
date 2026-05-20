@@ -252,6 +252,43 @@ class ApiService {
         );
     }
 
+    async getClassStudents(classId, params = {}) {
+        return this.get(endpoints.GET_CLASS_STUDENTS.replace('{class_id}', classId), params);
+    }
+
+    // Progress Reports
+    async getClassProgressReports(classId) {
+        return this.get(endpoints.GET_CLASS_PROGRESS_REPORTS.replace('{class_id}', classId));
+    }
+
+    async getClassProgressReportResults(classId, params = {}) {
+        return this.get(endpoints.GET_CLASS_PROGRESS_REPORT_RESULTS.replace('{class_id}', classId), params);
+    }
+
+    async getStudentProgressReportResults(clientId, params = {}) {
+        return this.get(endpoints.GET_STUDENT_PROGRESS_REPORT_RESULTS.replace('{client_id}', clientId), params);
+    }
+
+    async getProgressReportTemplate(id) {
+        return this.get(endpoints.GET_PROGRESS_REPORT_TEMPLATE.replace('{id}', id));
+    }
+
+    async storeProgressReportResult(data) {
+        return this.post(endpoints.STORE_PROGRESS_REPORT_RESULT, data);
+    }
+
+    async getProgressReportResult(resultId) {
+        return this.get(endpoints.GET_PROGRESS_REPORT_RESULT.replace('{result_id}', resultId));
+    }
+
+    async updateProgressReportResult(resultId, data) {
+        return this.put(endpoints.UPDATE_PROGRESS_REPORT_RESULT.replace('{result_id}', resultId), data);
+    }
+
+    async deleteProgressReportResult(resultId) {
+        return this.delete(endpoints.DELETE_PROGRESS_REPORT_RESULT.replace('{result_id}', resultId));
+    }
+
     // Tickets / Service Requests (Maintenance Reports)
     async getMaintenanceReports(params = {}) {
         return this.get(endpoints.GET_MAINTENANCE_REPORTS, params);

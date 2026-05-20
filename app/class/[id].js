@@ -14,10 +14,12 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import LessonsTab from '../components/class/LessonsTab';
 import AssignmentsTab from '../components/class/AssignmentsTab';
+import TestsTab from '../components/class/TestsTab';
 
 const TABS = [
     { id: 'lessons', label: 'Lessons', icon: 'book' },
     { id: 'assignments', label: 'Assignments', icon: 'list' },
+    { id: 'tests', label: 'Tests', icon: 'check-square-o' },
 ];
 
 export default function ClassProfileScreen() {
@@ -113,6 +115,12 @@ export default function ClassProfileScreen() {
                 <View style={{ flex: 1 }}>
                     {activeTab === 'lessons' && <LessonsTab classId={id} />}
                     {activeTab === 'assignments' && <AssignmentsTab classId={id} />}
+                    {activeTab === 'tests' && (
+                        <TestsTab
+                            classId={id}
+                            onOpenProgressReports={() => router.push(`/class/${id}/progress-reports`)}
+                        />
+                    )}
                 </View>
             )}
         </SafeAreaView>

@@ -18,7 +18,10 @@
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://st.qobox.com"
+      }
     },
     "apk": {
       "distribution": "internal",
