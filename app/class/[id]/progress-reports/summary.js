@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
     View,
     Text,
@@ -8,11 +8,12 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
 import Avatar from '../../../components/Avatar';
+import { resolveRubricColor } from '../../../utils/colors';
 
 // Student × report summary screen — same intent as the web's
 // StudentProgressReportSummaryDialog.vue but laid out as a vertical stack of
@@ -46,66 +47,88 @@ export default function ProgressReportSummaryScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        (async () => {
-            try {
-                setIsLoading(true);
-                setError('');
+    const load = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            setError('');
 
-                const [tplRes, classResults] = await Promise.all([
-                    api.getProgressReportTemplate(reportId),
-                    api.getClassProgressReportResults(classId),
-                ]);
-                setTemplate(tplRes?.data || tplRes);
+            // Pull the template, all class results, and the class roster
+            // in parallel. The roster gives us a name+photo fallback when
+            // the student has zero results yet (otherwise the header would
+            // just say "Student").
+            const [tplRes, classResults, classStudents] = await Promise.all([
+                api.getProgressReportTemplate(reportId),
+                api.getClassProgressReportResults(classId),
+                api.getClassStudents(classId, { all: 'true', scope: 'linked' }).catch(() => null),
+            ]);
+            setTemplate(tplRes?.data || tplRes);
 
-                const raw =
-                    classResults?.data ||
-                    (Array.isArray(classResults) ? classResults : []) ||
-                    [];
-                const list = (Array.isArray(raw) ? raw : []).filter(
-                    (r) =>
-                        Number(r.client_id ?? r.client?.id) === Number(studentId) &&
-                        Number(r.report_id ?? r.report?.id) === Number(reportId)
+            const raw =
+                classResults?.data ||
+                (Array.isArray(classResults) ? classResults : []) ||
+                [];
+            const list = (Array.isArray(raw) ? raw : []).filter(
+                (r) =>
+                    Number(r.client_id ?? r.client?.id) === Number(studentId) &&
+                    Number(r.report_id ?? r.report?.id) === Number(reportId)
+            );
+
+            // Prefer the freshly-loaded client info from a past result,
+            // but fall back to the class roster so the header is always
+            // populated.
+            const firstWithClient = list.find((r) => r.client);
+            if (firstWithClient?.client) {
+                setStudentMeta({
+                    name: firstWithClient.client.name ||
+                        `${firstWithClient.client.fname || ''} ${firstWithClient.client.sname || ''}`.trim(),
+                    photo: firstWithClient.client.list_photo || firstWithClient.client.photo || null,
+                });
+            } else {
+                const stList = classStudents?.students || classStudents?.data || classStudents?.clients || classStudents || [];
+                const match = (Array.isArray(stList) ? stList : []).find(
+                    (s) => Number(s.id ?? s.client_id ?? s.student_id) === Number(studentId)
                 );
-
-                const firstWithClient = list.find((r) => r.client);
-                if (firstWithClient?.client) {
+                if (match) {
                     setStudentMeta({
-                        name: firstWithClient.client.name ||
-                            `${firstWithClient.client.fname || ''} ${firstWithClient.client.sname || ''}`.trim(),
-                        photo: firstWithClient.client.list_photo || firstWithClient.client.photo || null,
+                        name: match.name ||
+                            `${match.fname || match.student_fname || ''} ${match.sname || match.student_sname || ''}`.trim(),
+                        photo: match.list_photo || match.photo || null,
                     });
                 }
-
-                if (list.length === 0) {
-                    setDetails([]);
-                    return;
-                }
-
-                const settled = await Promise.allSettled(
-                    list.map((r) => api.getProgressReportResult(r.id))
-                );
-                const full = settled
-                    .filter((s) => s.status === 'fulfilled')
-                    .map((s, idx) => s.value?.data || s.value || list[idx])
-                    .filter(Boolean)
-                    // Newest first for the mobile card stack — the web table is
-                    // oldest-left because it scrolls right; on a vertical
-                    // phone feed, newest-on-top is the expected pattern.
-                    .sort((a, b) => {
-                        const ta = new Date(a.created_at || a.updated_at || 0).getTime();
-                        const tb = new Date(b.created_at || b.updated_at || 0).getTime();
-                        return tb - ta;
-                    });
-                setDetails(full);
-            } catch (err) {
-                console.error('Summary load error', err);
-                setError(err.body?.message || err.message || 'Failed to load summary.');
-            } finally {
-                setIsLoading(false);
             }
-        })();
+
+            if (list.length === 0) {
+                setDetails([]);
+                return;
+            }
+
+            const settled = await Promise.allSettled(
+                list.map((r) => api.getProgressReportResult(r.id))
+            );
+            const full = settled
+                .filter((s) => s.status === 'fulfilled')
+                .map((s, idx) => s.value?.data || s.value || list[idx])
+                .filter(Boolean)
+                // Newest first for the mobile card stack — the web table is
+                // oldest-left because it scrolls right; on a vertical
+                // phone feed, newest-on-top is the expected pattern.
+                .sort((a, b) => {
+                    const ta = new Date(a.created_at || a.updated_at || 0).getTime();
+                    const tb = new Date(b.created_at || b.updated_at || 0).getTime();
+                    return tb - ta;
+                });
+            setDetails(full);
+        } catch (err) {
+            console.error('Summary load error', err);
+            setError(err.body?.message || err.message || 'Failed to load summary.');
+        } finally {
+            setIsLoading(false);
+        }
     }, [classId, reportId, studentId]);
+
+    // Re-run on every focus so a newly-saved assessment appears immediately
+    // when the user navigates back from the fill screen.
+    useFocusEffect(useCallback(() => { load(); }, [load]));
 
     // Group rows: ungrouped assessments first, then groups with children.
     // Each "row" gets rendered inside every card; the cell content per card
@@ -148,6 +171,16 @@ export default function ProgressReportSummaryScreen() {
         });
     };
 
+    const newAssessment = () => {
+        router.push({
+            pathname: `/class/${classId}/progress-reports/fill`,
+            params: {
+                reportId: String(reportId),
+                studentId: String(studentId),
+            },
+        });
+    };
+
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
@@ -176,17 +209,43 @@ export default function ProgressReportSummaryScreen() {
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             ) : details.length === 0 ? (
+                // Zero-state — no assessments yet. Show a big CTA so the staff
+                // member can jump straight into the first one.
                 <View style={styles.center}>
-                    <Ionicons name="document-text-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="document-text-outline" size={36} color={colors.textSecondary} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No assessments yet for this student.
                     </Text>
+                    <TouchableOpacity
+                        onPress={newAssessment}
+                        activeOpacity={0.85}
+                        style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+                    >
+                        <Ionicons name="add" size={18} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                            Start first assessment
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             ) : (
                 <ScrollView contentContainerStyle={styles.list}>
-                    <Text style={[styles.listTitle, { color: colors.textSecondary }]}>
-                        {details.length} assessment{details.length === 1 ? '' : 's'} · newest first
-                    </Text>
+                    {/* Sticky "+ New assessment" action at the top, so it's
+                        always one tap away regardless of history depth. */}
+                    <View style={styles.titleRow}>
+                        <Text style={[styles.listTitle, { color: colors.textSecondary }]}>
+                            {details.length} assessment{details.length === 1 ? '' : 's'} · newest first
+                        </Text>
+                        <TouchableOpacity
+                            onPress={newAssessment}
+                            activeOpacity={0.85}
+                            style={[styles.newBtn, { borderColor: colors.primary, backgroundColor: colors.primary + '18' }]}
+                        >
+                            <Ionicons name="add" size={14} color={colors.primary} />
+                            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>
+                                New assessment
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                     {details.map((r) => (
                         <ResultCard
                             key={r.id}
@@ -318,7 +377,7 @@ function OutcomeValue({ outcome, assessment, colors }) {
     } else if (t === 'R') {
         if (outcome.rubric_selection) {
             const rubric = (assessment.rubrics || []).find((rb) => rb.id === outcome.rubric_selection);
-            const bg = rubric?.color?.light?.background || rubric?.color?.dark?.background || '#9ca3af';
+            const bg = resolveRubricColor(rubric?.color);
             items.push(
                 <View key="r" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: bg }} />
@@ -377,7 +436,32 @@ const styles = StyleSheet.create({
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     list: { padding: 16, paddingBottom: 32, gap: 12 },
-    listTitle: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        marginBottom: 2,
+    },
+    listTitle: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, flex: 1 },
+    newBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+    },
+    ctaBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 18,
+        paddingVertical: 12,
+        borderRadius: 999,
+        marginTop: 8,
+    },
     card: {
         borderWidth: 1,
         borderRadius: 12,

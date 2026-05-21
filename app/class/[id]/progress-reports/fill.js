@@ -20,6 +20,7 @@ import Theme from '../../../context/ThemeContext';
 import Avatar from '../../../components/Avatar';
 import Toast from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
+import { resolveRubricColor } from '../../../utils/colors';
 
 // Assessment types come from the backend `progress_report_assessments.type`
 // column: 'P' pass/fail, 'S' score, 'R' rubric, 'C' comment-only.
@@ -528,7 +529,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
         }
         if (t === TYPE_RUBRIC) {
             const selected = (assessment.rubrics || []).find((r) => r.id === value.rubric_selection);
-            const dot = selected?.color?.light?.background || selected?.color?.dark?.background || '#9ca3af';
+            const dot = resolveRubricColor(selected?.color);
             return (
                 <TouchableOpacity disabled={disabled} onPress={onOpenRubric} style={[styles.pill, { borderColor: colors.border, flexDirection: 'row', gap: 6 }]}>
                     {selected ? (
@@ -691,7 +692,7 @@ function RubricPicker({ assessment, value, onSave, colors }) {
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>{assessment.label}</Text>
             <ScrollView style={{ flexShrink: 1, maxHeight: 280 }}>
                 {sortedRubrics.map((r) => {
-                    const dot = r.color?.light?.background || r.color?.dark?.background || '#9ca3af';
+                    const dot = resolveRubricColor(r.color);
                     const isSel = selected === r.id;
                     return (
                         <TouchableOpacity

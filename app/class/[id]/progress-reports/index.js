@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     View,
     Text,
@@ -7,93 +7,16 @@ import {
     ActivityIndicator,
     RefreshControl,
     TouchableOpacity,
-    SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
-import Avatar from '../../../components/Avatar';
 
-const fmtDateTime = (s) => {
-    if (!s) return null;
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return s;
-    return d.toLocaleDateString(undefined, {
-        day: 'numeric', month: 'short', year: 'numeric',
-        hour: 'numeric', minute: '2-digit',
-    });
-};
-
-// Group raw report-result rows by their report (template), then by student.
-// Mirrors the web app's `progressReportSummaries` computed in
-// resources/js/_staff/views/pages/education/class/tests/index.vue.
-function groupResultsByReport(results) {
-    const groups = new Map();
-    for (const r of results) {
-        const reportId = r.report_id || r.report?.id;
-        if (!reportId) continue;
-
-        if (!groups.has(reportId)) {
-            groups.set(reportId, {
-                report_id: reportId,
-                title: r.report?.title || 'Progress Report',
-                report: r.report,
-                _students: new Map(),
-                assessed_count: 0,
-                last_assessed: null,
-            });
-        }
-        const g = groups.get(reportId);
-
-        const clientId = r.client_id || r.client?.id;
-        const clientName =
-            r.client?.name ||
-            `${r.client?.fname || ''} ${r.client?.sname || ''}`.trim() ||
-            'Student';
-        const updatedAt = r.updated_at || r.created_at;
-
-        if (!g._students.has(clientId)) {
-            g._students.set(clientId, {
-                client_id: clientId,
-                name: clientName,
-                photo: r.client?.list_photo || r.client?.photo || null,
-                completed_count: 0,
-                draft_count: 0,
-                last_assessed: null,
-                results: [],
-            });
-        }
-        const st = g._students.get(clientId);
-        st.results.push(r);
-        if (r.completed) st.completed_count++;
-        else st.draft_count++;
-        if (updatedAt && (!st.last_assessed || new Date(updatedAt) > new Date(st.last_assessed))) {
-            st.last_assessed = updatedAt;
-        }
-
-        g.assessed_count++;
-        if (updatedAt && (!g.last_assessed || new Date(updatedAt) > new Date(g.last_assessed))) {
-            g.last_assessed = updatedAt;
-        }
-    }
-
-    return Array.from(groups.values()).map((g) => ({
-        report_id: g.report_id,
-        title: g.title,
-        report: g.report,
-        assessed_count: g.assessed_count,
-        last_assessed: g.last_assessed,
-        students: Array.from(g._students.values()).sort((a, b) => {
-            // Pin drafts to top — same UX rule as the web app
-            if ((a.draft_count > 0) !== (b.draft_count > 0)) {
-                return a.draft_count > 0 ? -1 : 1;
-            }
-            return a.name.localeCompare(b.name);
-        }),
-    }));
-}
-
+// Per-class report list. Each row is one progress-report template linked to
+// the class; tapping it drills into the student roster for that report.
+// Matches the spec flow: list of reports → tap → list of students.
 export default function ProgressReportsListScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -101,9 +24,8 @@ export default function ProgressReportsListScreen() {
     const { id: classId } = useLocalSearchParams();
     const router = useRouter();
 
-    const [templates, setTemplates] = useState([]); // available report templates
-    const [results, setResults] = useState([]);     // filled results for this class
-    const [expandedReportId, setExpandedReportId] = useState(null);
+    const [templates, setTemplates] = useState([]);
+    const [results, setResults] = useState([]); // class-wide filled results, used for per-report counts
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
@@ -139,143 +61,86 @@ export default function ProgressReportsListScreen() {
         load({ refresh: true });
     };
 
-    const grouped = useMemo(() => groupResultsByReport(results), [results]);
-
-    // Merge templates with grouped results so empty templates still show up.
-    const reports = useMemo(() => {
-        const byId = new Map(grouped.map((g) => [g.report_id, g]));
-        for (const tpl of templates) {
-            if (!byId.has(tpl.id)) {
-                byId.set(tpl.id, {
-                    report_id: tpl.id,
-                    title: tpl.title,
-                    report: tpl,
-                    assessed_count: 0,
-                    last_assessed: null,
-                    students: [],
-                });
-            } else {
-                // Keep the full template so we know its assessments for "New assessment"
-                const g = byId.get(tpl.id);
-                g.report = g.report || tpl;
-            }
+    // Per-report tally: how many unique students have any result + how many
+    // are still drafts. Drives the badges shown on each card.
+    const tallies = useMemo(() => {
+        const m = new Map();
+        for (const r of results) {
+            const rid = Number(r.report_id ?? r.report?.id);
+            if (!rid) continue;
+            const cid = Number(r.client_id ?? r.client?.id);
+            if (!cid) continue;
+            const entry = m.get(rid) || {
+                students: new Set(),
+                drafts: 0,
+                completed: 0,
+                last: null,
+            };
+            entry.students.add(cid);
+            if (r.completed) entry.completed += 1;
+            else entry.drafts += 1;
+            const t = r.updated_at || r.created_at;
+            if (t && (!entry.last || new Date(t) > new Date(entry.last))) entry.last = t;
+            m.set(rid, entry);
         }
-        return Array.from(byId.values());
-    }, [grouped, templates]);
+        return m;
+    }, [results]);
 
-    const goFill = (report, opts = {}) => {
-        router.push({
-            pathname: `/class/${classId}/progress-reports/fill`,
-            params: {
-                reportId: String(report.report_id ?? report.id),
-                ...(opts.resultId ? { resultId: String(opts.resultId) } : {}),
-                ...(opts.studentId ? { studentId: String(opts.studentId) } : {}),
-                ...(opts.readonly ? { readonly: '1' } : {}),
-            },
+    const reports = useMemo(() => {
+        return (templates || []).map((tpl) => {
+            const t = tallies.get(Number(tpl.id)) || { students: new Set(), drafts: 0, completed: 0, last: null };
+            return {
+                id: tpl.id,
+                title: tpl.title,
+                students_assessed: t.students.size,
+                drafts: t.drafts,
+                completed: t.completed,
+                last: t.last,
+            };
         });
+    }, [templates, tallies]);
+
+    const openReport = (reportId) => {
+        router.push(`/class/${classId}/progress-reports/${reportId}`);
     };
 
-    const renderReport = ({ item }) => {
-        const isExpanded = expandedReportId === item.report_id;
-        return (
-            <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => setExpandedReportId(isExpanded ? null : item.report_id)}
-                    style={styles.cardHeader}
-                >
-                    <Ionicons
-                        name={isExpanded ? 'chevron-down' : 'chevron-forward'}
-                        size={18}
-                        color={colors.textSecondary}
-                    />
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
-                            {item.title}
-                        </Text>
-                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                            {item.students.length} student{item.students.length === 1 ? '' : 's'}
-                            {item.last_assessed ? ` · last ${fmtDateTime(item.last_assessed)}` : ''}
-                        </Text>
-                    </View>
-                    <TouchableOpacity
-                        onPress={(e) => { e.stopPropagation?.(); goFill(item); }}
-                        style={[styles.addBtn, { borderColor: colors.primary, backgroundColor: colors.primary + '18' }]}
-                    >
-                        <Ionicons name="add" size={16} color={colors.primary} />
-                        <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12 }}>New</Text>
-                    </TouchableOpacity>
-                </TouchableOpacity>
-
-                {isExpanded ? (
-                    <View style={{ marginTop: 8, gap: 8 }}>
-                        {item.students.length === 0 ? (
-                            <Text style={[styles.emptyInline, { color: colors.textSecondary }]}>
-                                No assessments yet. Tap “New” to add one.
-                            </Text>
-                        ) : (
-                            item.students.map((st) => {
-                                const onPress = () => {
-                                    // Drafts: open the draft straight into the
-                                    // fill screen so the user can keep editing.
-                                    if (st.draft_count > 0) {
-                                        const draft = st.results.find((r) => !r.completed);
-                                        if (draft) {
-                                            goFill(item, { resultId: draft.id, studentId: st.client_id });
-                                            return;
-                                        }
-                                    }
-                                    // Completed results → matrix summary view
-                                    // (mirrors web's StudentProgressReportSummaryDialog).
-                                    if (st.completed_count > 0) {
-                                        router.push({
-                                            pathname: `/class/${classId}/progress-reports/summary`,
-                                            params: {
-                                                reportId: String(item.report_id),
-                                                studentId: String(st.client_id),
-                                            },
-                                        });
-                                    }
-                                };
-                                return (
-                                    <TouchableOpacity
-                                        key={`${item.report_id}-${st.client_id}`}
-                                        onPress={onPress}
-                                        activeOpacity={0.8}
-                                        style={[styles.studentRow, { borderColor: colors.border }]}
-                                    >
-                                        <Avatar uri={st.photo} name={st.name} size={32} />
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={[styles.studentName, { color: colors.textPrimary }]} numberOfLines={1}>
-                                                {st.name}
-                                            </Text>
-                                            {st.last_assessed ? (
-                                                <Text style={[styles.studentMeta, { color: colors.textSecondary }]} numberOfLines={1}>
-                                                    {fmtDateTime(st.last_assessed)}
-                                                </Text>
-                                            ) : null}
-                                        </View>
-                                        <View style={styles.chipsRow}>
-                                            {st.completed_count ? (
-                                                <Chip text={`${st.completed_count} done`} bg={(colors.success || colors.primary) + '22'} color={colors.success || colors.primary} />
-                                            ) : null}
-                                            {st.draft_count ? (
-                                                <Chip text={`${st.draft_count} draft`} bg={(colors.warning || colors.primary) + '22'} color={colors.warning || colors.primary} />
-                                            ) : null}
-                                        </View>
-                                        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                );
-                            })
-                        )}
-                    </View>
-                ) : null}
+    const renderReport = ({ item }) => (
+        <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => openReport(item.id)}
+            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+        >
+            <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
+                <FontAwesome name="file-text-o" size={18} color={colors.primary} />
             </View>
-        );
-    };
+            <View style={{ flex: 1, gap: 4 }}>
+                <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
+                    {item.title}
+                </Text>
+                <View style={styles.metaRow}>
+                    {item.students_assessed ? (
+                        <Text style={[styles.meta, { color: colors.textSecondary }]}>
+                            {item.students_assessed} assessed
+                        </Text>
+                    ) : (
+                        <Text style={[styles.meta, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+                            No assessments yet
+                        </Text>
+                    )}
+                    {item.drafts ? (
+                        <Chip text={`${item.drafts} draft`} bg={(colors.warning || colors.primary) + '22'} color={colors.warning || colors.primary} />
+                    ) : null}
+                    {item.completed ? (
+                        <Chip text={`${item.completed} done`} bg={(colors.success || colors.primary) + '22'} color={colors.success || colors.primary} />
+                    ) : null}
+                </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+    );
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
@@ -303,7 +168,7 @@ export default function ProgressReportsListScreen() {
             ) : (
                 <FlatList
                     data={reports}
-                    keyExtractor={(it) => String(it.report_id)}
+                    keyExtractor={(it) => String(it.id)}
                     renderItem={renderReport}
                     contentContainerStyle={styles.list}
                     refreshControl={
@@ -343,25 +208,23 @@ const styles = StyleSheet.create({
     iconButton: { padding: 8, borderRadius: 999 },
     headerTitle: { fontSize: 16, fontWeight: '700' },
     list: { padding: 16, gap: 10, paddingBottom: 32 },
-    card: { borderWidth: 1, borderRadius: 12, padding: 14 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    card: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+    },
+    iconWrap: {
+        width: 40, height: 40, borderRadius: 10,
+        alignItems: 'center', justifyContent: 'center',
+    },
     title: { fontSize: 15, fontWeight: '700' },
-    subtitle: { fontSize: 12, marginTop: 2 },
-    addBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 10, paddingVertical: 6,
-        borderRadius: 999, borderWidth: 1,
-    },
-    studentRow: {
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        borderWidth: 1, borderRadius: 10, padding: 10,
-    },
-    studentName: { fontSize: 13, fontWeight: '600' },
-    studentMeta: { fontSize: 11, marginTop: 1 },
-    chipsRow: { flexDirection: 'row', gap: 4 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+    meta: { fontSize: 12 },
     chip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
     chipText: { fontSize: 10, fontWeight: '700' },
-    emptyInline: { fontSize: 12, fontStyle: 'italic', paddingVertical: 6 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
