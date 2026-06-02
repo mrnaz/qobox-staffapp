@@ -257,12 +257,29 @@ export default function FillProgressReportScreen() {
                     <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {selectedStudent ? (
+                        <Avatar
+                            uri={selectedStudent.list_photo || selectedStudent.photo}
+                            name={selectedStudent.name || `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`}
+                            size={32}
+                        />
+                    ) : null}
+                    <View style={{ flex: 1, marginLeft: selectedStudent ? 8 : 0 }}>
+                        <Text
+                            style={[styles.headerTitle, { color: colors.textPrimary }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
                             {template?.title || 'Report'}
                         </Text>
-                        <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
-                            {isReadonly ? 'View' : isEditMode ? 'Edit' : 'New assessment'}
+                        <Text
+                            style={[styles.headerSub, { color: colors.textSecondary }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {selectedStudent
+                                ? (selectedStudent.name || `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`.trim())
+                                : (isReadonly ? 'View' : isEditMode ? 'Edit' : 'New assessment')}
                         </Text>
                     </View>
                     {isEditMode && !isReadonly ? (

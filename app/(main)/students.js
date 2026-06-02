@@ -10,6 +10,7 @@ import {
     TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
@@ -20,6 +21,7 @@ export default function MyStudentsScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
     const { colors } = theme;
+    const router = useRouter();
 
     const [staff, setStaff] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
@@ -125,7 +127,9 @@ export default function MyStudentsScreen() {
     }
 
     const renderItem = ({ item }) => (
-        <View
+        <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push(`/student/${item.id}`)}
             style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
         >
             <Avatar uri={item.photo} name={item.name} size={40} />
@@ -140,7 +144,8 @@ export default function MyStudentsScreen() {
                     </Text>
                 </View>
             </View>
-        </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
     );
 
     return (

@@ -226,6 +226,19 @@ class ApiService {
         return this.get(endpoints.GET_CLIENTS, params);
     }
 
+    // Student profile (basic info + guardians + medical)
+    async getStudent(clientId) {
+        return this.get(endpoints.GET_STUDENT.replace('{client_id}', clientId));
+    }
+
+    async getStudentTimetable(clientId, params = {}) {
+        return this.get(endpoints.GET_STUDENT_TIMETABLE.replace('{client_id}', clientId), params);
+    }
+
+    async getStudentClasses(clientId, params = {}) {
+        return this.get(endpoints.GET_STUDENT_CLASSES.replace('{client_id}', clientId), params);
+    }
+
     // Classes (staff)
     async getStaffClasses(staffId, params = {}) {
         return this.get(endpoints.GET_STAFF_CLASSES.replace('{staff_id}', staffId), params);

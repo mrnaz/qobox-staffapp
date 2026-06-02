@@ -3,20 +3,21 @@ import { View, Text, ActivityIndicator, TouchableOpacity, Image, Modal } from 'r
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Theme from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
 
 const JUMP_TABS = [
-    { name: 'Dashboard',    route: 'index',      path: '/(main)/',           icon: 'home' },
-    { name: 'Attendance',   route: 'attendance', path: '/(main)/attendance', icon: 'check-square-o' },
-    { name: 'My Roster',    route: 'roster',     path: '/(main)/roster',     icon: 'calendar-check-o' },
-    { name: 'My Timetable', route: 'timetable',  path: '/(main)/timetable',  icon: 'clock-o' },
-    { name: 'My Calendar',  route: 'calendar',   path: '/(main)/calendar',   icon: 'calendar' },
-    { name: 'My Classes',   route: 'classes',    path: '/(main)/classes',    icon: 'graduation-cap' },
-    { name: 'My Students',  route: 'students',   path: '/(main)/students',   icon: 'users' },
-    { name: 'Reports',      route: 'progress-reports', path: '/(main)/progress-reports', icon: 'file-text-o' },
-    { name: 'My Tickets',   route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
+    { name: 'Dashboard',  route: 'index',      path: '/(main)/',           icon: 'home' },
+    { name: 'Attendance', route: 'attendance', path: '/(main)/attendance', icon: 'check-square-o' },
+    { name: 'Roster',     route: 'roster',     path: '/(main)/roster',     icon: 'calendar-check-o' },
+    { name: 'Timetable',  route: 'timetable',  path: '/(main)/timetable',  icon: 'clock-o' },
+    { name: 'Calendar',   route: 'calendar',   path: '/(main)/calendar',   icon: 'calendar' },
+    { name: 'Classes',    route: 'classes',    path: '/(main)/classes',    icon: 'graduation-cap' },
+    { name: 'Students',   route: 'students',   path: '/(main)/students',   icon: 'users' },
+    { name: 'Reports',    route: 'progress-reports', path: '/(main)/progress-reports', icon: 'file-text-o' },
+    { name: 'Tickets',    route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
 ];
 
 const KNOWN_ROUTES = JUMP_TABS.map(t => t.route).filter(r => r !== 'index');
@@ -166,75 +167,73 @@ export default function StaffInfo() {
                 ) : null}
             </View>
 
-            {/* Jump To modal */}
-            <Modal visible={isJumpVisible} transparent animationType="slide" onRequestClose={() => setIsJumpVisible(false)}>
+            {/* Jump To modal — slides down from the top */}
+            <Modal visible={isJumpVisible} transparent animationType="fade" onRequestClose={() => setIsJumpVisible(false)}>
                 <TouchableOpacity
-                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-start' }}
                     activeOpacity={1}
                     onPress={() => setIsJumpVisible(false)}
                 >
                     <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-                        <View style={{
-                            backgroundColor: colors.cardBackground,
-                            borderTopLeftRadius: 20, borderTopRightRadius: 20,
-                            borderTopWidth: 1, borderColor: colors.border,
-                            paddingBottom: 28,
-                        }}>
-                            {/* Handle + title */}
+                        <SafeAreaView edges={['top']} style={{ backgroundColor: colors.cardBackground }}>
                             <View style={{
-                                alignItems: 'center', paddingTop: 12, paddingBottom: 16,
-                                borderBottomWidth: 1, borderBottomColor: colors.border,
+                                backgroundColor: colors.cardBackground,
+                                borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
+                                borderBottomWidth: 1, borderColor: colors.border,
+                                paddingTop: 8,
                             }}>
+                                {/* Title */}
                                 <View style={{
-                                    width: 36, height: 4, borderRadius: 2,
-                                    backgroundColor: colors.border, marginBottom: 12,
-                                }} />
-                                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700' }}>Jump to</Text>
-                            </View>
+                                    alignItems: 'center', paddingTop: 12, paddingBottom: 16,
+                                    borderBottomWidth: 1, borderBottomColor: colors.border,
+                                }}>
+                                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700' }}>Jump to</Text>
+                                </View>
 
-                            {/* 3-column grid */}
-                            <View style={{
-                                flexDirection: 'row', flexWrap: 'wrap',
-                                justifyContent: 'center',
-                                paddingHorizontal: 16, paddingTop: 16, gap: 12,
-                            }}>
-                                {JUMP_TABS.map(tab => {
-                                    const isActive = currentRoute === tab.route;
-                                    return (
-                                        <TouchableOpacity
-                                            key={tab.route}
-                                            onPress={() => { setIsJumpVisible(false); handleTabPress(tab); }}
-                                            style={{
-                                                width: '30%',
-                                                paddingVertical: 16,
-                                                borderRadius: 16,
-                                                backgroundColor: isActive ? colors.primary + '18' : colors.surface,
-                                                borderWidth: 1,
-                                                borderColor: isActive ? colors.primary : colors.border,
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <View style={{
-                                                width: 40, height: 40, borderRadius: 20,
-                                                backgroundColor: isActive ? colors.primary : colors.primary + '18',
-                                                alignItems: 'center', justifyContent: 'center',
-                                                marginBottom: 6,
-                                            }}>
-                                                <FontAwesome name={tab.icon} size={18} color={isActive ? '#fff' : colors.primary} />
-                                            </View>
-                                            <Text style={{
-                                                color: isActive ? colors.primary : colors.textPrimary,
-                                                fontSize: 12,
-                                                fontWeight: isActive ? '700' : '500',
-                                                textAlign: 'center',
-                                            }}>
-                                                {tab.name}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
+                                {/* 3-column grid */}
+                                <View style={{
+                                    flexDirection: 'row', flexWrap: 'wrap',
+                                    justifyContent: 'center',
+                                    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, gap: 12,
+                                }}>
+                                    {JUMP_TABS.map(tab => {
+                                        const isActive = currentRoute === tab.route;
+                                        return (
+                                            <TouchableOpacity
+                                                key={tab.route}
+                                                onPress={() => { setIsJumpVisible(false); handleTabPress(tab); }}
+                                                style={{
+                                                    width: '30%',
+                                                    paddingVertical: 16,
+                                                    borderRadius: 16,
+                                                    backgroundColor: isActive ? colors.primary + '18' : colors.surface,
+                                                    borderWidth: 1,
+                                                    borderColor: isActive ? colors.primary : colors.border,
+                                                    alignItems: 'center',
+                                                }}
+                                            >
+                                                <View style={{
+                                                    width: 40, height: 40, borderRadius: 20,
+                                                    backgroundColor: isActive ? colors.primary : colors.primary + '18',
+                                                    alignItems: 'center', justifyContent: 'center',
+                                                    marginBottom: 6,
+                                                }}>
+                                                    <FontAwesome name={tab.icon} size={18} color={isActive ? '#fff' : colors.primary} />
+                                                </View>
+                                                <Text style={{
+                                                    color: isActive ? colors.primary : colors.textPrimary,
+                                                    fontSize: 12,
+                                                    fontWeight: isActive ? '700' : '500',
+                                                    textAlign: 'center',
+                                                }}>
+                                                    {tab.name}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
                             </View>
-                        </View>
+                        </SafeAreaView>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>

@@ -44,6 +44,14 @@ export const endpoints = {
     GET_DAILY_ATTENDANCE_CLIENTS: 'attendances/daily/{id}/clients',
     GET_CLIENTS: 'clients',
 
+    // Student profile (the staff "View student" page)
+    //   - GET_STUDENT           → basic info, guardians, medical, address
+    //   - GET_STUDENT_TIMETABLE → ?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+    //   - GET_STUDENT_CLASSES   → ?period_id=
+    GET_STUDENT: 'clients/{client_id}',
+    GET_STUDENT_TIMETABLE: 'clients/{client_id}/timetable',
+    GET_STUDENT_CLASSES: 'clients/{client_id}/classes',
+
     // Classes (staff)
     GET_STAFF_CLASSES: 'staff/classes/{staff_id}',
     GET_CLASS: 'education/classes/{class_id}',

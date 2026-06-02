@@ -10,13 +10,13 @@ import StaffInfo from '../components/StaffInfo';
 const PAGE_TITLES = {
     index: 'Dashboard',
     attendance: 'Attendance',
-    roster: 'My Roster',
-    timetable: 'My Timetable',
-    calendar: 'My Calendar',
-    classes: 'My Classes',
-    students: 'My Students',
+    roster: 'Roster',
+    timetable: 'Timetable',
+    calendar: 'Calendar',
+    classes: 'Classes',
+    students: 'Students',
     'progress-reports': 'Reports',
-    tickets: 'My Tickets',
+    tickets: 'Tickets',
     reports: 'Reports',
 };
 
@@ -101,13 +101,13 @@ export default function MainLayout() {
             <Tabs tabBar={renderTabBar} screenOptions={screenOptions}>
                 <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
                 <Tabs.Screen name="attendance" options={{ title: 'Attendance' }} />
-                <Tabs.Screen name="roster" options={{ title: 'My Roster' }} />
-                <Tabs.Screen name="timetable" options={{ title: 'My Timetable' }} />
-                <Tabs.Screen name="calendar" options={{ title: 'My Calendar' }} />
-                <Tabs.Screen name="classes" options={{ title: 'My Classes' }} />
-                <Tabs.Screen name="students" options={{ title: 'My Students' }} />
+                <Tabs.Screen name="roster" options={{ title: 'Roster' }} />
+                <Tabs.Screen name="timetable" options={{ title: 'Timetable' }} />
+                <Tabs.Screen name="calendar" options={{ title: 'Calendar' }} />
+                <Tabs.Screen name="classes" options={{ title: 'Classes' }} />
+                <Tabs.Screen name="students" options={{ title: 'Students' }} />
                 <Tabs.Screen name="progress-reports" options={{ title: 'Reports' }} />
-                <Tabs.Screen name="tickets" options={{ title: 'My Tickets' }} />
+                <Tabs.Screen name="tickets" options={{ title: 'Tickets' }} />
                 {/* Reports stays registered (still navigable) but hidden from the tab bar
                     since the client's spec lists Progress Reports as a sub-feature of
                     Classes, not a top-level item. */}

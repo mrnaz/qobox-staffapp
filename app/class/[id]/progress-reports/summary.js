@@ -190,11 +190,19 @@ export default function ProgressReportSummaryScreen() {
                 </TouchableOpacity>
                 <Avatar uri={studentMeta?.photo} name={studentMeta?.name || ''} size={32} />
                 <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                        {studentMeta?.name || 'Student'}
-                    </Text>
-                    <Text style={[styles.headerSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                    <Text
+                        style={[styles.headerTitle, { color: colors.textPrimary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
                         {template?.title || 'Report'}
+                    </Text>
+                    <Text
+                        style={[styles.headerSub, { color: colors.textSecondary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {studentMeta?.name || 'Student'}
                     </Text>
                 </View>
             </View>

@@ -5,10 +5,12 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
+    Pressable,
     Modal,
     FlatList,
     ActivityIndicator,
     Alert,
+    Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,21 +23,15 @@ import Theme from '../context/ThemeContext';
 // users can mark statuses, search, see counts, and submit.
 
 const STATUS_META = {
-    present: { label: 'Present',  color: '#11AA22', icon: 'checkbox' },
-    absent:  { label: 'Absent',   color: '#BB2222', icon: 'close-circle' },
-    late:    { label: 'Late',     color: '#EE9911', icon: 'time' },
-    left:    { label: 'Left',     color: '#2196F3', icon: 'exit' },
-    notset:  { label: 'Unmarked', color: '#8899CC', icon: 'square-outline' },
+    present: { label: 'Present',  menuLabel: 'Present',      color: '#11AA22', icon: 'checkbox' },
+    absent:  { label: 'Absent',   menuLabel: 'Absent',       color: '#BB2222', icon: 'close-circle' },
+    late:    { label: 'Late',     menuLabel: 'Arrived Late', color: '#EE9911', icon: 'time' },
+    left:    { label: 'Left',     menuLabel: 'Left Early',   color: '#2196F3', icon: 'exit' },
+    notset:  { label: 'Unmarked', menuLabel: 'Unmarked',     color: '#8899CC', icon: 'square-outline' },
 };
 
-// Web cycle: notset → present → absent → late → left → notset
-const NEXT_STATUS = {
-    notset: 'present',
-    present: 'absent',
-    absent: 'late',
-    late: 'left',
-    left: 'notset',
-};
+// Order shown in the picker — matches the web AttendanceStatusSelector.
+const SELECTOR_ORDER = ['present', 'absent', 'late', 'left', 'notset'];
 
 const fmtDate = (s) => {
     if (!s) return '';
@@ -70,6 +66,8 @@ export default function DailyAttendanceModal({
     const [staffId, setStaffId] = useState(null);
     const [abilities, setAbilities] = useState([]);
     const [filterStatus, setFilterStatus] = useState(null); // 'present'|'absent'|'late'|'left'|'notset'|null
+    const [selectorStudent, setSelectorStudent] = useState(null); // student whose status picker is open
+    const [anchor, setAnchor] = useState(null); // { top, left, width } screen position of the popup
 
     useEffect(() => {
         (async () => {
@@ -151,12 +149,28 @@ export default function DailyAttendanceModal({
         return newId;
     };
 
-    const handleToggle = async (student) => {
+    const openSelector = (student, e) => {
+        const { pageX, pageY } = e.nativeEvent;
+        const { width, height } = Dimensions.get('window');
+        const POPUP_W = 230;
+        const POPUP_H = 5 * 46 + 12; // 5 rows + vertical padding
+        let left = pageX - POPUP_W + 24; // hang off the right side, near the tapped pill
+        left = Math.max(12, Math.min(left, width - POPUP_W - 12));
+        let top = pageY + 14; // open just below the tap
+        if (top + POPUP_H > height - 16) top = Math.max(48, pageY - POPUP_H - 8); // flip up near the bottom
+        setAnchor({ top, left, width: POPUP_W });
+        setSelectorStudent(student);
+    };
+
+    const handleSelectStatus = async (status) => {
+        const student = selectorStudent;
+        setSelectorStudent(null);
+        if (!student) return;
         const clientId = student.id || student.client_id;
         const cur = statusMap[String(clientId)] || 'notset';
-        const next = NEXT_STATUS[cur] || 'present';
+        if (status === cur) return; // already set — nothing to do
         const previous = { ...statusMap };
-        setStatusMap((prev) => ({ ...prev, [String(clientId)]: next }));
+        setStatusMap((prev) => ({ ...prev, [String(clientId)]: status }));
         try {
             const aid = await ensureAttendance();
             const res = await api.toggleDailyAttendance({
@@ -164,9 +178,9 @@ export default function DailyAttendanceModal({
                 client_id: clientId,
                 staff_id: staffId,
                 reporter_id: staffId,
-                status: next,
+                status,
             });
-            const serverStatus = res?.status ?? next;
+            const serverStatus = res?.status ?? status;
             setStatusMap((prev) => {
                 const copy = { ...prev };
                 if (serverStatus === null) delete copy[String(clientId)];
@@ -174,7 +188,7 @@ export default function DailyAttendanceModal({
                 return copy;
             });
         } catch (err) {
-            console.error('Toggle attendance error', err);
+            console.error('Set attendance status error', err);
             setStatusMap(previous);
             Alert.alert('Could not update', err.body?.message || err.message || 'Please try again.');
         }
@@ -241,11 +255,12 @@ export default function DailyAttendanceModal({
                     ) : null}
                 </View>
                 <TouchableOpacity
-                    onPress={() => handleToggle(item)}
+                    onPress={(e) => openSelector(item, e)}
                     style={[styles.statusPill, { borderColor: meta.color, backgroundColor: meta.color + '22' }]}
                 >
                     <Ionicons name={meta.icon} size={16} color={meta.color} />
                     <Text style={[styles.statusLabel, { color: meta.color }]}>{meta.label}</Text>
+                    <Ionicons name="chevron-down" size={12} color={meta.color} />
                 </TouchableOpacity>
             </View>
         );
@@ -372,6 +387,52 @@ export default function DailyAttendanceModal({
                         <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Close</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Status picker — small popup anchored at the tapped pill, web dropdown parity */}
+                <Modal
+                    visible={!!selectorStudent}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setSelectorStudent(null)}
+                >
+                    <Pressable style={{ flex: 1 }} onPress={() => setSelectorStudent(null)}>
+                        {anchor ? (
+                            <TouchableOpacity
+                                activeOpacity={1}
+                                onPress={() => {}}
+                                style={[styles.popup, {
+                                    top: anchor.top,
+                                    left: anchor.left,
+                                    width: anchor.width,
+                                    backgroundColor: colors.cardBackground,
+                                    borderColor: colors.border,
+                                }]}
+                            >
+                                {SELECTOR_ORDER.map((key) => {
+                                    const m = STATUS_META[key];
+                                    const cur = selectorStudent
+                                        ? statusMap[String(selectorStudent.id || selectorStudent.client_id)] || 'notset'
+                                        : 'notset';
+                                    const isSel = cur === key;
+                                    return (
+                                        <TouchableOpacity
+                                            key={key}
+                                            onPress={() => handleSelectStatus(key)}
+                                            style={[styles.popupItem, isSel && { backgroundColor: m.color + '1A' }]}
+                                        >
+                                            <Ionicons name={m.icon} size={20} color={m.color} />
+                                            <Text style={[styles.popupLabel, { color: colors.textPrimary, fontWeight: isSel ? '700' : '500' }]}>
+                                                {m.menuLabel}
+                                            </Text>
+                                            <View style={{ flex: 1 }} />
+                                            {isSel ? <Ionicons name="checkmark" size={18} color={m.color} /> : null}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </TouchableOpacity>
+                        ) : null}
+                    </Pressable>
+                </Modal>
             </View>
         </Modal>
     );
@@ -468,4 +529,25 @@ const styles = StyleSheet.create({
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 60 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+    popup: {
+        position: 'absolute',
+        borderRadius: 14,
+        borderWidth: 1,
+        paddingVertical: 6,
+        paddingHorizontal: 6,
+        shadowColor: '#000',
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 8,
+    },
+    popupItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+    },
+    popupLabel: { fontSize: 14 },
 });
