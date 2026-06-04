@@ -21,10 +21,19 @@ import { ensureAcademicPeriod } from '../utils/academicPeriod';
 const TABS = [
     { id: 'info',      label: 'Info',      icon: 'user' },
     { id: 'classes',   label: 'Classes',   icon: 'graduation-cap' },
-    { id: 'guardians', label: 'Guardians', icon: 'users' },
+    { id: 'guardians', label: 'Family',    icon: 'users' },
     { id: 'medical',   label: 'Medical',   icon: 'heartbeat' },
     { id: 'timetable', label: 'Timetable', icon: 'clock-o' },
 ];
+
+// Gender is stored as a single-char code ('M' / 'F') in the backend; surface it
+// as Male / Female / Unspecified per the staff spec.
+function formatGender(g) {
+    const s = String(g ?? '').trim().toLowerCase();
+    if (s === 'm' || s === 'male') return 'Male';
+    if (s === 'f' || s === 'female') return 'Female';
+    return 'Unspecified';
+}
 
 export default function StudentDetailScreen() {
     const { useTheme } = Theme;
@@ -105,26 +114,21 @@ export default function StudentDetailScreen() {
                             <TouchableOpacity
                                 key={t.id}
                                 onPress={() => setActiveTab(t.id)}
-                                style={styles.tabBtn}
+                                style={[styles.tabBtn, { borderBottomColor: active ? colors.primary : 'transparent' }]}
                             >
-                                <View style={styles.tabContent}>
-                                    <FontAwesome
-                                        name={t.icon}
-                                        size={14}
-                                        color={active ? colors.primary : colors.textSecondary}
-                                    />
-                                    <Text style={{
-                                        color: active ? colors.primary : colors.textSecondary,
-                                        fontWeight: active ? '700' : '500',
-                                        fontSize: 13,
-                                    }}>
-                                        {t.label}
-                                    </Text>
-                                </View>
-                                <View style={{
-                                    height: 2, marginTop: 6, borderRadius: 1,
-                                    backgroundColor: active ? colors.primary : 'transparent',
-                                }} />
+                                <FontAwesome
+                                    name={t.icon}
+                                    size={16}
+                                    color={active ? colors.primary : colors.textSecondary}
+                                    style={{ marginBottom: 4 }}
+                                />
+                                <Text style={{
+                                    color: active ? colors.primary : colors.textSecondary,
+                                    fontWeight: active ? '600' : '400',
+                                    fontSize: 11,
+                                }}>
+                                    {t.label}
+                                </Text>
                             </TouchableOpacity>
                         );
                     })}
@@ -147,7 +151,7 @@ export default function StudentDetailScreen() {
                 <View style={{ flex: 1 }}>
                     {activeTab === 'info'      && <InfoTab student={student} colors={colors} />}
                     {activeTab === 'classes'   && <ClassesTab studentId={id} colors={colors} />}
-                    {activeTab === 'guardians' && <GuardiansTab student={student} colors={colors} />}
+                    {activeTab === 'guardians' && <FamilyTab student={student} studentId={id} colors={colors} />}
                     {activeTab === 'medical'   && <MedicalTab student={student} colors={colors} />}
                     {activeTab === 'timetable' && <TimetableTab studentId={id} />}
                 </View>
@@ -172,6 +176,11 @@ function calcAge(dob) {
 function InfoTab({ student, colors }) {
     if (!student) return null;
 
+    const fullName =
+        student.full_name ||
+        `${student.fname || ''} ${student.sname || ''}`.trim() ||
+        'Student';
+
     const address = [
         student.address_1,
         student.address_2,
@@ -189,10 +198,23 @@ function InfoTab({ student, colors }) {
 
     return (
         <ScrollView contentContainerStyle={styles.tabBody}>
+            {/* Large avatar hero */}
+            <View style={styles.avatarHero}>
+                <Avatar uri={student.photo || student.list_photo} name={fullName} size={96} />
+                <Text style={[styles.heroName, { color: colors.textPrimary }]} numberOfLines={2}>
+                    {fullName}
+                </Text>
+                {student.clientref ? (
+                    <Text style={[styles.heroSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {student.clientref}
+                    </Text>
+                ) : null}
+            </View>
+
             <Section title="Personal" colors={colors}>
-                <Field label="Full name" value={student.full_name || `${student.fname || ''} ${student.sname || ''}`.trim()} colors={colors} />
+                <Field label="Full name" value={fullName} colors={colors} />
                 <Field label="Date of birth" value={dobDisplay} colors={colors} />
-                <Field label="Gender" value={student.gender} colors={colors} />
+                <Field label="Gender" value={formatGender(student.gender)} colors={colors} />
                 <Field label="Reference" value={student.clientref} colors={colors} />
             </Section>
 
@@ -355,48 +377,109 @@ function ClassesTab({ studentId, colors }) {
     );
 }
 
-// ---- Guardians ------------------------------------------------------------
+// ---- Family (guardians + siblings) ----------------------------------------
 
-function GuardiansTab({ student, colors }) {
+function FamilyPersonRow({ name, sub, icon, colors }) {
+    return (
+        <View style={[styles.familyRow, { borderTopColor: colors.border }]}>
+            <View style={[styles.familyAvatar, { backgroundColor: colors.primary + '22' }]}>
+                <FontAwesome name={icon} size={16} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {name}
+                </Text>
+                {sub ? (
+                    <Text style={[styles.cardSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {sub}
+                    </Text>
+                ) : null}
+            </View>
+        </View>
+    );
+}
+
+function FamilyTab({ student, studentId, colors }) {
     const guardians = Array.isArray(student?.guardians) ? student.guardians : [];
+    const [siblings, setSiblings] = useState([]);
+    const [sibLoading, setSibLoading] = useState(true);
+
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                setSibLoading(true);
+                const res = await api.getStudentGuardians(studentId);
+                const list = res?.guardians || res?.data || [];
+                // Each guardian carries its own `siblings` array; dedupe across
+                // guardians since shared siblings appear under multiple parents.
+                const seen = new Map();
+                (Array.isArray(list) ? list : []).forEach((g) => {
+                    (Array.isArray(g.siblings) ? g.siblings : []).forEach((s) => {
+                        if (s && s.id != null && !seen.has(s.id)) seen.set(s.id, s);
+                    });
+                });
+                if (mounted) setSiblings(Array.from(seen.values()));
+            } catch (err) {
+                console.error('Siblings load error', err);
+            } finally {
+                if (mounted) setSibLoading(false);
+            }
+        })();
+        return () => { mounted = false; };
+    }, [studentId]);
+
+    const siblingName = (s) => `${s.fname || ''} ${s.sname || ''}`.trim() || 'Unnamed';
+    const siblingSub = (s) => {
+        const age = s.age ?? (s.dob ? calcAge(s.dob) : null);
+        return age != null ? `${age} y/o` : (s.dob_formatted || '');
+    };
 
     return (
         <ScrollView contentContainerStyle={styles.tabBody}>
-            {guardians.length === 0 ? (
-                <View style={styles.emptyBlock}>
-                    <Ionicons name="people-outline" size={28} color={colors.textSecondary} />
-                    <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                        No guardians on record.
-                    </Text>
+            {/* Guardians card */}
+            <View style={[styles.familyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                <View style={styles.familyHeader}>
+                    <FontAwesome name="users" size={14} color={colors.textSecondary} />
+                    <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Guardians</Text>
                 </View>
-            ) : (
-                guardians.map((g, idx) => (
-                    <View
-                        key={g.id ?? `${g.name}-${idx}`}
-                        style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                    >
-                        <View style={styles.cardRow}>
-                            <View style={{
-                                width: 36, height: 36, borderRadius: 18,
-                                backgroundColor: colors.primary + '22',
-                                alignItems: 'center', justifyContent: 'center',
-                            }}>
-                                <FontAwesome name="user" size={16} color={colors.primary} />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                                    {g.name || 'Unnamed'}
-                                </Text>
-                                {g.type ? (
-                                    <Text style={[styles.cardSub, { color: colors.textSecondary }]} numberOfLines={1}>
-                                        {g.type}
-                                    </Text>
-                                ) : null}
-                            </View>
-                        </View>
-                    </View>
-                ))
-            )}
+                {guardians.length === 0 ? (
+                    <Text style={[styles.familyEmpty, { color: colors.textSecondary }]}>No guardians on record.</Text>
+                ) : (
+                    guardians.map((g, idx) => (
+                        <FamilyPersonRow
+                            key={g.id ?? `${g.name}-${idx}`}
+                            name={g.name || 'Unnamed'}
+                            sub={g.type}
+                            icon="user"
+                            colors={colors}
+                        />
+                    ))
+                )}
+            </View>
+
+            {/* Siblings card */}
+            <View style={[styles.familyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                <View style={styles.familyHeader}>
+                    <FontAwesome name="child" size={14} color={colors.textSecondary} />
+                    <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Siblings</Text>
+                </View>
+                {sibLoading ? (
+                    <ActivityIndicator color={colors.primary} style={{ paddingVertical: 16 }} />
+                ) : siblings.length === 0 ? (
+                    <Text style={[styles.familyEmpty, { color: colors.textSecondary }]}>No siblings on record.</Text>
+                ) : (
+                    siblings.map((s, idx) => (
+                        <FamilyPersonRow
+                            key={s.id ?? idx}
+                            name={siblingName(s)}
+                            sub={siblingSub(s)}
+                            icon="child"
+                            colors={colors}
+                        />
+                    ))
+                )}
+            </View>
         </ScrollView>
     );
 }
@@ -508,13 +591,36 @@ const styles = StyleSheet.create({
     },
     tabBarWrap: { borderBottomWidth: 1 },
     tabBar: { paddingHorizontal: 8 },
-    tabBtn: { paddingVertical: 10, paddingHorizontal: 12 },
-    tabContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+    tabBtn: {
+        paddingHorizontal: 12,
+        height: 56,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderBottomWidth: 2,
+    },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     emptyBlock: { alignItems: 'center', paddingVertical: 40, gap: 8 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
     tabBody: { padding: 16, paddingBottom: 32 },
+    avatarHero: { alignItems: 'center', paddingTop: 8, paddingBottom: 20, gap: 10 },
+    heroName: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
+    heroSub: { fontSize: 13 },
+    familyCard: { borderWidth: 1, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
+    familyHeader: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingHorizontal: 12, paddingVertical: 12,
+    },
+    familyTitle: { fontSize: 13, fontWeight: '700' },
+    familyRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1,
+    },
+    familyAvatar: {
+        width: 36, height: 36, borderRadius: 18,
+        alignItems: 'center', justifyContent: 'center',
+    },
+    familyEmpty: { fontSize: 13, paddingHorizontal: 12, paddingBottom: 14 },
     sectionTitle: {
         fontSize: 11, fontWeight: '700',
         textTransform: 'uppercase', letterSpacing: 0.6,

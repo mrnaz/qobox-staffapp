@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -187,6 +187,52 @@ export default function RosterScreen() {
         fetchPage({ targetPage: page + 1, mode: 'more' });
     };
 
+    // Order the loaded shifts around the "anchor": the most recent shift that
+    // has started (start datetime <= now) but is not yet checked in — i.e. the
+    // one carrying the "Check In Now" action.
+    //   • showPast = false → anchor first, then upcoming shifts (ascending).
+    //   • showPast = true  → anchor first, then past shifts (descending).
+    // If there's no eligible anchor (e.g. everything is in the future), we fall
+    // back to a plain date sort: ascending when !showPast, descending when showPast.
+    const startTimeOf = (item) => {
+        const ref = item.rostered_start || item.claimed_start;
+        const t = ref ? new Date(ref).getTime() : NaN;
+        return Number.isNaN(t) ? 0 : t;
+    };
+
+    const orderedShifts = useMemo(() => {
+        const now = Date.now();
+        let anchorTime = null;
+        for (const item of shifts) {
+            if (item.actual_start) continue; // already checked in — not the anchor
+            const t = startTimeOf(item);
+            if (t <= now && (anchorTime === null || t > anchorTime)) {
+                anchorTime = t;
+            }
+        }
+
+        if (anchorTime === null) {
+            // No anchor: default chronological order.
+            return shifts
+                .slice()
+                .sort((a, b) =>
+                    showPast
+                        ? startTimeOf(b) - startTimeOf(a)
+                        : startTimeOf(a) - startTimeOf(b)
+                );
+        }
+
+        if (!showPast) {
+            // Anchor + upcoming, ascending (anchor included).
+            return shifts
+                .filter((item) => startTimeOf(item) >= anchorTime)
+                .sort((a, b) => startTimeOf(a) - startTimeOf(b));
+        }
+        // Anchor + past, descending (anchor included).
+        return shifts
+            .filter((item) => startTimeOf(item) <= anchorTime)
+            .sort((a, b) => startTimeOf(b) - startTimeOf(a));
+    }, [shifts, showPast]);
 
     // Backend response shapes vary:
     //   POST /staff-roster-log         → { data: {...} }
@@ -547,7 +593,7 @@ export default function RosterScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={shifts}
+                    data={orderedShifts}
                     keyExtractor={(item, i) => String(item.id || `r${item.staff_roster_id}-${i}`)}
                     renderItem={renderItem}
                     contentContainerStyle={styles.list}

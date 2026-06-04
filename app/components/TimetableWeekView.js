@@ -93,6 +93,9 @@ export default function TimetableWeekView({ loader, enabled = true }) {
             PanResponder.create({
                 onMoveShouldSetPanResponder: (_, g) =>
                     Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy),
+                onPanResponderGrant: () => {
+                    slideX.setValue(0);
+                },
                 onPanResponderMove: (_, g) => {
                     slideX.setValue(g.dx);
                 },
@@ -115,6 +118,9 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                     } else {
                         Animated.spring(slideX, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
                     }
+                },
+                onPanResponderTerminate: () => {
+                    Animated.spring(slideX, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
                 },
             }),
         [selectedDay, goToDay, slideX]

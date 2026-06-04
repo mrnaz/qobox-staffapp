@@ -14,6 +14,7 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
 import DailyAttendanceModal from '../components/DailyAttendanceModal';
+import Toast from '../components/Toast';
 
 const fmtDate = (s) => {
     if (!s) return '—';
@@ -43,6 +44,7 @@ export default function AttendanceScreen() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
     const [openDay, setOpenDay] = useState(null); // { date, attendanceId, status }
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         (async () => {
@@ -111,11 +113,19 @@ export default function AttendanceScreen() {
         return (
             <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => setOpenDay({
-                    date: item.academic_date || item.date,
-                    attendanceId: item.id || item.attendance_id || null,
-                    status: item.status,
-                })}
+                onPress={() => {
+                    // Submitted/completed attendance is read-only on the backend
+                    // (gated by completed_at). Don't open it — just tell the user.
+                    if (isCompleted) {
+                        setToast({ message: 'You already completed this attendance.', variant: 'info' });
+                        return;
+                    }
+                    setOpenDay({
+                        date: item.academic_date || item.date,
+                        attendanceId: item.id || item.attendance_id || null,
+                        status: item.status,
+                    });
+                }}
                 style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
             >
                 <View style={styles.cardHeader}>
@@ -192,6 +202,8 @@ export default function AttendanceScreen() {
                     load({ refresh: true });
                 }}
             />
+
+            <Toast toast={toast} onHide={() => setToast(null)} />
         </View>
     );
 }

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
@@ -138,7 +138,6 @@ export default function MyStudentsScreen() {
                     {item.name}
                 </Text>
                 <View style={styles.metaRow}>
-                    <FontAwesome name="graduation-cap" size={11} color={colors.textSecondary} />
                     <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
                         {item.classes.join(', ')}
                     </Text>

@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import Avatar from './Avatar';
 
 // Daily attendance marking modal — mobile counterpart of the staff web
 // DailyAttendanceMarkingDialog.vue. The scope/course filter and per-student
@@ -244,6 +245,11 @@ export default function DailyAttendanceModal({
         const meta = STATUS_META[status];
         return (
             <View style={[styles.row, { borderBottomColor: colors.border }]}>
+                <Avatar
+                    uri={item.list_photo || item.photo || null}
+                    name={`${item.fname || ''} ${item.sname || ''}`}
+                    size={40}
+                />
                 <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
                         {item.fname} {item.sname}

@@ -4,7 +4,7 @@ export const lightColors = {
     primaryLight: '#4a7a5a',
     primaryDark: '#1e4030',
 
-    background: '#EEEEF6',
+    background: '#E9E9EC',
     backgroundLight: '#f5f0eb',
     backgroundDark: '#e0d8ce',
 
@@ -19,7 +19,7 @@ export const lightColors = {
     error: '#b02820',
     info: '#1e5e96',
 
-    border: '#E0E0E9',
+    border: '#DDDDE3',
 
     cardBackground: '#ffffff',
     cardShadow: '#000',

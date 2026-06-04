@@ -92,20 +92,23 @@ export default function ClassesScreen() {
         //   students: [], scheduled_lessons, scheduled_lessons_passed,
         //   completed_lessons, planned_lessons, course_id, ... }
         const id = item.id ?? item.class_id;
+        const isClass = id != null;
+        const displayTitle = item.title || item.class_title || item.course_title || 'Untitled';
         const studentCount = Array.isArray(item.students)
             ? item.students.length
             : (item.student_count ?? item.students_count ?? null);
         return (
             <TouchableOpacity
-                onPress={() => router.push(`/class/${id}`)}
+                onPress={() => { if (isClass) router.push(`/class/${id}`); }}
+                disabled={!isClass}
                 activeOpacity={0.8}
                 style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
             >
                 <View style={{ flex: 1, gap: 4 }}>
                     <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
-                        {item.title || item.class_title || 'Class'}
+                        {displayTitle}
                     </Text>
-                    {item.course_title ? (
+                    {isClass && item.course_title && item.course_title !== displayTitle ? (
                         <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
                             {Array.isArray(item.course_title) ? item.course_title.join(', ') : item.course_title}
                         </Text>
@@ -129,7 +132,9 @@ export default function ClassesScreen() {
                         ) : null}
                     </View>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                {isClass ? (
+                    <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                ) : null}
             </TouchableOpacity>
         );
     };

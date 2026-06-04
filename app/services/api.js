@@ -239,6 +239,10 @@ class ApiService {
         return this.get(endpoints.GET_STUDENT_CLASSES.replace('{client_id}', clientId), params);
     }
 
+    async getStudentGuardians(clientId, params = {}) {
+        return this.get(endpoints.GET_STUDENT_GUARDIANS.replace('{client_id}', clientId), params);
+    }
+
     // Classes (staff)
     async getStaffClasses(staffId, params = {}) {
         return this.get(endpoints.GET_STAFF_CLASSES.replace('{staff_id}', staffId), params);
@@ -267,6 +271,18 @@ class ApiService {
 
     async getClassStudents(classId, params = {}) {
         return this.get(endpoints.GET_CLASS_STUDENTS.replace('{class_id}', classId), params);
+    }
+
+    async getClassResources(classId, params = {}) {
+        return this.get(endpoints.GET_CLASS_RESOURCES.replace('{class_id}', classId), params);
+    }
+
+    async getClassNoticeboard(classId, params = {}) {
+        return this.get(endpoints.GET_CLASS_NOTICEBOARD.replace('{class_id}', classId), params);
+    }
+
+    async getClassCalendar(classId, params = {}) {
+        return this.get(endpoints.GET_CLASS_CALENDAR.replace('{class_id}', classId), params);
     }
 
     // Progress Reports

@@ -429,16 +429,6 @@ export default function DashboardScreen() {
                     })
                 )}
             </Section>
-
-            {/* Quick links */}
-            <Section title="Jump to" colors={colors}>
-                <View style={styles.quickGrid}>
-                    <QuickLink label="Roster"   icon="briefcase-outline" colors={colors} onPress={() => router.push('/(main)/roster')} />
-                    <QuickLink label="Timetable" icon="grid-outline"      colors={colors} onPress={() => router.push('/(main)/timetable')} />
-                    <QuickLink label="Calendar" icon="calendar-outline"  colors={colors} onPress={() => router.push('/(main)/calendar')} />
-                    <QuickLink label="Classes"  icon="school-outline"     colors={colors} onPress={() => router.push('/(main)/classes')} />
-                </View>
-            </Section>
         </ScrollView>
         </>
     );
@@ -450,21 +440,6 @@ function Section({ title, children, colors }) {
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
             <View style={{ gap: 8 }}>{children}</View>
         </View>
-    );
-}
-
-function QuickLink({ label, icon, onPress, colors }) {
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            activeOpacity={0.7}
-            style={[styles.quickItem, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-        >
-            <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-                <Ionicons name={icon} size={20} color={colors.primary} />
-            </View>
-            <Text style={[styles.quickLabel, { color: colors.textPrimary }]}>{label}</Text>
-        </TouchableOpacity>
     );
 }
 
@@ -490,22 +465,6 @@ const styles = StyleSheet.create({
     },
     rowTitle: { fontSize: 14, fontWeight: '600' },
     rowSub: { fontSize: 12, marginTop: 2 },
-    quickGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    quickItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        flexBasis: '48%',
-        flexGrow: 1,
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
-    },
-    quickLabel: { fontSize: 14, fontWeight: '600' },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
 

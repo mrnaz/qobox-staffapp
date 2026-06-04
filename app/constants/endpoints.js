@@ -51,6 +51,8 @@ export const endpoints = {
     GET_STUDENT: 'clients/{client_id}',
     GET_STUDENT_TIMETABLE: 'clients/{client_id}/timetable',
     GET_STUDENT_CLASSES: 'clients/{client_id}/classes',
+    // Guardians for a student, each with a computed `siblings` array.
+    GET_STUDENT_GUARDIANS: 'guardians/student/{client_id}',
 
     // Classes (staff)
     GET_STAFF_CLASSES: 'staff/classes/{staff_id}',
@@ -59,6 +61,11 @@ export const endpoints = {
     GET_LESSON: 'education/lessons/lesson/{lesson_id}',
     GET_CLASS_ASSIGNMENTS: 'education/classes/{class_id}/assignments',
     GET_CLASS_ASSIGNMENT: 'education/classes/{class_id}/assignments/{assignment_id}',
+    // Class profile sub-pages (mirror the client app's class-profile tabs).
+    // Backend routes live in routes/staff/api.php under the education/classes group.
+    GET_CLASS_RESOURCES: 'education/classes/{class_id}/resources',
+    GET_CLASS_NOTICEBOARD: 'education/classes/{class_id}/noticeboards',
+    GET_CLASS_CALENDAR: 'education/classes/{class_id}/calendar',
 
     // Progress Reports (mirrors qobox web staff endpoints)
     //  - templates linked to a class:      education/classes/{class_id}/progress-reports
