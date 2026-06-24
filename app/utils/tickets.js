@@ -24,14 +24,15 @@ export const deriveStatus = (report) => {
 };
 
 // Priority icon + color — mirrors the web staff portal
-// (MaintenanceReporting.vue priorityIcon / priorityColor) so the visual
-// language matches across mobile and web. Colors are hex constants from the
-// web app, not theme tokens, so they stay consistent in both light/dark.
+// (MaintenanceReporting.vue priorityIcon / priorityColor). Colours resolve from
+// the app's standard theme tokens (info/success/warning/error) so they match the
+// rest of the UI and adapt to light/dark mode. `color(colors)` is called with the
+// active theme palette at render time.
 export const PRIORITY_META = {
-    L: { label: 'Low',      icon: 'arrow-down-circle', color: () => '#008ae6' },
-    N: { label: 'Normal',   icon: 'remove-circle',     color: () => '#00cc66' },
-    H: { label: 'High',     icon: 'arrow-up-circle',   color: () => '#ffcc00' },
-    C: { label: 'Critical', icon: 'arrow-up-circle',   color: () => '#ff3300' },
+    L: { label: 'Low',      icon: 'arrow-down-circle', color: (c) => c.info },
+    N: { label: 'Normal',   icon: 'remove-circle',     color: (c) => c.success },
+    H: { label: 'High',     icon: 'arrow-up-circle',   color: (c) => c.warning },
+    C: { label: 'Critical', icon: 'arrow-up-circle',   color: (c) => c.error },
 };
 
 // Map derived status (see `deriveStatus`) → display label + bg/fg resolvers.

@@ -24,12 +24,22 @@ import Avatar from './Avatar';
 // users can mark statuses, search, see counts, and submit.
 
 const STATUS_META = {
-    present: { label: 'Present',  menuLabel: 'Present',      color: '#11AA22', icon: 'checkbox' },
-    absent:  { label: 'Absent',   menuLabel: 'Absent',       color: '#BB2222', icon: 'close-circle' },
-    late:    { label: 'Late',     menuLabel: 'Arrived Late', color: '#EE9911', icon: 'time' },
-    left:    { label: 'Left',     menuLabel: 'Left Early',   color: '#2196F3', icon: 'exit' },
-    notset:  { label: 'Unmarked', menuLabel: 'Unmarked',     color: '#8899CC', icon: 'square-outline' },
+    present: { label: 'Present',  menuLabel: 'Present',      icon: 'checkbox' },
+    absent:  { label: 'Absent',   menuLabel: 'Absent',       icon: 'close-circle' },
+    late:    { label: 'Late',     menuLabel: 'Arrived Late', icon: 'time' },
+    left:    { label: 'Left',     menuLabel: 'Left Early',   icon: 'exit' },
+    notset:  { label: 'Unmarked', menuLabel: 'Unmarked',     icon: 'square-outline' },
 };
+
+// Resolve each status to one of the app's standard theme tokens (instead of the
+// old hardcoded hex) so the chips/icons match the rest of the UI and light/dark.
+const statusColor = (colors, status) => ({
+    present: colors.success,
+    absent:  colors.error,
+    late:    colors.warning,
+    left:    colors.info,
+    notset:  colors.textDisabled,
+}[status] || colors.textSecondary);
 
 // Order shown in the picker — matches the web AttendanceStatusSelector.
 const SELECTOR_ORDER = ['present', 'absent', 'late', 'left', 'notset'];
@@ -243,6 +253,7 @@ export default function DailyAttendanceModal({
         const clientId = item.id || item.client_id;
         const status = statusMap[String(clientId)] || 'notset';
         const meta = STATUS_META[status];
+        const sColor = statusColor(colors, status);
         return (
             <View style={[styles.row, { borderBottomColor: colors.border }]}>
                 <Avatar
@@ -262,11 +273,11 @@ export default function DailyAttendanceModal({
                 </View>
                 <TouchableOpacity
                     onPress={(e) => openSelector(item, e)}
-                    style={[styles.statusPill, { borderColor: meta.color, backgroundColor: meta.color + '22' }]}
+                    style={[styles.statusPill, { borderColor: sColor, backgroundColor: sColor + '22' }]}
                 >
-                    <Ionicons name={meta.icon} size={16} color={meta.color} />
-                    <Text style={[styles.statusLabel, { color: meta.color }]}>{meta.label}</Text>
-                    <Ionicons name="chevron-down" size={12} color={meta.color} />
+                    <Ionicons name={meta.icon} size={16} color={sColor} />
+                    <Text style={[styles.statusLabel, { color: sColor }]}>{meta.label}</Text>
+                    <Ionicons name="chevron-down" size={12} color={sColor} />
                 </TouchableOpacity>
             </View>
         );
@@ -292,14 +303,15 @@ export default function DailyAttendanceModal({
                     <View style={[styles.summaryBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
                         {['present', 'absent', 'late', 'left', 'notset'].map((key) => {
                             const meta = STATUS_META[key];
+                            const sColor = statusColor(colors, key);
                             const active = filterStatus === key;
                             return (
                                 <TouchableOpacity
                                     key={key}
                                     onPress={() => setFilterStatus(active ? null : key)}
-                                    style={[styles.summaryItem, active && { backgroundColor: meta.color + '14' }]}
+                                    style={[styles.summaryItem, active && { backgroundColor: sColor + '14' }]}
                                 >
-                                    <Ionicons name={meta.icon} size={14} color={meta.color} />
+                                    <Ionicons name={meta.icon} size={14} color={sColor} />
                                     <Text style={[styles.summaryCount, { color: colors.textPrimary }]}>
                                         {counts[key]}
                                     </Text>
@@ -416,6 +428,7 @@ export default function DailyAttendanceModal({
                             >
                                 {SELECTOR_ORDER.map((key) => {
                                     const m = STATUS_META[key];
+                                    const sColor = statusColor(colors, key);
                                     const cur = selectorStudent
                                         ? statusMap[String(selectorStudent.id || selectorStudent.client_id)] || 'notset'
                                         : 'notset';
@@ -424,14 +437,14 @@ export default function DailyAttendanceModal({
                                         <TouchableOpacity
                                             key={key}
                                             onPress={() => handleSelectStatus(key)}
-                                            style={[styles.popupItem, isSel && { backgroundColor: m.color + '1A' }]}
+                                            style={[styles.popupItem, isSel && { backgroundColor: sColor + '1A' }]}
                                         >
-                                            <Ionicons name={m.icon} size={20} color={m.color} />
+                                            <Ionicons name={m.icon} size={20} color={sColor} />
                                             <Text style={[styles.popupLabel, { color: colors.textPrimary, fontWeight: isSel ? '700' : '500' }]}>
                                                 {m.menuLabel}
                                             </Text>
                                             <View style={{ flex: 1 }} />
-                                            {isSel ? <Ionicons name="checkmark" size={18} color={m.color} /> : null}
+                                            {isSel ? <Ionicons name="checkmark" size={18} color={sColor} /> : null}
                                         </TouchableOpacity>
                                     );
                                 })}

@@ -21,7 +21,6 @@ import { ensureAcademicPeriod } from '../utils/academicPeriod';
 const TABS = [
     { id: 'info',      label: 'Info',      icon: 'user' },
     { id: 'classes',   label: 'Classes',   icon: 'graduation-cap' },
-    { id: 'guardians', label: 'Family',    icon: 'users' },
     { id: 'medical',   label: 'Medical',   icon: 'heartbeat' },
     { id: 'timetable', label: 'Timetable', icon: 'clock-o' },
 ];
@@ -149,9 +148,8 @@ export default function StudentDetailScreen() {
                 </View>
             ) : (
                 <View style={{ flex: 1 }}>
-                    {activeTab === 'info'      && <InfoTab student={student} colors={colors} />}
+                    {activeTab === 'info'      && <InfoTab student={student} studentId={id} colors={colors} />}
                     {activeTab === 'classes'   && <ClassesTab studentId={id} colors={colors} />}
-                    {activeTab === 'guardians' && <FamilyTab student={student} studentId={id} colors={colors} />}
                     {activeTab === 'medical'   && <MedicalTab student={student} colors={colors} />}
                     {activeTab === 'timetable' && <TimetableTab studentId={id} />}
                 </View>
@@ -173,7 +171,7 @@ function calcAge(dob) {
     return age;
 }
 
-function InfoTab({ student, colors }) {
+function InfoTab({ student, studentId, colors }) {
     if (!student) return null;
 
     const fullName =
@@ -248,6 +246,10 @@ function InfoTab({ student, colors }) {
                     ) : null}
                 </Section>
             ) : null}
+
+            {/* Family — guardians + siblings (formerly a separate tab) */}
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Family</Text>
+            <FamilyBoxes student={student} studentId={studentId} colors={colors} />
         </ScrollView>
     );
 }
@@ -399,7 +401,9 @@ function FamilyPersonRow({ name, sub, icon, colors }) {
     );
 }
 
-function FamilyTab({ student, studentId, colors }) {
+// Guardians + Siblings boxes, embedded in the Info tab. (Previously the standalone
+// "Family" tab; the tab was removed and these boxes moved onto Info.)
+function FamilyBoxes({ student, studentId, colors }) {
     const guardians = Array.isArray(student?.guardians) ? student.guardians : [];
     const [siblings, setSiblings] = useState([]);
     const [sibLoading, setSibLoading] = useState(true);
@@ -436,7 +440,7 @@ function FamilyTab({ student, studentId, colors }) {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.tabBody}>
+        <>
             {/* Guardians card */}
             <View style={[styles.familyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
                 <View style={styles.familyHeader}>
@@ -480,7 +484,7 @@ function FamilyTab({ student, studentId, colors }) {
                     ))
                 )}
             </View>
-        </ScrollView>
+        </>
     );
 }
 

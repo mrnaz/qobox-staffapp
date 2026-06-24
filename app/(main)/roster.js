@@ -21,6 +21,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { capturePhotoCompressed, appendPhotoToForm } from '../utils/photo';
+import QRCode from '../components/QRCode';
 
 // Match the Vue staff portal's check-in time format: 'YYYY-MM-DD HH:mm' in the
 // SITE's local timezone. The Vue web works because users browse from the same
@@ -72,6 +73,23 @@ const shiftStatus = (item) => {
     return 'upcoming';
 };
 
+// True when the shift is rostered for today (device-local day, consistent with
+// `canShowAction`'s window math). Used to limit the "Check In" button to today's
+// shifts — in "show past shifts" mode the 8-day window would otherwise surface it
+// on earlier days too.
+const isShiftToday = (item) => {
+    const ref = item.rostered_start || item.claimed_start;
+    if (!ref) return false;
+    const d = new Date(ref);
+    if (Number.isNaN(d.getTime())) return false;
+    const now = new Date();
+    return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+    );
+};
+
 export default function RosterScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -101,6 +119,7 @@ export default function RosterScreen() {
     const [checkInPhoto, setCheckInPhoto] = useState(null);
     const [showCheckInTimePicker, setShowCheckInTimePicker] = useState(false);
     const [checkInSubmitting, setCheckInSubmitting] = useState(false);
+    const [showCheckInQR, setShowCheckInQR] = useState(false);
 
     // Check-out modal state (mirrors check-in)
     const [checkOutTarget, setCheckOutTarget] = useState(null);
@@ -262,11 +281,13 @@ export default function RosterScreen() {
         setCheckInTime(new Date());
         setCheckInNote('');
         setCheckInPhoto(null);
+        setShowCheckInQR(false);
     };
 
     const closeCheckInModal = () => {
         setCheckInTarget(null);
         setShowCheckInTimePicker(false);
+        setShowCheckInQR(false);
         setCheckInNote('');
         setCheckInPhoto(null);
         setCheckInTime(new Date());
@@ -452,6 +473,10 @@ export default function RosterScreen() {
             || (item.claimed_start ? new Date(item.claimed_start).toDateString() : '—');
         const showAction = canShowAction(item);
         const isBusy = actingOnId === (item.id || item.staff_roster_id);
+        // Check In is limited to today's shift; Check Out stays available for any
+        // open (started but not ended) shift regardless of day.
+        const canCheckIn = showAction && !item.absent && !item.actual_start && isShiftToday(item);
+        const canCheckOut = showAction && !item.absent && item.actual_start && !item.actual_end;
 
         return (
             <TouchableOpacity
@@ -510,9 +535,9 @@ export default function RosterScreen() {
                 ) : null}
 
                 {/* Actions */}
-                {showAction && !item.absent ? (
+                {canCheckIn || canCheckOut ? (
                     <View style={styles.actions}>
-                        {!item.actual_start ? (
+                        {canCheckIn ? (
                             <TouchableOpacity
                                 onPress={() => openCheckInModal(item)}
                                 disabled={isBusy}
@@ -527,7 +552,7 @@ export default function RosterScreen() {
                                     </>
                                 )}
                             </TouchableOpacity>
-                        ) : !item.actual_end ? (
+                        ) : canCheckOut ? (
                             <TouchableOpacity
                                 onPress={() => openCheckOutModal(item)}
                                 disabled={isBusy}
@@ -806,7 +831,7 @@ export default function RosterScreen() {
                                     <TextInput
                                         value={checkInNote}
                                         onChangeText={setCheckInNote}
-                                        placeholder="Anything to flag for your manager?"
+                                        placeholder=""
                                         placeholderTextColor={colors.textSecondary}
                                         multiline
                                         numberOfLines={3}
@@ -819,8 +844,25 @@ export default function RosterScreen() {
                                     />
                                 </View>
 
-                                <View style={{ gap: 6 }}>
-                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Photo (optional)</Text>
+                                <View style={{ gap: 8 }}>
+                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        <TouchableOpacity
+                                            onPress={handleAttachCheckInPhoto}
+                                            style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+                                        >
+                                            <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
+                                            <Text style={{ color: colors.textPrimary }} numberOfLines={1}>
+                                                {checkInPhoto ? 'Retake' : 'Take a photo'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => setShowCheckInQR(true)}
+                                            style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+                                        >
+                                            <Ionicons name="qr-code-outline" size={18} color={colors.textPrimary} />
+                                            <Text style={{ color: colors.textPrimary }} numberOfLines={1}>Check In QR</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                     {checkInPhoto ? (
                                         <View style={{ gap: 8 }}>
                                             <Image
@@ -838,15 +880,7 @@ export default function RosterScreen() {
                                                 </Text>
                                             </TouchableOpacity>
                                         </View>
-                                    ) : (
-                                        <TouchableOpacity
-                                            onPress={handleAttachCheckInPhoto}
-                                            style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.background }]}
-                                        >
-                                            <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
-                                            <Text style={{ color: colors.textPrimary, flex: 1 }}>Take a photo</Text>
-                                        </TouchableOpacity>
-                                    )}
+                                    ) : null}
                                 </View>
 
                                 <TouchableOpacity
@@ -864,6 +898,43 @@ export default function RosterScreen() {
                                     )}
                                 </TouchableOpacity>
                             </ScrollView>
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Check-in QR — staff shows this at the kiosk to check in */}
+            <Modal
+                visible={showCheckInQR}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowCheckInQR(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowCheckInQR(false)}
+                >
+                    <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 360 }}>
+                        <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                            <View style={styles.modalHeader}>
+                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Check in QR</Text>
+                                <TouchableOpacity onPress={() => setShowCheckInQR(false)} style={styles.iconButton}>
+                                    <Ionicons name="close" size={22} color={colors.textPrimary} />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={[styles.qrHint, { color: colors.textSecondary }]}>
+                                Scan this at the kiosk to check in.
+                            </Text>
+                            {staff?.id != null ? (
+                                <View style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
+                                    <QRCode value={String(staff.id)} size={220} />
+                                </View>
+                            ) : (
+                                <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                                    No staff profile loaded.
+                                </Text>
+                            )}
                         </View>
                     </TouchableOpacity>
                 </TouchableOpacity>
@@ -1124,6 +1195,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 10,
     },
+    halfButton: { flex: 1, justifyContent: 'center' },
+    qrBox: {
+        alignItems: 'center',
+        borderRadius: 12,
+        padding: 16,
+    },
+    qrHint: { fontSize: 13, textAlign: 'center', marginBottom: 4 },
     photoPreview: {
         width: '100%',
         height: 180,

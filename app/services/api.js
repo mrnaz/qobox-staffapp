@@ -193,8 +193,8 @@ class ApiService {
         return this.get(endpoints.GET_CALENDAR_EVENTS_QUERY, params);
     }
 
-    async getCalendarEventTypes() {
-        return this.get(endpoints.GET_CALENDAR_EVENT_TYPES);
+    async getCalendarEventTypes(params = {}) {
+        return this.get(endpoints.GET_CALENDAR_EVENT_TYPES, params);
     }
 
     // Attendance

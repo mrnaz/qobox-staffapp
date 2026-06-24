@@ -252,8 +252,8 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
             ) : null}
 
-            {/* Today */}
-            <Section title="Today" colors={colors}>
+            {/* Today's Classes */}
+            <Section title="Today's Classes" colors={colors}>
                 {isLoading && sessions.length === 0 && events.length === 0 ? (
                     <ActivityIndicator color={colors.primary} style={{ paddingVertical: 24 }} />
                 ) : (
@@ -273,14 +273,13 @@ export default function DashboardScreen() {
                                 {sessions.map((it, i) => {
                                     const classTitle = it.class?.title || it.class_title || it.title || 'Class';
                                     const roomName = it.room?.name || it.room_name;
+                                    const classAvatar = it.class?.photo || it.class?.avatar || it.class_avatar;
                                     return (
                                         <View
                                             key={`s-${it.id ?? i}`}
                                             style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
                                         >
-                                            <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-                                                <Ionicons name="school-outline" size={18} color={colors.primary} />
-                                            </View>
+                                            <Avatar uri={classAvatar} name={classTitle} size={40} />
                                             <View style={{ flex: 1 }}>
                                                 <Text style={[styles.rowTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                                                     {classTitle}

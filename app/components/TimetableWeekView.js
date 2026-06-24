@@ -134,7 +134,14 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
                 const startDate = fmtApi(weekStart);
-                const endDate = fmtApi(addDays(weekStart, 6));
+                // The backend filters `whereBetween('session_start', [start, end])`
+                // treating each bare date as midnight in the site timezone, so the
+                // upper bound `end` excludes that whole day's sessions. Request the
+                // day *after* the visible week (Mon of next week) so all 7 days —
+                // including Sunday — fall inside the range. `todaysItems` re-filters
+                // to the selected day, so over-fetching one boundary day is harmless.
+                // (Mirrors the dashboard's documented +1-day workaround.)
+                const endDate = fmtApi(addDays(weekStart, 7));
                 const data = await loader({ startDate, endDate });
                 setItems(Array.isArray(data) ? data : []);
             } catch (err) {
@@ -323,8 +330,8 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                                 {/* Blocks layer */}
                                 <View style={styles.blocksLayer}>
                                     {nowVisible ? (
-                                        <View style={[styles.nowLine, { top: nowTopOffset, borderTopColor: colors.error || '#dc2626' }]}>
-                                            <View style={[styles.nowDot, { backgroundColor: colors.error || '#dc2626' }]} />
+                                        <View style={[styles.nowLine, { top: nowTopOffset, borderTopColor: colors.error }]}>
+                                            <View style={[styles.nowDot, { backgroundColor: colors.error }]} />
                                         </View>
                                     ) : null}
 

@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     TouchableOpacity,
     RefreshControl,
+    Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +49,18 @@ const eventColor = (name, theme) => {
     return theme.primary;
 };
 
+// The four built-in ("special") calendar categories the backend emits, with their
+// default palette colour name. Mirrors the web app's specialCalendarEventTypes and
+// CalendarEventsRepository::getColorForEventType. `category` matches the backend
+// `event_category`; `key` is the toggle id used in the filter state.
+const SPECIAL_EVENT_TYPES = [
+    { key: 'classes',     category: 'class_sessions', label: 'Classes',     color: 'azure'  },
+    { key: 'assignments', category: 'assignments',    label: 'Assignments', color: 'purple' },
+    { key: 'tests',       category: 'tests',          label: 'Tests',       color: 'amber'  },
+    { key: 'events',      category: 'events',         label: 'Events',      color: 'lime'   },
+];
+const CATEGORY_TO_KEY = SPECIAL_EVENT_TYPES.reduce((m, t) => { m[t.category] = t.key; return m; }, {});
+
 export default function CalendarScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -61,6 +74,14 @@ export default function CalendarScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
+
+    // ── Event-type visibility filter (mirrors the main app's "Calendar Types") ──
+    const [specialSelected, setSpecialSelected] = useState(
+        () => SPECIAL_EVENT_TYPES.reduce((m, t) => { m[t.key] = true; return m; }, {})
+    );
+    const [customTypes, setCustomTypes] = useState([]); // [{ id, label, color, selected }]
+    const [showUncategorized, setShowUncategorized] = useState(true);
+    const [filterVisible, setFilterVisible] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -103,16 +124,66 @@ export default function CalendarScreen() {
 
     useEffect(() => { load(); }, [load]);
 
+    // Load the org's custom calendar event types once (for the filter's "Custom
+    // Calendars" section). Preserve selections across reloads. Non-fatal on error —
+    // the filter still works for the built-in categories.
+    useEffect(() => {
+        if (!staff?.id) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await api.getCalendarEventTypes({ organisation_id: organisationId });
+                const list = res?.data || res?.calendar_event_types || res || [];
+                if (cancelled) return;
+                setCustomTypes((prev) => {
+                    const prevSel = new Map(prev.map((t) => [String(t.id), t.selected]));
+                    return (Array.isArray(list) ? list : []).map((t) => ({
+                        id: t.id,
+                        label: t.label || t.name || 'Calendar',
+                        color: t.color || 'steel',
+                        selected: prevSel.has(String(t.id)) ? prevSel.get(String(t.id)) : true,
+                    }));
+                });
+            } catch (err) {
+                console.warn('Calendar event types load failed', err?.message || err);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [staff, organisationId]);
+
     const onRefresh = () => {
         setIsRefreshing(true);
         load({ refresh: true });
     };
 
+    // Visibility predicate driven by the filter state. Defaults to visible for
+    // unknown/missing categories so nothing silently disappears.
+    const isEventVisible = useCallback((ev) => {
+        const cat = ev.event_category;
+        // Custom calendar events (and anything uncategorised)
+        if (cat === 'calendar_event' || cat == null) {
+            if (ev.event_type != null && ev.event_type !== '') {
+                const t = customTypes.find((c) => String(c.id) === String(ev.event_type));
+                return t ? t.selected : true; // unknown / not-yet-loaded type → show
+            }
+            return showUncategorized;
+        }
+        // Built-in "special" categories (class_sessions / assignments / tests / events)
+        const key = CATEGORY_TO_KEY[cat];
+        if (!key) return true; // unknown category → show
+        return specialSelected[key] !== false;
+    }, [specialSelected, customTypes, showUncategorized]);
+
+    const filtersActive =
+        SPECIAL_EVENT_TYPES.some((t) => specialSelected[t.key] === false) ||
+        customTypes.some((t) => !t.selected) ||
+        !showUncategorized;
+
     // Group events by their start date — backend returns `start_at` field
     const grouped = useMemo(() => {
         const map = new Map();
         const startOf = (ev) => ev.start_at || ev.start_date || ev.start || ev.date;
-        const sorted = [...events].sort((a, b) => {
+        const sorted = [...events].filter(isEventVisible).sort((a, b) => {
             return (new Date(startOf(a)).getTime() || 0) - (new Date(startOf(b)).getTime() || 0);
         });
         sorted.forEach((ev) => {
@@ -124,7 +195,7 @@ export default function CalendarScreen() {
             map.get(key).items.push(ev);
         });
         return Array.from(map.values());
-    }, [events]);
+    }, [events, isEventVisible]);
 
     if (profileLoaded && !staff?.id) {
         return (
@@ -144,14 +215,27 @@ export default function CalendarScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={[styles.bar, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={styles.navBtn}>
-                    <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setMonth(startOfMonth(new Date()))}>
-                    <Text style={[styles.label, { color: colors.textPrimary }]}>{fmtMonth(month)}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={styles.navBtn}>
-                    <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+                <View style={styles.barNav}>
+                    <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={styles.navBtn}>
+                        <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setMonth(startOfMonth(new Date()))}>
+                        <Text style={[styles.label, { color: colors.textPrimary }]}>{fmtMonth(month)}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={styles.navBtn}>
+                        <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+                    </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                    onPress={() => setFilterVisible(true)}
+                    style={styles.navBtn}
+                    accessibilityLabel="Filter event types"
+                >
+                    <Ionicons
+                        name={filtersActive ? 'funnel' : 'funnel-outline'}
+                        size={20}
+                        color={filtersActive ? colors.primary : colors.textPrimary}
+                    />
                 </TouchableOpacity>
             </View>
 
@@ -230,7 +314,101 @@ export default function CalendarScreen() {
                     })}
                 </ScrollView>
             )}
+
+            {/* Event-type visibility filter */}
+            <Modal
+                visible={filterVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setFilterVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setFilterVisible(false)}
+                >
+                    <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
+                        <View style={[styles.filterCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                            <View style={styles.filterHeader}>
+                                <Text style={[styles.filterTitle, { color: colors.textPrimary }]}>Calendar Types</Text>
+                                <TouchableOpacity onPress={() => setFilterVisible(false)} style={{ padding: 4 }}>
+                                    <Ionicons name="close" size={20} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView style={{ maxHeight: 440 }} contentContainerStyle={{ paddingBottom: 8 }}>
+                                <Text style={[styles.filterSection, { color: colors.textSecondary }]}>Special Calendars</Text>
+                                {SPECIAL_EVENT_TYPES.map((t) => (
+                                    <FilterRow
+                                        key={t.key}
+                                        colors={colors}
+                                        label={t.label}
+                                        palette={colors[t.color]}
+                                        selected={specialSelected[t.key] !== false}
+                                        onToggle={() =>
+                                            setSpecialSelected((s) => ({ ...s, [t.key]: !(s[t.key] !== false) }))
+                                        }
+                                    />
+                                ))}
+
+                                <Text style={[styles.filterSection, { color: colors.textSecondary }]}>Custom Calendars</Text>
+                                {customTypes.length === 0 ? (
+                                    <Text style={[styles.filterEmpty, { color: colors.textDisabled }]}>
+                                        No custom calendars found.
+                                    </Text>
+                                ) : (
+                                    customTypes.map((t) => (
+                                        <FilterRow
+                                            key={t.id}
+                                            colors={colors}
+                                            label={t.label}
+                                            palette={colors[String(t.color).toLowerCase()]}
+                                            selected={t.selected}
+                                            onToggle={() =>
+                                                setCustomTypes((list) =>
+                                                    list.map((c) => (c.id === t.id ? { ...c, selected: !c.selected } : c))
+                                                )
+                                            }
+                                        />
+                                    ))
+                                )}
+
+                                <Text style={[styles.filterSection, { color: colors.textSecondary }]}>Other</Text>
+                                <FilterRow
+                                    colors={colors}
+                                    label="Uncategorized"
+                                    palette={colors.steel}
+                                    selected={showUncategorized}
+                                    onToggle={() => setShowUncategorized((v) => !v)}
+                                />
+                            </ScrollView>
+                        </View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
         </View>
+    );
+}
+
+function FilterRow({ colors, label, palette, selected, onToggle }) {
+    const accent = palette?.text || colors.primary;
+    return (
+        <TouchableOpacity onPress={onToggle} activeOpacity={0.7} style={styles.filterRow}>
+            <View
+                style={[styles.filterSwatch, {
+                    backgroundColor: palette?.background || colors.cardBackground,
+                    borderColor: palette?.border || colors.border,
+                }]}
+            />
+            <Text style={[styles.filterLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                {label}
+            </Text>
+            <View style={{ flex: 1 }} />
+            <Ionicons
+                name={selected ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={selected ? accent : colors.textSecondary}
+            />
+        </TouchableOpacity>
     );
 }
 
@@ -244,6 +422,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderBottomWidth: 1,
     },
+    barNav: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     navBtn: { padding: 6 },
     label: { fontSize: 14, fontWeight: '600' },
     list: { padding: 16, paddingBottom: 32 },
@@ -267,4 +446,36 @@ const styles = StyleSheet.create({
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+
+    // Event-type filter modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+    },
+    filterCard: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+    filterHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 8,
+    },
+    filterTitle: { fontSize: 16, fontWeight: '700' },
+    filterSection: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 4,
+    },
+    filterEmpty: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8 },
+    filterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
+    filterSwatch: { width: 16, height: 16, borderRadius: 5, borderWidth: 1 },
+    filterLabel: { fontSize: 15, fontWeight: '500' },
 });
