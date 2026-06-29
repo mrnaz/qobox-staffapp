@@ -183,6 +183,12 @@ class ApiService {
         return this.put(endpoints.UPDATE_STAFF_ROSTER.replace('{id}', id), data);
     }
 
+    async getRosterCheckinToken(id) {
+        // GET /api/v1/staff/roster/{roster}/checkin-token → { token: "QBXSHIFT:<uuid>" }
+        // The kiosk scans this token to clock the staff in/out of this shift.
+        return this.get(endpoints.GET_STAFF_ROSTER_CHECKIN_TOKEN.replace('{id}', id));
+    }
+
     // Timetable
     async getStaffTimetable(staffId, params = {}) {
         return this.get(endpoints.GET_STAFF_TIMETABLE.replace('{staff_id}', staffId), params);

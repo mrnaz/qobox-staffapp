@@ -27,6 +27,7 @@ export const endpoints = {
     STORE_STAFF_ROSTER_LOG: 'staff-roster-log',
     UPDATE_STAFF_ROSTER_LOG: 'staff-roster-log/{id}',
     UPDATE_STAFF_ROSTER: 'staff/roster/{id}', // for mark-absent (admin-only on backend)
+    GET_STAFF_ROSTER_CHECKIN_TOKEN: 'staff/roster/{id}/checkin-token', // per-shift kiosk QR token
 
     // My Timetable
     GET_STAFF_TIMETABLE: 'staff/{staff_id}/timetable',

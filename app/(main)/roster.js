@@ -120,6 +120,9 @@ export default function RosterScreen() {
     const [showCheckInTimePicker, setShowCheckInTimePicker] = useState(false);
     const [checkInSubmitting, setCheckInSubmitting] = useState(false);
     const [showCheckInQR, setShowCheckInQR] = useState(false);
+    const [qrToken, setQrToken] = useState('');
+    const [qrLoading, setQrLoading] = useState(false);
+    const [qrError, setQrError] = useState('');
 
     // Check-out modal state (mirrors check-in)
     const [checkOutTarget, setCheckOutTarget] = useState(null);
@@ -133,6 +136,29 @@ export default function RosterScreen() {
     const resetModalState = () => {
         setMarkAbsence(false);
         setAbsenceReason('');
+    };
+
+    // Fetch this shift's per-shift kiosk token and show it as a QR. The kiosk
+    // scans QBXSHIFT:<uuid> to clock the staff in (or out) of this specific shift.
+    const openShiftQr = async (item) => {
+        const rosterId = item?.staff_roster_id;
+        setShowCheckInQR(true);
+        setQrToken('');
+        setQrError('');
+        if (!rosterId) {
+            setQrError('This shift has no roster to generate a QR for.');
+            return;
+        }
+        setQrLoading(true);
+        try {
+            const res = await api.getRosterCheckinToken(rosterId);
+            setQrToken(res?.token || '');
+            if (!res?.token) setQrError('No QR token returned.');
+        } catch (err) {
+            setQrError(err.body?.message || err.message || 'Could not load the QR code.');
+        } finally {
+            setQrLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -696,6 +722,15 @@ export default function RosterScreen() {
                                             }
                                             colors={colors}
                                         />
+                                        {selectedShift.staff_roster_id ? (
+                                            <TouchableOpacity
+                                                onPress={() => openShiftQr(selectedShift)}
+                                                style={[styles.btn, { backgroundColor: colors.primary }]}
+                                            >
+                                                <Ionicons name="qr-code-outline" size={16} color="#fff" />
+                                                <Text style={styles.btnText}>Clock-in QR</Text>
+                                            </TouchableOpacity>
+                                        ) : null}
                                         {selectedShift.checkin_comments ? (
                                             <DetailRow label="Check-in note" value={selectedShift.checkin_comments} colors={colors} />
                                         ) : null}
@@ -856,7 +891,7 @@ export default function RosterScreen() {
                                             </Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
-                                            onPress={() => setShowCheckInQR(true)}
+                                            onPress={() => openShiftQr(checkInTarget)}
                                             style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
                                         >
                                             <Ionicons name="qr-code-outline" size={18} color={colors.textPrimary} />
@@ -918,21 +953,25 @@ export default function RosterScreen() {
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 360 }}>
                         <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <View style={styles.modalHeader}>
-                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Check in QR</Text>
+                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Clock-in QR</Text>
                                 <TouchableOpacity onPress={() => setShowCheckInQR(false)} style={styles.iconButton}>
                                     <Ionicons name="close" size={22} color={colors.textPrimary} />
                                 </TouchableOpacity>
                             </View>
                             <Text style={[styles.qrHint, { color: colors.textSecondary }]}>
-                                Scan this at the kiosk to check in.
+                                Scan this at the kiosk to clock in or out.
                             </Text>
-                            {staff?.id != null ? (
+                            {qrLoading ? (
                                 <View style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
-                                    <QRCode value={String(staff.id)} size={220} />
+                                    <ActivityIndicator color={colors.primary} />
+                                </View>
+                            ) : qrToken ? (
+                                <View style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
+                                    <QRCode value={qrToken} size={260} />
                                 </View>
                             ) : (
                                 <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                    No staff profile loaded.
+                                    {qrError || 'No QR available.'}
                                 </Text>
                             )}
                         </View>
