@@ -13,7 +13,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
+import PeriodPicker from '../components/PeriodPicker';
 
 export default function ClassesScreen() {
     const { useTheme } = Theme;
@@ -24,6 +25,7 @@ export default function ClassesScreen() {
     const [staff, setStaff] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
     const [period, setPeriod] = useState(null);
+    const [periods, setPeriods] = useState([]);
     const [classes, setClasses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -45,14 +47,22 @@ export default function ClassesScreen() {
                 setError('');
                 let activePeriod = period;
                 if (!activePeriod) {
-                    const { period: p } = await ensureAcademicPeriod();
+                    const { period: p, periods: list } = await ensureAcademicPeriod();
                     activePeriod = p;
                     setPeriod(p);
+                    setPeriods(Array.isArray(list) ? list : []);
+                }
+                // Without a period the endpoint would silently return nothing —
+                // surface that instead of an empty "no classes" list.
+                if (!activePeriod?.id) {
+                    setClasses([]);
+                    setError('We could not determine your academic period. Pull to refresh or contact your administrator.');
+                    return;
                 }
                 const res = await api.getStaffClasses(staff.id, {
                     // Backend `staff/classes/{staff_id}` controller uses
                     // $request->query('academic_period'), not period_id.
-                    academic_period: activePeriod?.id,
+                    academic_period: activePeriod.id,
                 });
                 const list = res?.classes || res?.data || res || [];
                 setClasses(Array.isArray(list) ? list : []);
@@ -72,6 +82,13 @@ export default function ClassesScreen() {
     const onRefresh = () => {
         setIsRefreshing(true);
         load({ refresh: true });
+    };
+
+    // Switching period persists the choice and reloads (load depends on `period`).
+    const handlePeriodChange = (p) => {
+        if (!p || p.id === period?.id) return;
+        setAcademicPeriod(p.id);
+        setPeriod(p);
     };
 
     if (profileLoaded && !staff?.id) {
@@ -141,6 +158,14 @@ export default function ClassesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {periods.length > 0 ? (
+                <PeriodPicker
+                    periods={periods}
+                    selectedId={period?.id}
+                    onChange={handlePeriodChange}
+                />
+            ) : null}
+
             {isLoading && classes.length === 0 ? (
                 <View style={styles.center}>
                     <ActivityIndicator color={colors.primary} />
@@ -163,7 +188,16 @@ export default function ClassesScreen() {
                     ListEmptyComponent={
                         <View style={styles.center}>
                             <Ionicons name="school-outline" size={32} color={colors.textSecondary} />
-                            <Text style={[styles.empty, { color: colors.textSecondary }]}>You aren't assigned to any classes.</Text>
+                            <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                                {period?.label
+                                    ? `No classes in ${period.label}.`
+                                    : "You aren't assigned to any classes."}
+                            </Text>
+                            {periods.length > 1 ? (
+                                <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                                    Teaching in a different period? Tap the period above to switch.
+                                </Text>
+                            ) : null}
                         </View>
                     }
                 />
@@ -190,5 +224,6 @@ const styles = StyleSheet.create({
     meta: { fontSize: 11 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
+    emptyHint: { fontSize: 12, textAlign: 'center', paddingHorizontal: 40, marginTop: 2 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
 });

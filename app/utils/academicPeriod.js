@@ -7,12 +7,19 @@ const pickCurrent = (periods) => {
     if (!Array.isArray(periods) || periods.length === 0) return null;
     const today = Date.now();
 
-    const containingToday = periods.find((p) => {
+    const active = periods.filter((p) => {
         const start = p.period_start ? new Date(p.period_start).getTime() : null;
         const end = p.period_end ? new Date(p.period_end).getTime() : null;
         return start && end && today >= start && today <= end;
     });
-    if (containingToday) return containingToday;
+    if (active.length) {
+        // When several periods are active at once (common for multi-campus orgs),
+        // prefer one the staff member actually teaches in — otherwise we can land
+        // on a period where they have no classes and the screen looks empty.
+        // Mirrors the Vue staff web (DefaultLayoutWithVerticalNav getAcademicPeriods).
+        const teaching = active.find((p) => p.staff_teaches_in);
+        return teaching || active[0];
+    }
 
     // Fallback: the most recent period (latest period_start <= today),
     // or just the first one if none has started yet.
@@ -42,6 +49,12 @@ export const ensureAcademicPeriod = async () => {
 
     await AsyncStorage.setItem(STORAGE_KEY, String(chosen.id));
     return { id: chosen.id, period: chosen, periods };
+};
+
+// Persist an explicitly chosen period (from the in-app period switcher).
+export const setAcademicPeriod = async (id) => {
+    if (id === null || id === undefined) return;
+    await AsyncStorage.setItem(STORAGE_KEY, String(id));
 };
 
 export const clearAcademicPeriod = async () => {

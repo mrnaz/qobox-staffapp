@@ -17,6 +17,7 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
 import ShiftTimer from '../components/ShiftTimer';
+import { formatShiftStart, normalizeTimeLabel } from '../utils/datetime';
 
 // Map post_scope → theme color group (matching client app's NoticeboardList)
 const SCOPE_PALETTE = {
@@ -224,36 +225,40 @@ export default function DashboardScreen() {
             contentContainerStyle={styles.container}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         >
-            {/* Running shift banner */}
-            {openShift ? (
-                <TouchableOpacity
-                    onPress={() => router.push('/(main)/roster')}
-                    activeOpacity={0.85}
-                    style={[styles.runningCard, {
-                        borderColor: colors.success || colors.primary,
-                        backgroundColor: (colors.success || colors.primary) + '18',
-                    }]}
-                >
-                    <View style={[styles.runningDot, { backgroundColor: colors.success || colors.primary }]} />
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.runningLabel, { color: colors.success || colors.primary }]}>
-                            On shift
-                        </Text>
-                        <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
-                            Started {openShift.actual_start || openShift.rostered_start_time || ''}
-                            {openShift.rostered_end_time ? ` · ends ${openShift.rostered_end_time}` : ''}
-                        </Text>
-                    </View>
-                    <ShiftTimer
-                        startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
-                        style={[styles.runningTimer, { color: colors.textPrimary }]}
-                    />
-                    <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-            ) : null}
+            {/* Today */}
+            <Section title="Today" colors={colors}>
+                {/* On-shift card — it's part of today, so it lives under this heading */}
+                {openShift ? (
+                    <TouchableOpacity
+                        onPress={() => router.push('/(main)/roster')}
+                        activeOpacity={0.85}
+                        style={[styles.runningCard, {
+                            borderColor: colors.success || colors.primary,
+                            backgroundColor: (colors.success || colors.primary) + '18',
+                        }]}
+                    >
+                        <View style={[styles.runningDot, { backgroundColor: colors.success || colors.primary }]} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.runningLabel, { color: colors.success || colors.primary }]}>
+                                On shift
+                            </Text>
+                            <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
+                                Started {formatShiftStart(openShift.actual_start) || openShift.rostered_start_time || '—'}
+                            </Text>
+                            {openShift.rostered_end_time ? (
+                                <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
+                                    Ends at {normalizeTimeLabel(openShift.rostered_end_time)}
+                                </Text>
+                            ) : null}
+                        </View>
+                        <ShiftTimer
+                            startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
+                            style={[styles.runningTimer, { color: colors.textPrimary }]}
+                        />
+                        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                ) : null}
 
-            {/* Today's Classes */}
-            <Section title="Today's Classes" colors={colors}>
                 {isLoading && sessions.length === 0 && events.length === 0 ? (
                     <ActivityIndicator color={colors.primary} style={{ paddingVertical: 24 }} />
                 ) : (
@@ -475,7 +480,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 12,
         padding: 12,
-        marginBottom: 16,
     },
     runningDot: {
         width: 10, height: 10, borderRadius: 5,

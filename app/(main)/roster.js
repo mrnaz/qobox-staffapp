@@ -22,6 +22,8 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { capturePhotoCompressed, appendPhotoToForm } from '../utils/photo';
 import QRCode from '../components/QRCode';
+import ShiftTimer from '../components/ShiftTimer';
+import { parseWallClock, formatShiftStart, normalizeTimeLabel, isToday } from '../utils/datetime';
 
 // Match the Vue staff portal's check-in time format: 'YYYY-MM-DD HH:mm' in the
 // SITE's local timezone. The Vue web works because users browse from the same
@@ -52,6 +54,15 @@ const nowForApi = (timezone, when) => {
     }
 };
 
+const fmtDateForApi = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const yesterday = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d;
+};
+
 // Mirrors the staff portal's 8-day check-in window.
 const canShowAction = (item) => {
     if (item.actual_start && item.actual_end) return false;
@@ -61,9 +72,9 @@ const canShowAction = (item) => {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     const endOfToday = today.getTime();
-    const ref = item.rostered_start || item.claimed_start;
-    if (!ref) return true;
-    const refTime = new Date(ref).getTime();
+    const refDate = parseWallClock(item.rostered_start || item.claimed_start);
+    if (!refDate) return true;
+    const refTime = refDate.getTime();
     return refTime >= eightDaysAgo && refTime <= endOfToday;
 };
 
@@ -73,22 +84,9 @@ const shiftStatus = (item) => {
     return 'upcoming';
 };
 
-// True when the shift is rostered for today (device-local day, consistent with
-// `canShowAction`'s window math). Used to limit the "Check In" button to today's
-// shifts — in "show past shifts" mode the 8-day window would otherwise surface it
-// on earlier days too.
-const isShiftToday = (item) => {
-    const ref = item.rostered_start || item.claimed_start;
-    if (!ref) return false;
-    const d = new Date(ref);
-    if (Number.isNaN(d.getTime())) return false;
-    const now = new Date();
-    return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-    );
-};
+// True when the shift is rostered for today (device-local day). Used to limit
+// the "Check In" button to today's shifts.
+const isShiftToday = (item) => isToday(item.rostered_start || item.claimed_start);
 
 export default function RosterScreen() {
     const { useTheme } = Theme;
@@ -101,6 +99,7 @@ export default function RosterScreen() {
     const [siteId, setSiteId] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
     const [shifts, setShifts] = useState([]);
+    const [openShift, setOpenShift] = useState(null);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
     const [showPast, setShowPast] = useState(false);
@@ -187,18 +186,24 @@ export default function RosterScreen() {
                 if (mode === 'initial') setIsLoading(true);
                 if (mode === 'more') setIsLoadingMore(true);
                 setError('');
-                const res = await api.getMyShifts({
+                const params = {
                     staff_id: staff.id,
                     site_id: siteId,
                     show_past_shifts: showPast ? 'true' : 'false',
                     page: targetPage,
                     limit: PAGE_SIZE,
-                });
+                };
+                // "Show past shifts" means yesterday and backwards — pass an
+                // explicit start of yesterday so today's shifts stay out of the
+                // past list (the backend defaults `start` to today otherwise).
+                if (showPast) params.start = fmtDateForApi(yesterday());
+                const res = await api.getMyShifts(params);
                 const incoming = Array.isArray(res?.data) ? res.data : [];
                 const totalCount = res?.meta?.pagination?.total ?? incoming.length;
 
                 setTotal(totalCount);
                 setPage(targetPage);
+                setOpenShift(res?.open_shift || null);
                 setShifts((prev) => (targetPage === 1 ? incoming : [...prev, ...incoming]));
             } catch (err) {
                 console.error('Roster load error', err);
@@ -232,52 +237,78 @@ export default function RosterScreen() {
         fetchPage({ targetPage: page + 1, mode: 'more' });
     };
 
-    // Order the loaded shifts around the "anchor": the most recent shift that
-    // has started (start datetime <= now) but is not yet checked in — i.e. the
-    // one carrying the "Check In Now" action.
-    //   • showPast = false → anchor first, then upcoming shifts (ascending).
-    //   • showPast = true  → anchor first, then past shifts (descending).
-    // If there's no eligible anchor (e.g. everything is in the future), we fall
-    // back to a plain date sort: ascending when !showPast, descending when showPast.
+    // The backend already returns the correct set for each mode (today-and-
+    // forward when !showPast, yesterday-and-back when showPast). We just apply a
+    // stable chronological sort and lift the active/open shift out of the body —
+    // it's rendered pinned above the list instead (see ListHeaderComponent).
     const startTimeOf = (item) => {
-        const ref = item.rostered_start || item.claimed_start;
-        const t = ref ? new Date(ref).getTime() : NaN;
-        return Number.isNaN(t) ? 0 : t;
+        const d = parseWallClock(item.rostered_start || item.claimed_start);
+        return d ? d.getTime() : 0;
     };
 
     const orderedShifts = useMemo(() => {
-        const now = Date.now();
-        let anchorTime = null;
-        for (const item of shifts) {
-            if (item.actual_start) continue; // already checked in — not the anchor
-            const t = startTimeOf(item);
-            if (t <= now && (anchorTime === null || t > anchorTime)) {
-                anchorTime = t;
-            }
-        }
-
-        if (anchorTime === null) {
-            // No anchor: default chronological order.
-            return shifts
-                .slice()
-                .sort((a, b) =>
-                    showPast
-                        ? startTimeOf(b) - startTimeOf(a)
-                        : startTimeOf(a) - startTimeOf(b)
-                );
-        }
-
-        if (!showPast) {
-            // Anchor + upcoming, ascending (anchor included).
-            return shifts
-                .filter((item) => startTimeOf(item) >= anchorTime)
-                .sort((a, b) => startTimeOf(a) - startTimeOf(b));
-        }
-        // Anchor + past, descending (anchor included).
+        const openId = openShift?.id;
         return shifts
-            .filter((item) => startTimeOf(item) <= anchorTime)
-            .sort((a, b) => startTimeOf(b) - startTimeOf(a));
-    }, [shifts, showPast]);
+            .filter((item) => !(openId != null && item.id === openId))
+            .sort((a, b) =>
+                showPast
+                    ? startTimeOf(b) - startTimeOf(a)
+                    : startTimeOf(a) - startTimeOf(b)
+            );
+    }, [shifts, showPast, openShift]);
+
+    // Whether the active shift started before today — an old shift left open that
+    // needs checking out, not a shift for today.
+    const openShiftIsStale = Boolean(
+        openShift && !isToday(openShift.actual_start || openShift.rostered_start)
+    );
+
+    // Pinned active-shift card. Rendered above the list in BOTH modes (mirrors the
+    // dashboard). Carries the Check Out action and, when stale, a clear flag.
+    const openShiftBusy = actingOnId === openShift?.id;
+    const openAccent = openShiftIsStale
+        ? (colors.warning || colors.primary)
+        : (colors.success || colors.primary);
+    const openShiftHeader = openShift ? (
+        <View style={[styles.pinnedCard, { borderColor: openAccent, backgroundColor: openAccent + '18' }]}>
+            <View style={styles.pinnedHeaderRow}>
+                <View style={[styles.runningDot, { backgroundColor: openAccent }]} />
+                <Text style={[styles.pinnedLabel, { color: openAccent }]}>On shift</Text>
+                {openShiftIsStale ? (
+                    <View style={[styles.staleBadge, { borderColor: openAccent }]}>
+                        <Text style={[styles.staleText, { color: openAccent }]}>Not checked out</Text>
+                    </View>
+                ) : null}
+                <View style={{ flex: 1 }} />
+                <ShiftTimer
+                    startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
+                    style={[styles.runningTimer, { color: colors.textPrimary }]}
+                />
+            </View>
+            <Text style={[styles.pinnedSub, { color: colors.textSecondary }]}>
+                Started {formatShiftStart(openShift.actual_start) || openShift.rostered_start_time || '—'}
+            </Text>
+            {openShift.rostered_end_time ? (
+                <Text style={[styles.pinnedSub, { color: colors.textSecondary }]}>
+                    Ends at {normalizeTimeLabel(openShift.rostered_end_time)}
+                </Text>
+            ) : null}
+            <TouchableOpacity
+                onPress={() => openCheckOutModal(openShift)}
+                disabled={openShiftBusy}
+                style={[styles.btn, { backgroundColor: colors.warning || colors.primary, opacity: openShiftBusy ? 0.6 : 1, marginTop: 10 }]}
+            >
+                {openShiftBusy ? (
+                    <ActivityIndicator color="#fff" />
+                ) : (
+                    <>
+                        <Ionicons name="log-out-outline" size={16} color="#fff" />
+                        <Text style={styles.btnText}>Check Out</Text>
+                    </>
+                )}
+            </TouchableOpacity>
+        </View>
+    ) : null;
 
     // Backend response shapes vary:
     //   POST /staff-roster-log         → { data: {...} }
@@ -647,6 +678,7 @@ export default function RosterScreen() {
                     data={orderedShifts}
                     keyExtractor={(item, i) => String(item.id || `r${item.staff_roster_id}-${i}`)}
                     renderItem={renderItem}
+                    ListHeaderComponent={openShiftHeader}
                     contentContainerStyle={styles.list}
                     refreshControl={
                         <RefreshControl
@@ -1033,7 +1065,7 @@ export default function RosterScreen() {
                                     <TextInput
                                         value={checkOutNote}
                                         onChangeText={setCheckOutNote}
-                                        placeholder="Anything to flag for your manager?"
+                                        placeholder=""
                                         placeholderTextColor={colors.textSecondary}
                                         multiline
                                         numberOfLines={3}
@@ -1172,6 +1204,23 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     absentText: { fontSize: 12, fontWeight: '600' },
+
+    // Pinned active-shift card (rendered above the list)
+    pinnedCard: {
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 10,
+        gap: 4,
+    },
+    pinnedHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    pinnedLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+    pinnedSub: { fontSize: 12 },
+    runningDot: { width: 10, height: 10, borderRadius: 5 },
+    runningTimer: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
+    staleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
+    staleText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+
     center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: {

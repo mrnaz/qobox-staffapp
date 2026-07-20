@@ -1,29 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { Text } from 'react-native';
+import { parseApiDate } from '../utils/datetime';
 
 // Live ticking timer showing elapsed time since `startTimeUtc`.
 //
-// `startTimeUtc` is a UTC-naive string like "2026-05-09 11:32:00" (the
-// `actual_start_utc` / `open_shift_actual_start_utc` field returned by the
-// staff-roster-log/query endpoint). We treat it as UTC and diff against
-// Date.now(), so the elapsed value is correct regardless of device timezone.
+// `startTimeUtc` is a shift's start datetime as returned by the
+// staff-roster-log/query endpoint. It may carry an explicit UTC offset
+// (the `…_utc` fields, e.g. "2026-05-09 11:32:00+00") or be a zone-less,
+// site-local string (e.g. "2026-05-09 11:32"). We parse it as an absolute
+// instant — treating zone-less values as UTC — and diff against Date.now(),
+// so the elapsed value ticks correctly.
+//
+// Note: Hermes (React Native's engine) rejects several of these string shapes
+// that a browser would accept, which is why parsing goes through parseApiDate.
 //
 // Mirrors the Vue web's ShiftTimer behavior (see resources/js/_staff/views/pages/staff/shift-log/components/ShiftTimer.vue).
 export default function ShiftTimer({ startTimeUtc, style }) {
     const [elapsedSec, setElapsedSec] = useState(0);
 
     useEffect(() => {
-        if (!startTimeUtc) {
+        const start = parseApiDate(startTimeUtc, { assumeUtc: true });
+        if (!start) {
             setElapsedSec(0);
             return;
         }
-        // Convert "2026-05-09 11:32:00" → "2026-05-09T11:32:00Z" so JS treats as UTC.
-        const iso = startTimeUtc.replace(' ', 'T') + 'Z';
-        const startMs = new Date(iso).getTime();
-        if (Number.isNaN(startMs)) {
-            setElapsedSec(0);
-            return;
-        }
+        const startMs = start.getTime();
         const compute = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
         compute();
         const id = setInterval(compute, 1000);

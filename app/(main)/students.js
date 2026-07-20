@@ -15,7 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
+import PeriodPicker from '../components/PeriodPicker';
 
 export default function MyStudentsScreen() {
     const { useTheme } = Theme;
@@ -26,6 +27,7 @@ export default function MyStudentsScreen() {
     const [staff, setStaff] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
     const [period, setPeriod] = useState(null);
+    const [periods, setPeriods] = useState([]);
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -48,12 +50,18 @@ export default function MyStudentsScreen() {
                 setError('');
                 let activePeriod = period;
                 if (!activePeriod) {
-                    const { period: p } = await ensureAcademicPeriod();
+                    const { period: p, periods: list } = await ensureAcademicPeriod();
                     activePeriod = p;
                     setPeriod(p);
+                    setPeriods(Array.isArray(list) ? list : []);
+                }
+                if (!activePeriod?.id) {
+                    setClasses([]);
+                    setError('We could not determine your academic period. Pull to refresh or contact your administrator.');
+                    return;
                 }
                 const res = await api.getStaffClasses(staff.id, {
-                    academic_period: activePeriod?.id,
+                    academic_period: activePeriod.id,
                 });
                 const list = res?.classes || res?.data || res || [];
                 setClasses(Array.isArray(list) ? list : []);
@@ -73,6 +81,12 @@ export default function MyStudentsScreen() {
     const onRefresh = () => {
         setIsRefreshing(true);
         load({ refresh: true });
+    };
+
+    const handlePeriodChange = (p) => {
+        if (!p || p.id === period?.id) return;
+        setAcademicPeriod(p.id);
+        setPeriod(p);
     };
 
     // Aggregate unique students across all classes the user teaches. The
@@ -149,6 +163,14 @@ export default function MyStudentsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {periods.length > 0 ? (
+                <PeriodPicker
+                    periods={periods}
+                    selectedId={period?.id}
+                    onChange={handlePeriodChange}
+                />
+            ) : null}
+
             {/* Search */}
             <View style={[styles.searchWrap, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
@@ -189,8 +211,17 @@ export default function MyStudentsScreen() {
                         <View style={styles.center}>
                             <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                {search ? 'No students match your search.' : "You don't have any students yet."}
+                                {search
+                                    ? 'No students match your search.'
+                                    : period?.label
+                                        ? `No students in ${period.label}.`
+                                        : "You don't have any students yet."}
                             </Text>
+                            {!search && periods.length > 1 ? (
+                                <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                                    Teaching in a different period? Tap the period above to switch.
+                                </Text>
+                            ) : null}
                         </View>
                     }
                 />
@@ -227,5 +258,6 @@ const styles = StyleSheet.create({
     meta: { fontSize: 12, flexShrink: 1 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
+    emptyHint: { fontSize: 12, textAlign: 'center', paddingHorizontal: 40, marginTop: 2 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
 });
