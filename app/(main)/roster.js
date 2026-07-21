@@ -8,7 +8,6 @@ import {
     RefreshControl,
     TouchableOpacity,
     Switch,
-    Alert,
     Modal,
     ScrollView,
     TextInput,
@@ -17,12 +16,14 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { capturePhotoCompressed, appendPhotoToForm } from '../utils/photo';
 import QRCode from '../components/QRCode';
 import ShiftTimer from '../components/ShiftTimer';
+import Toast from '../components/Toast';
 import { parseWallClock, formatShiftStart, normalizeTimeLabel, isToday } from '../utils/datetime';
 
 // Match the Vue staff portal's check-in time format: 'YYYY-MM-DD HH:mm' in the
@@ -111,6 +112,7 @@ export default function RosterScreen() {
     const [selectedShift, setSelectedShift] = useState(null);
     const [markAbsence, setMarkAbsence] = useState(false);
     const [absenceReason, setAbsenceReason] = useState('');
+    const [toast, setToast] = useState(null);
     // Check-in modal state
     const [checkInTarget, setCheckInTarget] = useState(null);
     const [checkInTime, setCheckInTime] = useState(new Date());
@@ -131,6 +133,7 @@ export default function RosterScreen() {
     const [showCheckOutTimePicker, setShowCheckOutTimePicker] = useState(false);
     const [checkOutSubmitting, setCheckOutSubmitting] = useState(false);
     const inFlightRef = useRef(false);
+    const prevQrOpenRef = useRef(false);
 
     const resetModalState = () => {
         setMarkAbsence(false);
@@ -225,6 +228,28 @@ export default function RosterScreen() {
         setTotal(0);
         fetchPage({ targetPage: 1, mode: 'initial' });
     }, [fetchPage]);
+
+    // Re-sync every time this tab regains focus. `openShift` (which drives the
+    // pinned "On shift" / Check Out card) is only ever set from a fetch, so
+    // without this it lags the backend — e.g. after a kiosk-QR check-in, or an
+    // in-app check-in/out done elsewhere. The stale view shows "Check In", which
+    // the backend rejects with "already has an active shift" and offers no way
+    // to check out. Mirrors the Dashboard's focus refresh.
+    useFocusEffect(
+        useCallback(() => {
+            fetchPage({ targetPage: 1, mode: 'refresh' });
+        }, [fetchPage])
+    );
+
+    // Closing the Check-in QR modal is a strong signal the user just clocked in
+    // (or out) at the kiosk while staying on this screen — where useFocusEffect
+    // never fires. Re-sync so the Check Out card appears/updates right away.
+    useEffect(() => {
+        if (prevQrOpenRef.current && !showCheckInQR) {
+            fetchPage({ targetPage: 1, mode: 'refresh' });
+        }
+        prevQrOpenRef.current = showCheckInQR;
+    }, [showCheckInQR, fetchPage]);
 
     const onRefresh = () => {
         setIsRefreshing(true);
@@ -389,17 +414,21 @@ export default function RosterScreen() {
 
             spliceShift(item, unwrapShift(res));
             closeCheckInModal();
+            // spliceShift only flips the row; refetch so the pinned "On shift"
+            // card (driven by openShift) reflects the now-open shift too.
+            fetchPage({ targetPage: 1, mode: 'refresh' });
+            setToast({ message: 'Checked in', variant: 'success' });
         } catch (err) {
             console.error('Check-in error', err);
             const isActiveShiftError =
                 err.status === 422 &&
                 /already has an active shift/i.test(err.body?.message || '');
-            Alert.alert(
-                'Check-in failed',
-                isActiveShiftError
-                    ? 'You already have an open shift. Toggle "Show past shifts" to find it and check out first.'
-                    : (err.body?.message || err.message || 'Please try again.')
-            );
+            setToast({
+                message: isActiveShiftError
+                    ? 'You already have an open shift — use “Check Out” on the card above.'
+                    : (err.body?.message || err.message || 'Check-in failed. Please try again.'),
+                variant: 'error',
+            });
         } finally {
             setActingOnId(null);
             setCheckInSubmitting(false);
@@ -412,7 +441,7 @@ export default function RosterScreen() {
             if (photo) setCheckInPhoto(photo);
         } catch (err) {
             console.error('Photo capture error', err);
-            Alert.alert('Camera error', err.message || 'Could not capture photo.');
+            setToast({ message: err.message || 'Could not capture photo.', variant: 'error' });
         }
     };
 
@@ -465,9 +494,17 @@ export default function RosterScreen() {
 
             spliceShift(item, unwrapShift(res));
             closeCheckOutModal();
+            // The shift is closed now — drop the pinned card immediately, then
+            // refetch to reconcile (open_shift should come back null).
+            setOpenShift(null);
+            fetchPage({ targetPage: 1, mode: 'refresh' });
+            setToast({ message: 'Checked out', variant: 'success' });
         } catch (err) {
             console.error('Check-out error', err);
-            Alert.alert('Check-out failed', err.body?.message || err.message || 'Please try again.');
+            setToast({
+                message: err.body?.message || err.message || 'Check-out failed. Please try again.',
+                variant: 'error',
+            });
         } finally {
             setActingOnId(null);
             setCheckOutSubmitting(false);
@@ -480,7 +517,7 @@ export default function RosterScreen() {
             if (photo) setCheckOutPhoto(photo);
         } catch (err) {
             console.error('Photo capture error', err);
-            Alert.alert('Camera error', err.message || 'Could not capture photo.');
+            setToast({ message: err.message || 'Could not capture photo.', variant: 'error' });
         }
     };
 
@@ -491,7 +528,7 @@ export default function RosterScreen() {
         const item = selectedShift;
         if (!item?.staff_roster_id) return;
         if (!absenceReason.trim()) {
-            Alert.alert('Reason required', 'Please add a short reason for the absence.');
+            setToast({ message: 'Please add a short reason for the absence.', variant: 'error' });
             return;
         }
         try {
@@ -512,7 +549,7 @@ export default function RosterScreen() {
             const msg = err.status === 403
                 ? "You don't have permission to mark yourself absent. Please ask an administrator."
                 : err.body?.message || err.message || 'Please try again.';
-            Alert.alert('Mark absent failed', msg);
+            setToast({ message: msg, variant: 'error' });
         } finally {
             setActingOnId(null);
         }
@@ -1131,6 +1168,8 @@ export default function RosterScreen() {
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
+
+            <Toast toast={toast} onHide={() => setToast(null)} />
         </View>
     );
 }
