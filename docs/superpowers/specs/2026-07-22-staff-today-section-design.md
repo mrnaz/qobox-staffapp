@@ -10,8 +10,9 @@ Replace the dashboard's inline "Today" list with a compact **TODAY** counts box
 (Classes / Calendar Events / PTM Meetings). Tapping the box opens a dedicated
 **Today** page that expands each of the three into a full list.
 
-One small backend change (PTM attendee count — see "Backend change"). Everything
-else uses data sources that already exist.
+A backend change is required: the `staff/{staff_id}/ptms` endpoint is **currently
+broken** and must be repaired before the app can use it (see "Backend change").
+The classes and calendar sources already work and are untouched.
 
 ## Decisions (from brainstorming)
 
@@ -30,7 +31,7 @@ All filtered to **today in the device-local timezone**, using the same
 |------|----------|-----------------|
 | Classes | `GET staff/{staff_id}/timetable?start_date&end_date` (`api.getStaffTimetable`) | `class.title`, `class.photo`, `room.name`, `session_start`, `session_end` |
 | Calendar events | `GET calendar/events/query?from&to&staff_id&org_id` (`api.getCalendarEvents`) | `title`, `start_at`, `all_day`, `location_description`, `location_building`, `location_room` |
-| PTM meetings | `GET staff/{staff_id}/ptms?start_date&end_date` (**new** `api.getStaffPtms`) | `student.full_name`, `attendees_count` (**new field**), `timeslot.ptm_start`, `location` (booking location relation), booking `location_name` |
+| PTM meetings | `GET staff/{staff_id}/ptms?start_date&end_date` (**new** `api.getStaffPtms`) | `student.full_name`, `attendees_count` (**new field**), `timeslot.ptm_start`, `location_label` (**new field**: `building.name \| room.name`, or `location_name`) |
 
 Date range passed to each: `start_date/from = today`, `end_date/to = tomorrow`
 (mirrors the dashboard's existing "extend end to next day" note), then the
@@ -91,7 +92,8 @@ results are filtered client-side to today so all three lists agree on "today".
     - **CALENDAR** — `title`; line `📅 {all_day ? 'All day' : formatTime(start_at)}`;
       location line `📍 {location_description || [location_building?.name, location_room?.name].filter(Boolean).join(', ')}` (omitted when empty).
     - **PTMs** — person avatar + `{student.full_name} ({attendees_count} attendees)`;
-      location line `📍 {location?.location_name || [location?.building?.name, location?.room?.name].filter(Boolean).join(' | ') || location_name}`; time `{formatTime(timeslot.ptm_start)}`.
+      location line `📍 {location_label}` (omitted when empty); time
+      `{formatClock(timeslot.ptm_start)}`.
       Attendee text: pluralize (`1 attendee` / `N attendees`); omit the `(…)` when count is 0/absent.
   - Each section has its own empty state ("No classes today", "No calendar
     events today", "No PTM meetings today").
@@ -100,19 +102,44 @@ results are filtered client-side to today so all three lists agree on "today".
 - `/today` is a pushed Stack screen reached only from the dashboard box; it is
   **not** added to the bottom tab bar.
 
-## Backend change (qobox — PTM attendee count)
+## Backend change (qobox — repair + extend the PTM endpoint)
 
-Add a participant count to the PTM payload so the app can show "(N attendees)".
+`GET staff/{staff}/ptms` (`StaffController@get_ptms` → `StaffRepository::get_ptms`)
+is **currently broken** and 500s on every call — two independent bugs:
 
-- **`app/Repositories/Staff/StaffRepository.php` → `get_ptms`**: add
-  `->withCount('participants')` to the `PtmBooking` query (alongside the existing
-  `->with(['student', 'timeslot', 'location'])`). `PtmBooking->participants()` is
-  an existing `hasMany(PtmBookingParticipant::class)`.
-- **`app/Transformers/Staff/Administration/MyPtmBookingsTransformer.php`**: add
-  `'attendees_count' => (int) ($data->participants_count ?? 0),`.
+1. `->with(['student', 'timeslot', 'location'])` references a `location`
+   relation that does not exist on `PtmBooking` (verified: "Call to undefined
+   relationship [location]").
+2. `StaffRepository` imports `App\Transformers\Staff\Forms\MyPtmBookingsTransformer`,
+   which does not exist — the real file is `App\Transformers\Staff\Administration\
+   MyPtmBookingsTransformer`.
 
-"Attendees" = rows in `ptm_booking_participants` for the booking. This is
-additive (a new field); no existing consumer of the transformer is affected.
+Since this endpoint has never worked and no other consumer uses it (only the new
+mobile Today page will), we repair it and add the two fields the app needs.
+
+- **`app/Models/PtmBooking.php`** — add the two missing relations (columns
+  `building_id`, `room_id` already exist and are populated):
+  ```php
+  public function building() { return $this->belongsTo(Building::class); }
+  public function room()     { return $this->belongsTo(Room::class); }
+  ```
+- **`app/Repositories/Staff/StaffRepository.php`**:
+  - Fix the import to `use App\Transformers\Staff\Administration\MyPtmBookingsTransformer;`.
+  - In `get_ptms`, change the query to
+    `->with(['student', 'timeslot.ptm_session.site', 'building', 'room'])->withCount('participants')`
+    (drops the broken `location`; eager-loads `timeslot.ptm_session.site` that the
+    transformer's timezone lookup already reaches lazily; and `building`/`room` for
+    the label).
+- **`app/Transformers/Staff/Administration/MyPtmBookingsTransformer.php`**:
+  - Replace `'location' => $data['location']` with a composed label:
+    ```php
+    'location_label' => $data->location_name
+        ?: collect([$data->building?->name, $data->room?->name])->filter()->implode(' | '),
+    ```
+  - Add `'attendees_count' => (int) ($data->participants_count ?? 0),`.
+
+"Attendees" = rows in `ptm_booking_participants` (`PtmBooking->participants()`,
+an existing `hasMany`). `Building`/`Room` models exist and expose `name`.
 
 ## Component boundaries
 
@@ -130,12 +157,12 @@ additive (a new field); no existing consumer of the transformer is affected.
 - **Loading:** counts show `–` until the first load resolves.
 
 ## Field-shape verification (implementation step)
-The PTM `location` relation shape and the calendar `location_building`/
-`location_room` object shape are inferred from the backend transformers. During
-implementation, confirm the exact nested keys against one live `/ptms` and one
-`/calendar/events/query` response and adjust the fallback chains above if needed.
-The chains are written defensively (optional chaining + fallbacks) so a missing
-key degrades to a shorter line rather than a crash.
+The calendar `location_building`/`location_room` object shapes are inferred from
+the backend transformer. During implementation, confirm those nested keys against
+one live `/calendar/events/query` response and adjust the fallback chain if
+needed; it is written defensively (optional chaining + fallbacks) so a missing
+key degrades to a shorter line rather than a crash. The PTM shape is now fixed by
+this spec's backend change (`attendees_count`, `location_label`).
 
 ## Out of scope
 - Row tap navigation / detail screens for classes, events, PTMs.
