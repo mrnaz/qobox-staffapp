@@ -10,14 +10,15 @@ Replace the dashboard's inline "Today" list with a compact **TODAY** counts box
 (Classes / Calendar Events / PTM Meetings). Tapping the box opens a dedicated
 **Today** page that expands each of the three into a full list.
 
-No backend changes. All three data sources already exist.
+One small backend change (PTM attendee count — see "Backend change"). Everything
+else uses data sources that already exist.
 
 ## Decisions (from brainstorming)
 
 1. **Dashboard layout:** the inline class/event list under "Today" is **replaced**
    by the compact counts box. The On-shift card and Notices are untouched.
-2. **PTM rows:** show student full name, time, and location only. No attendee
-   count (would require a backend change) — out of scope.
+2. **PTM rows:** show student full name, attendee count, time, and location. The
+   attendee count requires a small backend change (see "Backend change").
 3. **Row taps:** all rows on the Today page are **display-only** for v1.
 
 ## Data sources
@@ -29,7 +30,7 @@ All filtered to **today in the device-local timezone**, using the same
 |------|----------|-----------------|
 | Classes | `GET staff/{staff_id}/timetable?start_date&end_date` (`api.getStaffTimetable`) | `class.title`, `class.photo`, `room.name`, `session_start`, `session_end` |
 | Calendar events | `GET calendar/events/query?from&to&staff_id&org_id` (`api.getCalendarEvents`) | `title`, `start_at`, `all_day`, `location_description`, `location_building`, `location_room` |
-| PTM meetings | `GET staff/{staff_id}/ptms?start_date&end_date` (**new** `api.getStaffPtms`) | `student.full_name`, `timeslot.ptm_start`, `location` (booking location relation), booking `location_name` |
+| PTM meetings | `GET staff/{staff_id}/ptms?start_date&end_date` (**new** `api.getStaffPtms`) | `student.full_name`, `attendees_count` (**new field**), `timeslot.ptm_start`, `location` (booking location relation), booking `location_name` |
 
 Date range passed to each: `start_date/from = today`, `end_date/to = tomorrow`
 (mirrors the dashboard's existing "extend end to next day" note), then the
@@ -89,14 +90,29 @@ results are filtered client-side to today so all three lists agree on "today".
       subtitle = `room.name`, time right-aligned (`formatTime(session_start)`).
     - **CALENDAR** — `title`; line `📅 {all_day ? 'All day' : formatTime(start_at)}`;
       location line `📍 {location_description || [location_building?.name, location_room?.name].filter(Boolean).join(', ')}` (omitted when empty).
-    - **PTMs** — person avatar + `student.full_name`; location line
-      `📍 {location?.location_name || [location?.building?.name, location?.room?.name].filter(Boolean).join(' | ') || location_name}`; time `{formatTime(timeslot.ptm_start)}`.
+    - **PTMs** — person avatar + `{student.full_name} ({attendees_count} attendees)`;
+      location line `📍 {location?.location_name || [location?.building?.name, location?.room?.name].filter(Boolean).join(' | ') || location_name}`; time `{formatTime(timeslot.ptm_start)}`.
+      Attendee text: pluralize (`1 attendee` / `N attendees`); omit the `(…)` when count is 0/absent.
   - Each section has its own empty state ("No classes today", "No calendar
     events today", "No PTM meetings today").
 
 ### 4. Navigation
 - `/today` is a pushed Stack screen reached only from the dashboard box; it is
   **not** added to the bottom tab bar.
+
+## Backend change (qobox — PTM attendee count)
+
+Add a participant count to the PTM payload so the app can show "(N attendees)".
+
+- **`app/Repositories/Staff/StaffRepository.php` → `get_ptms`**: add
+  `->withCount('participants')` to the `PtmBooking` query (alongside the existing
+  `->with(['student', 'timeslot', 'location'])`). `PtmBooking->participants()` is
+  an existing `hasMany(PtmBookingParticipant::class)`.
+- **`app/Transformers/Staff/Administration/MyPtmBookingsTransformer.php`**: add
+  `'attendees_count' => (int) ($data->participants_count ?? 0),`.
+
+"Attendees" = rows in `ptm_booking_participants` for the booking. This is
+additive (a new field); no existing consumer of the transformer is affected.
 
 ## Component boundaries
 
@@ -122,8 +138,8 @@ The chains are written defensively (optional chaining + fallbacks) so a missing
 key degrades to a shorter line rather than a crash.
 
 ## Out of scope
-- PTM attendee count (needs backend transformer change).
 - Row tap navigation / detail screens for classes, events, PTMs.
+- A dedicated "grade" concept for classes (no such field exists; subtitle = room).
 - Any change to Notices, the On-shift card, or the bottom tab bar.
 
 ## Verification
