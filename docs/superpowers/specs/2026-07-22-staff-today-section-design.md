@@ -105,12 +105,15 @@ results are filtered client-side to today so all three lists agree on "today".
 ## Backend change (qobox — repair + extend the PTM endpoint)
 
 `GET staff/{staff}/ptms` (`StaffController@get_ptms` → `StaffRepository::get_ptms`)
-is **currently broken** and 500s on every call — two independent bugs:
+is **currently broken** and 500s on every call — three independent bugs:
 
-1. `->with(['student', 'timeslot', 'location'])` references a `location`
+1. `PtmBooking::where('staff_id', ...)` filters a column that does not exist —
+   `ptm_bookings` links to staff via `ptm_staff_id` → `ptm_staff.staff_id`. Fix:
+   `whereHas('ptm_staff', fn ($q) => $q->where('staff_id', $staff['id']))`.
+2. `->with(['student', 'timeslot', 'location'])` references a `location`
    relation that does not exist on `PtmBooking` (verified: "Call to undefined
    relationship [location]").
-2. `StaffRepository` imports `App\Transformers\Staff\Forms\MyPtmBookingsTransformer`,
+3. `StaffRepository` imports `App\Transformers\Staff\Forms\MyPtmBookingsTransformer`,
    which does not exist — the real file is `App\Transformers\Staff\Administration\
    MyPtmBookingsTransformer`.
 
@@ -125,7 +128,8 @@ mobile Today page will), we repair it and add the two fields the app needs.
   ```
 - **`app/Repositories/Staff/StaffRepository.php`**:
   - Fix the import to `use App\Transformers\Staff\Administration\MyPtmBookingsTransformer;`.
-  - In `get_ptms`, change the query to
+  - In `get_ptms`, fix the staff filter (`whereHas('ptm_staff', …staff_id…)`) and
+    change eager loading to
     `->with(['student', 'timeslot.ptm_session.site', 'building', 'room'])->withCount('participants')`
     (drops the broken `location`; eager-loads `timeslot.ptm_session.site` that the
     transformer's timezone lookup already reaches lazily; and `building`/`room` for
