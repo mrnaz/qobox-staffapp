@@ -194,6 +194,10 @@ class ApiService {
         return this.get(endpoints.GET_STAFF_TIMETABLE.replace('{staff_id}', staffId), params);
     }
 
+    async getStaffPtms(staffId, params = {}) {
+        return this.get(endpoints.GET_STAFF_PTMS.replace('{staff_id}', staffId), params);
+    }
+
     // Calendar
     async getCalendarEvents(params = {}) {
         return this.get(endpoints.GET_CALENDAR_EVENTS_QUERY, params);

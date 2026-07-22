@@ -32,6 +32,9 @@ export const endpoints = {
     // My Timetable
     GET_STAFF_TIMETABLE: 'staff/{staff_id}/timetable',
 
+    // PTM meetings for a staff member (date range)
+    GET_STAFF_PTMS: 'staff/{staff_id}/ptms',
+
     // Calendar
     GET_CALENDAR_EVENTS_QUERY: 'calendar/events/query',
     GET_CALENDAR_EVENT_TYPES: 'calendar/event-types',
