@@ -70,6 +70,9 @@ export default function DashboardScreen() {
     const { classes: todayClasses, events: todayEvents, ptms: todayPtms, loading: agendaLoading } =
         useTodayAgenda(staff?.id, orgId);
 
+    const agendaEmpty =
+        todayClasses.length === 0 && todayEvents.length === 0 && todayPtms.length === 0;
+
     const [notices, setNotices] = useState([]);
     const [openShift, setOpenShift] = useState(null);
     const [expandedNoticeId, setExpandedNoticeId] = useState(null);
@@ -142,7 +145,7 @@ export default function DashboardScreen() {
                 setIsRefreshing(false);
             }
         },
-        [staff, orgId, siteId]
+        [staff, siteId]
     );
 
     useEffect(() => { loadToday(); }, [loadToday]);
@@ -221,7 +224,7 @@ export default function DashboardScreen() {
                         <View key={row.label} style={styles.todayRow}>
                             <Ionicons name={row.icon} size={22} color={colors.textPrimary} style={styles.todayIcon} />
                             <Text style={[styles.todayCount, { color: colors.textPrimary }]}>
-                                {agendaLoading ? '–' : row.count}
+                                {agendaLoading && agendaEmpty ? '–' : row.count}
                             </Text>
                             <Text style={[styles.todayLabel, { color: colors.textPrimary }]}>{row.label}</Text>
                         </View>
@@ -359,20 +362,6 @@ const styles = StyleSheet.create({
     emptyCard: { borderWidth: 1, borderRadius: 12, padding: 24, alignItems: 'center', gap: 6 },
     emptyCardTitle: { fontSize: 14, fontWeight: '600' },
     emptyCardText: { fontSize: 12, textAlign: 'center' },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
-    },
-    iconWrap: {
-        width: 40, height: 40, borderRadius: 10,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    rowTitle: { fontSize: 14, fontWeight: '600' },
-    rowSub: { fontSize: 12, marginTop: 2 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
 
