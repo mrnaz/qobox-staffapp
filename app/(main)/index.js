@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     ScrollView,
-    ActivityIndicator,
     TouchableOpacity,
     RefreshControl,
     Dimensions,
@@ -18,6 +17,7 @@ import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
 import ShiftTimer from '../components/ShiftTimer';
 import { formatShiftStart, normalizeTimeLabel } from '../utils/datetime';
+import useTodayAgenda from '../hooks/useTodayAgenda';
 
 // Map post_scope → theme color group (matching client app's NoticeboardList)
 const SCOPE_PALETTE = {
@@ -56,24 +56,6 @@ const relativeTime = (iso) => {
     return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-const fmtDateForApi = (d) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-const formatTime = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime())
-        ? ''
-        : d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-};
-
-const eventColor = (name, theme) => {
-    if (!name) return theme.primary;
-    const palette = theme[String(name).toLowerCase()];
-    if (palette && typeof palette === 'object' && palette.text) return palette.text;
-    return theme.primary;
-};
-
 export default function DashboardScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -85,8 +67,9 @@ export default function DashboardScreen() {
     const [siteId, setSiteId] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
 
-    const [sessions, setSessions] = useState([]);
-    const [events, setEvents] = useState([]);
+    const { classes: todayClasses, events: todayEvents, ptms: todayPtms, loading: agendaLoading } =
+        useTodayAgenda(staff?.id, orgId);
+
     const [notices, setNotices] = useState([]);
     const [openShift, setOpenShift] = useState(null);
     const [expandedNoticeId, setExpandedNoticeId] = useState(null);
@@ -112,19 +95,8 @@ export default function DashboardScreen() {
             if (!staff?.id) return;
             try {
                 if (!opts.refresh) setIsLoading(true);
-                const today = new Date();
-                const tomorrow = new Date(today);
-                tomorrow.setDate(today.getDate() + 1);
-                const todayStr = fmtDateForApi(today);
-                const tomorrowStr = fmtDateForApi(tomorrow);
 
-                // Backend `whereBetween('session_start', [start, end])` treats
-                // start_date == end_date as a single instant (midnight in the
-                // site's timezone), so we must extend `end` to the next day to
-                // include all of today's sessions.
-                const [tt, cal, nb, rl] = await Promise.allSettled([
-                    api.getStaffTimetable(staff.id, { start_date: todayStr, end_date: tomorrowStr }),
-                    api.getCalendarEvents({ from: todayStr, to: tomorrowStr, staff_id: staff.id, org_id: orgId }),
+                const [nb, rl] = await Promise.allSettled([
                     api.getDashboardNoticeboard({ limit: 5, page: 1 }),
                     siteId
                         ? api.getMyShifts({
@@ -137,29 +109,6 @@ export default function DashboardScreen() {
                         : Promise.resolve({ open_shift: null }),
                 ]);
 
-                const isOnDay = (iso, day) => {
-                    if (!iso) return false;
-                    const d = new Date(iso);
-                    return (
-                        d.getFullYear() === day.getFullYear() &&
-                        d.getMonth() === day.getMonth() &&
-                        d.getDate() === day.getDate()
-                    );
-                };
-                if (tt.status === 'fulfilled') {
-                    const list = tt.value?.timetable || tt.value?.data || tt.value || [];
-                    const todayOnly = (Array.isArray(list) ? list : []).filter((s) =>
-                        isOnDay(s.session_start || s.start, today)
-                    );
-                    setSessions(todayOnly);
-                }
-                if (cal.status === 'fulfilled') {
-                    const list = cal.value?.events || cal.value?.data || cal.value || [];
-                    const todayOnly = (Array.isArray(list) ? list : []).filter((e) =>
-                        isOnDay(e.start_at || e.start_date || e.start, today)
-                    );
-                    setEvents(todayOnly);
-                }
                 if (nb.status === 'fulfilled') {
                     const list = nb.value?.noticeboard || nb.value?.data || nb.value || [];
                     setNotices(Array.isArray(list) ? list : []);
@@ -259,70 +208,25 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                 ) : null}
 
-                {isLoading && sessions.length === 0 && events.length === 0 ? (
-                    <ActivityIndicator color={colors.primary} style={{ paddingVertical: 24 }} />
-                ) : (
-                    <>
-                        {sessions.length === 0 && events.length === 0 ? (
-                            <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                                <Ionicons name="cafe-outline" size={28} color={colors.textSecondary} />
-                                <Text style={[styles.emptyCardTitle, { color: colors.textPrimary }]}>
-                                    Nothing on your plate today
-                                </Text>
-                                <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>
-                                    No classes or events scheduled.
-                                </Text>
-                            </View>
-                        ) : (
-                            <>
-                                {sessions.map((it, i) => {
-                                    const classTitle = it.class?.title || it.class_title || it.title || 'Class';
-                                    const roomName = it.room?.name || it.room_name;
-                                    const classAvatar = it.class?.photo || it.class?.avatar || it.class_avatar;
-                                    return (
-                                        <View
-                                            key={`s-${it.id ?? i}`}
-                                            style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                                        >
-                                            <Avatar uri={classAvatar} name={classTitle} size={40} />
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={[styles.rowTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                                                    {classTitle}
-                                                </Text>
-                                                <Text style={[styles.rowSub, { color: colors.textSecondary }]}>
-                                                    {formatTime(it.session_start)} – {formatTime(it.session_end)}
-                                                    {roomName ? ` · ${roomName}` : ''}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                                {events.map((ev, i) => {
-                                    const accent = eventColor(ev.color, colors);
-                                    return (
-                                        <View
-                                            key={`e-${ev.id ?? i}`}
-                                            style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                                        >
-                                            <View style={[styles.iconWrap, { backgroundColor: accent + '22' }]}>
-                                                <Ionicons name="calendar-outline" size={18} color={accent} />
-                                            </View>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={[styles.rowTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                                                    {ev.title || ev.name || 'Event'}
-                                                </Text>
-                                                <Text style={[styles.rowSub, { color: colors.textSecondary }]}>
-                                                    {ev.all_day ? 'All day' : formatTime(ev.start_at || ev.start_date || ev.start)}
-                                                    {ev.type_label || ev.event_type_name ? ` · ${ev.type_label || ev.event_type_name}` : ''}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </>
-                        )}
-                    </>
-                )}
+                <TouchableOpacity
+                    onPress={() => router.push('/today')}
+                    activeOpacity={0.85}
+                    style={[styles.todayBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                >
+                    {[
+                        { icon: 'school-outline', count: todayClasses.length, label: 'Classes' },
+                        { icon: 'calendar-outline', count: todayEvents.length, label: 'Calendar Events' },
+                        { icon: 'chatbubbles-outline', count: todayPtms.length, label: 'PTM Meetings' },
+                    ].map((row) => (
+                        <View key={row.label} style={styles.todayRow}>
+                            <Ionicons name={row.icon} size={22} color={colors.textPrimary} style={styles.todayIcon} />
+                            <Text style={[styles.todayCount, { color: colors.textPrimary }]}>
+                                {agendaLoading ? '–' : row.count}
+                            </Text>
+                            <Text style={[styles.todayLabel, { color: colors.textPrimary }]}>{row.label}</Text>
+                        </View>
+                    ))}
+                </TouchableOpacity>
             </Section>
 
             {/* Notices */}
@@ -519,4 +423,11 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     expandHintText: { fontSize: 12, fontWeight: '600' },
+
+    // Today counts box
+    todayBox: { borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 14 },
+    todayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+    todayIcon: { width: 30 },
+    todayCount: { fontSize: 18, fontWeight: '700', width: 34 },
+    todayLabel: { fontSize: 16, fontWeight: '500' },
 });
