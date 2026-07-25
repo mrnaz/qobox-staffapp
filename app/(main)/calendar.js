@@ -296,7 +296,7 @@ export default function CalendarScreen() {
                             >
                                 {date.getDate()}
                             </Text>
-                            {dayEvents.length > 0 ? (
+                            {inMonth && dayEvents.length > 0 ? (
                                 <View style={[styles.gridBadge, { backgroundColor: colors.primary }]}>
                                     <Text style={styles.gridBadgeText}>{dayEvents.length}</Text>
                                 </View>
@@ -315,8 +315,8 @@ export default function CalendarScreen() {
                     <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} style={styles.navBtn}>
                         <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setMonth(startOfMonth(new Date()))}>
-                        <Text style={[styles.label, { color: colors.textPrimary }]}>{fmtMonth(month)}</Text>
+                    <TouchableOpacity onPress={() => { if (!isCurrentMonth) setMonth(startOfMonth(new Date())); }}>
+                        <Text style={[styles.label, { color: colors.textPrimary }]} numberOfLines={1}>{fmtMonth(month)}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} style={styles.navBtn}>
                         <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
@@ -324,7 +324,7 @@ export default function CalendarScreen() {
                 </View>
                 <View style={styles.barRight}>
                     <TouchableOpacity
-                        onPress={() => setMonth(startOfMonth(new Date()))}
+                        onPress={() => { if (!isCurrentMonth) setMonth(startOfMonth(new Date())); }}
                         style={[styles.iconBtn, { backgroundColor: isCurrentMonth ? colors.primary : colors.surface }]}
                         accessibilityLabel="Go to current month"
                     >
@@ -548,14 +548,14 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderBottomWidth: 1,
     },
-    barNav: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    barNav: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 },
     barRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     navBtn: { padding: 6 },
     iconBtn: { padding: 7, borderRadius: 8 },
     viewToggle: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, borderWidth: 1, overflow: 'hidden' },
     viewToggleOption: { paddingHorizontal: 10, paddingVertical: 7, alignItems: 'center', justifyContent: 'center' },
     viewToggleDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
-    label: { fontSize: 14, fontWeight: '600' },
+    label: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
 
     // Month-grid view
     monthWrap: { padding: 12, paddingBottom: 32 },
