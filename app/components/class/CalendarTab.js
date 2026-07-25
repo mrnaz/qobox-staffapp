@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -60,9 +60,16 @@ export default function CalendarTab({ classId }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
+    // Bumped on every load() call; lets an in-flight request's response detect
+    // it's been superseded by a newer month change and skip its setState.
+    const loadRequestIdRef = useRef(0);
 
     const load = useCallback(
         async (opts = {}) => {
+            // Tag this load so a later month change (which starts its own load
+            // before this one resolves) can make this one's results a no-op
+            // instead of clobbering the newer month's data.
+            const requestId = ++loadRequestIdRef.current;
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
@@ -72,15 +79,20 @@ export default function CalendarTab({ classId }) {
                     start_date: fmtDate(startOfMonth(month)),
                     end_date: fmtDate(endOfMonth(month)),
                 });
+                if (requestId !== loadRequestIdRef.current) return;
                 const list =
                     res?.events || res?.calendar || res?.sessions || res?.data || res || [];
                 setEvents(Array.isArray(list) ? list : []);
             } catch (err) {
                 console.error('Class calendar load error', err);
-                setError(err.body?.message || err.message || 'Failed to load calendar.');
+                if (requestId === loadRequestIdRef.current) {
+                    setError(err.body?.message || err.message || 'Failed to load calendar.');
+                }
             } finally {
-                setIsLoading(false);
-                setIsRefreshing(false);
+                if (requestId === loadRequestIdRef.current) {
+                    setIsLoading(false);
+                    setIsRefreshing(false);
+                }
             }
         },
         [classId, month]

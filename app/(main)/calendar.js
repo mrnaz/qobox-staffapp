@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -7,10 +7,11 @@ import {
     ActivityIndicator,
     TouchableOpacity,
     RefreshControl,
+    Dimensions,
     Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 
@@ -49,6 +50,23 @@ const eventColor = (name, theme) => {
     return theme.primary;
 };
 
+// ── Month-grid helpers ──────────────────────────────────────────────────────
+const { width: SCREEN_W } = Dimensions.get('window');
+const GRID_CELL_H = Math.round((SCREEN_W / 7) * 1.15);
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Sunday-first 6-week (42-cell) grid covering `monthDate`, matching the client
+// app's calendar layout (stable height across month navigation).
+const getCalendarGrid = (monthDate) => {
+    const first = startOfMonth(monthDate);
+    const offset = first.getDay(); // 0 = Sunday
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+        cells.push(new Date(first.getFullYear(), first.getMonth(), 1 - offset + i));
+    }
+    return cells;
+};
+
 // The four built-in ("special") calendar categories the backend emits, with their
 // default palette colour name. Mirrors the web app's specialCalendarEventTypes and
 // CalendarEventsRepository::getColorForEventType. `category` matches the backend
@@ -70,10 +88,14 @@ export default function CalendarScreen() {
     const [profileLoaded, setProfileLoaded] = useState(false);
     const [organisationId, setOrganisationId] = useState(null);
     const [month, setMonth] = useState(startOfMonth(new Date()));
+    const [view, setView] = useState('day'); // 'day' (agenda) | 'month' (grid)
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
+    // Bumped on every load() call; lets an in-flight request's response detect
+    // it's been superseded by a newer month change and skip its setState.
+    const loadRequestIdRef = useRef(0);
 
     // ── Event-type visibility filter (mirrors the main app's "Calendar Types") ──
     const [specialSelected, setSpecialSelected] = useState(
@@ -98,6 +120,10 @@ export default function CalendarScreen() {
     const load = useCallback(
         async (opts = {}) => {
             if (!staff?.id) return;
+            // Tag this load so a later month change (which starts its own load
+            // before this one resolves) can make this one's results a no-op
+            // instead of clobbering the newer month's data.
+            const requestId = ++loadRequestIdRef.current;
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
@@ -109,14 +135,19 @@ export default function CalendarScreen() {
                     staff_id: staff.id,
                     org_id: organisationId,
                 });
+                if (requestId !== loadRequestIdRef.current) return;
                 const list = res?.events || res?.data || res || [];
                 setEvents(Array.isArray(list) ? list : []);
             } catch (err) {
                 console.error('Calendar load error', err);
-                setError(err.body?.message || err.message || 'Failed to load calendar.');
+                if (requestId === loadRequestIdRef.current) {
+                    setError(err.body?.message || err.message || 'Failed to load calendar.');
+                }
             } finally {
-                setIsLoading(false);
-                setIsRefreshing(false);
+                if (requestId === loadRequestIdRef.current) {
+                    setIsLoading(false);
+                    setIsRefreshing(false);
+                }
             }
         },
         [staff, organisationId, month]
@@ -197,6 +228,15 @@ export default function CalendarScreen() {
         return Array.from(map.values());
     }, [events, isEventVisible]);
 
+    // Fast lookup for the month grid: date-key → that day's visible events.
+    const eventsByDay = useMemo(() => {
+        const m = new Map();
+        grouped.forEach(({ day, items }) => m.set(fmtDate(day), items));
+        return m;
+    }, [grouped]);
+
+    const grid = useMemo(() => getCalendarGrid(month), [month]);
+
     if (profileLoaded && !staff?.id) {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -211,6 +251,62 @@ export default function CalendarScreen() {
     }
 
     const today = new Date();
+    const isCurrentMonth =
+        month.getFullYear() === today.getFullYear() && month.getMonth() === today.getMonth();
+
+    const renderMonthView = () => (
+        <ScrollView
+            contentContainerStyle={styles.monthWrap}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        >
+            <View style={styles.weekHeader}>
+                {WEEKDAY_LABELS.map((l) => (
+                    <View key={l} style={styles.weekHeaderCell}>
+                        <Text style={[styles.weekHeaderText, { color: colors.textSecondary }]}>{l}</Text>
+                    </View>
+                ))}
+            </View>
+            <View style={[styles.grid, { borderColor: colors.border }]}>
+                {grid.map((date) => {
+                    const inMonth = date.getMonth() === month.getMonth();
+                    const dayEvents = eventsByDay.get(fmtDate(date)) || [];
+                    const isToday = isSameDay(date, today);
+                    return (
+                        <TouchableOpacity
+                            key={date.toISOString()}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                if (date.getMonth() !== month.getMonth() || date.getFullYear() !== month.getFullYear()) {
+                                    setMonth(startOfMonth(date));
+                                }
+                                setView('day');
+                            }}
+                            style={[
+                                styles.gridCell,
+                                { borderColor: colors.border },
+                                isToday && { backgroundColor: colors.primary + '20' },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.gridDate,
+                                    { color: inMonth ? colors.textPrimary : colors.textDisabled },
+                                    isToday && { color: colors.primary, fontWeight: '800' },
+                                ]}
+                            >
+                                {date.getDate()}
+                            </Text>
+                            {dayEvents.length > 0 ? (
+                                <View style={[styles.gridBadge, { backgroundColor: colors.primary }]}>
+                                    <Text style={styles.gridBadgeText}>{dayEvents.length}</Text>
+                                </View>
+                            ) : null}
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        </ScrollView>
+    );
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -226,17 +322,45 @@ export default function CalendarScreen() {
                         <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
                     </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    onPress={() => setFilterVisible(true)}
-                    style={styles.navBtn}
-                    accessibilityLabel="Filter event types"
-                >
-                    <Ionicons
-                        name={filtersActive ? 'funnel' : 'funnel-outline'}
-                        size={20}
-                        color={filtersActive ? colors.primary : colors.textPrimary}
-                    />
-                </TouchableOpacity>
+                <View style={styles.barRight}>
+                    <TouchableOpacity
+                        onPress={() => setMonth(startOfMonth(new Date()))}
+                        style={[styles.iconBtn, { backgroundColor: isCurrentMonth ? colors.primary : colors.surface }]}
+                        accessibilityLabel="Go to current month"
+                    >
+                        <Ionicons name="home" size={18} color={isCurrentMonth ? '#fff' : colors.textSecondary} />
+                    </TouchableOpacity>
+
+                    <View style={[styles.viewToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <TouchableOpacity
+                            style={[styles.viewToggleOption, view === 'day' && { backgroundColor: colors.primary }]}
+                            onPress={() => setView('day')}
+                            accessibilityLabel="Agenda view"
+                        >
+                            <FontAwesome name="list" size={16} color={view === 'day' ? '#fff' : colors.textSecondary} />
+                        </TouchableOpacity>
+                        <View style={[styles.viewToggleDivider, { backgroundColor: colors.border }]} />
+                        <TouchableOpacity
+                            style={[styles.viewToggleOption, view === 'month' && { backgroundColor: colors.primary }]}
+                            onPress={() => setView('month')}
+                            accessibilityLabel="Month view"
+                        >
+                            <FontAwesome name="calendar" size={16} color={view === 'month' ? '#fff' : colors.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                        onPress={() => setFilterVisible(true)}
+                        style={styles.navBtn}
+                        accessibilityLabel="Filter event types"
+                    >
+                        <Ionicons
+                            name={filtersActive ? 'funnel' : 'funnel-outline'}
+                            size={20}
+                            color={filtersActive ? colors.primary : colors.textPrimary}
+                        />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {isLoading && events.length === 0 ? (
@@ -251,6 +375,8 @@ export default function CalendarScreen() {
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
                     </TouchableOpacity>
                 </View>
+            ) : view === 'month' ? (
+                renderMonthView()
             ) : grouped.length === 0 ? (
                 <ScrollView
                     contentContainerStyle={styles.center}
@@ -423,8 +549,46 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     barNav: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    barRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     navBtn: { padding: 6 },
+    iconBtn: { padding: 7, borderRadius: 8 },
+    viewToggle: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, borderWidth: 1, overflow: 'hidden' },
+    viewToggleOption: { paddingHorizontal: 10, paddingVertical: 7, alignItems: 'center', justifyContent: 'center' },
+    viewToggleDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
     label: { fontSize: 14, fontWeight: '600' },
+
+    // Month-grid view
+    monthWrap: { padding: 12, paddingBottom: 32 },
+    weekHeader: { flexDirection: 'row', marginBottom: 6 },
+    weekHeaderCell: { width: '14.2857%', alignItems: 'center' },
+    weekHeaderText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderLeftWidth: StyleSheet.hairlineWidth,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    gridCell: {
+        width: '14.2857%',
+        height: GRID_CELL_H,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        padding: 4,
+        alignItems: 'center',
+    },
+    gridDate: { fontSize: 13, marginTop: 2 },
+    gridBadge: {
+        marginTop: 4,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        paddingHorizontal: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    gridBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
     list: { padding: 16, paddingBottom: 32 },
     dayBlock: { marginBottom: 16 },
     dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },

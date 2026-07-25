@@ -32,6 +32,24 @@ const STATUS_LABELS = {
     pending: 'Pending',
 };
 
+// Per-student attendance statuses shown as a legend above the daily records.
+// Mirrors DailyAttendanceModal's STATUS_META / statusColor so the icons and
+// colours match the marking screen (theme tokens, not hardcoded hex).
+const STATUS_LEGEND = [
+    { key: 'present', label: 'Present',  icon: 'checkbox' },
+    { key: 'absent',  label: 'Absent',   icon: 'close-circle' },
+    { key: 'late',    label: 'Late',     icon: 'time' },
+    { key: 'left',    label: 'Left',     icon: 'exit' },
+    { key: 'notset',  label: 'Unmarked', icon: 'square-outline' },
+];
+const statusColor = (colors, key) => ({
+    present: colors.success,
+    absent:  colors.error,
+    late:    colors.warning,
+    left:    colors.info,
+    notset:  colors.textDisabled,
+}[key] || colors.textSecondary);
+
 export default function AttendanceScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -178,6 +196,7 @@ export default function AttendanceScreen() {
                     data={items}
                     keyExtractor={(it, i) => String(it.id ?? `${it.academic_date || it.date || ''}-${i}`)}
                     renderItem={renderItem}
+                    ListHeaderComponent={items.length > 0 ? <AttendanceLegend colors={colors} /> : null}
                     contentContainerStyle={styles.list}
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     ListEmptyComponent={
@@ -217,6 +236,24 @@ function Stat({ label, value, color, colors }) {
     );
 }
 
+function AttendanceLegend({ colors }) {
+    return (
+        <View style={[styles.legend, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            {STATUS_LEGEND.map((s) => {
+                const c = statusColor(colors, s.key);
+                return (
+                    <View key={s.key} style={styles.legendItem}>
+                        <View style={[styles.legendIcon, { backgroundColor: c + '1A' }]}>
+                            <Ionicons name={s.icon} size={14} color={c} />
+                        </View>
+                        <Text style={[styles.legendText, { color: colors.textSecondary }]}>{s.label}</Text>
+                    </View>
+                );
+            })}
+        </View>
+    );
+}
+
 const styles = StyleSheet.create({
     container: { flex: 1 },
     list: { padding: 16, paddingTop: 4, paddingBottom: 32, gap: 10 },
@@ -234,4 +271,19 @@ const styles = StyleSheet.create({
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+
+    // Status legend (mirrors the client attendance-calendar legend)
+    legend: {
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 10,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        rowGap: 10,
+        columnGap: 16,
+    },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendIcon: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+    legendText: { fontSize: 12, fontWeight: '500' },
 });
