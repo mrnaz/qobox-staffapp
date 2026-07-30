@@ -98,3 +98,33 @@ export const isToday = (value) => {
         d.getDate() === now.getDate()
     );
 };
+
+// 'YYYY-MM-DD HH:mm' in the SITE's timezone, which is the shape the check-in and
+// check-out endpoints expect. The Vue staff portal gets away with device-local
+// time because those users sit in the same timezone as their site; on a phone we
+// cannot assume that, so the instant is reformatted into the site's zone.
+//
+// Falls back to device-local when no timezone is supplied or it is unusable.
+export const nowForApi = (timezone, when) => {
+    const now = when instanceof Date ? when : new Date();
+
+    if (!timezone) {
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())} `
+            + `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+    }
+
+    try {
+        // 'en-CA' yields YYYY-MM-DD natively and 24-hour times under hour12:false.
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: timezone,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+            hour12: false,
+        }).formatToParts(now);
+        const get = (t) => parts.find((p) => p.type === t)?.value || '00';
+
+        return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
+    } catch {
+        return nowForApi(undefined, now);
+    }
+};

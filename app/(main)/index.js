@@ -16,6 +16,9 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
 import ShiftTimer from '../components/ShiftTimer';
+import Toast from '../components/Toast';
+import CheckInModal from '../components/shift/CheckInModal';
+import CheckOutModal from '../components/shift/CheckOutModal';
 import { formatShiftStart, normalizeTimeLabel } from '../utils/datetime';
 import useTodayAgenda from '../hooks/useTodayAgenda';
 
@@ -75,6 +78,11 @@ export default function DashboardScreen() {
 
     const [notices, setNotices] = useState([]);
     const [openShift, setOpenShift] = useState(null);
+    const [todayShifts, setTodayShifts] = useState([]);
+    const [permissions, setPermissions] = useState({ app_checkinout: true, kiosk_checkinout: true });
+    const [checkInTarget, setCheckInTarget] = useState(null);
+    const [checkOutTarget, setCheckOutTarget] = useState(null);
+    const [toast, setToast] = useState(null);
     const [expandedNoticeId, setExpandedNoticeId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -99,8 +107,10 @@ export default function DashboardScreen() {
             try {
                 if (!opts.refresh) setIsLoading(true);
 
-                const [nb, rl] = await Promise.allSettled([
+                const [nb, rl, td] = await Promise.allSettled([
                     api.getDashboardNoticeboard({ limit: 5, page: 1 }),
+                    // Past-inclusive, purely to locate an open shift — one that
+                    // began before today (a night shift) still needs its card.
                     siteId
                         ? api.getMyShifts({
                               staff_id: staff.id,
@@ -110,6 +120,18 @@ export default function DashboardScreen() {
                               show_past_shifts: 'true',
                           })
                         : Promise.resolve({ open_shift: null }),
+                    // Today's roster. The backend defaults `start` to today when
+                    // show_past_shifts is false, which is exactly the set the
+                    // "today's shift" card needs.
+                    siteId
+                        ? api.getMyShifts({
+                              staff_id: staff.id,
+                              site_id: siteId,
+                              page: 1,
+                              limit: 10,
+                              show_past_shifts: 'false',
+                          })
+                        : Promise.resolve({ data: [] }),
                 ]);
 
                 if (nb.status === 'fulfilled') {
@@ -131,12 +153,27 @@ export default function DashboardScreen() {
                                 rostered_start_full_date: item.open_shift_rostered_start_full_date,
                                 rostered_start_time: item.open_shift_rostered_start_time,
                                 rostered_end_time: item.open_shift_rostered_end_time,
+                                // Needed by the check-out sheet: claimed_start is
+                                // echoed back in the payload, and without the
+                                // timezone the submitted time would be device-local
+                                // rather than the site's. This row belongs to the
+                                // same site, so its timezone is the right one.
+                                claimed_start: item.open_shift_claimed_start,
+                                timezone: item.timezone,
                             };
                         } else if (item) {
                             open = item;
                         }
                     }
                     setOpenShift(open);
+                }
+                if (td.status === 'fulfilled') {
+                    const rows = Array.isArray(td.value?.data) ? td.value.data : [];
+                    // Only shifts still waiting to be started belong on the
+                    // "today's shift" card; an in-progress one is already
+                    // represented by the On shift card, and a finished one is done.
+                    setTodayShifts(rows.filter((s) => !s.actual_start && !s.absent));
+                    if (td.value?.permissions) setPermissions(td.value.permissions);
                 }
             } catch (err) {
                 console.error('Dashboard load error', err);
@@ -179,10 +216,11 @@ export default function DashboardScreen() {
         >
             {/* Today */}
             <Section title="Today" colors={colors}>
-                {/* On-shift card — it's part of today, so it lives under this heading */}
+                {/* On-shift card — it's part of today, so it lives under this heading.
+                    Tapping it opens the check-out sheet, which carries the kiosk QR. */}
                 {openShift ? (
                     <TouchableOpacity
-                        onPress={() => router.push('/(main)/roster')}
+                        onPress={() => setCheckOutTarget(openShift)}
                         activeOpacity={0.85}
                         style={[styles.runningCard, {
                             borderColor: colors.success || colors.primary,
@@ -210,6 +248,39 @@ export default function DashboardScreen() {
                         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                 ) : null}
+
+                {/* Shifts rostered for today that have not been started yet.
+                    Tapping one opens the check-in sheet with its kiosk QR. */}
+                {todayShifts.map((shift) => (
+                    <TouchableOpacity
+                        key={shift.id || `roster-${shift.staff_roster_id}`}
+                        onPress={() => setCheckInTarget(shift)}
+                        activeOpacity={0.85}
+                        style={[styles.runningCard, {
+                            borderColor: colors.border,
+                            backgroundColor: colors.cardBackground,
+                        }]}
+                    >
+                        <Ionicons name="time-outline" size={20} color={colors.primary} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.runningLabel, { color: colors.primary }]}>
+                                Shift today
+                            </Text>
+                            <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
+                                {shift.rostered_start_time && shift.rostered_end_time
+                                    ? `${normalizeTimeLabel(shift.rostered_start_time)} – ${normalizeTimeLabel(shift.rostered_end_time)}`
+                                    : formatShiftStart(shift.rostered_start) || '—'}
+                            </Text>
+                            {shift.site_name ? (
+                                <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
+                                    {shift.site_name}
+                                </Text>
+                            ) : null}
+                        </View>
+                        <Text style={[styles.runningLabel, { color: colors.textSecondary }]}>Check in</Text>
+                        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                ))}
 
                 <TouchableOpacity
                     onPress={() => router.push('/today')}
@@ -341,6 +412,35 @@ export default function DashboardScreen() {
                 )}
             </Section>
         </ScrollView>
+
+        <CheckInModal
+            shift={checkInTarget}
+            staff={staff}
+            siteId={siteId}
+            permissions={permissions}
+            onClose={() => setCheckInTarget(null)}
+            onSuccess={() => {
+                loadToday({ refresh: true });
+                setToast({ message: 'Checked in', variant: 'success' });
+            }}
+            onError={(message) => setToast({ message, variant: 'error' })}
+        />
+
+        <CheckOutModal
+            shift={checkOutTarget}
+            staff={staff}
+            siteId={siteId}
+            permissions={permissions}
+            onClose={() => setCheckOutTarget(null)}
+            onSuccess={() => {
+                setOpenShift(null);
+                loadToday({ refresh: true });
+                setToast({ message: 'Checked out', variant: 'success' });
+            }}
+            onError={(message) => setToast({ message, variant: 'error' })}
+        />
+
+        <Toast toast={toast} onHide={() => setToast(null)} />
         </>
     );
 }

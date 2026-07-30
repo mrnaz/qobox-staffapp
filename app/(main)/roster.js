@@ -12,48 +12,19 @@ import {
     ScrollView,
     TextInput,
     Image,
-    Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import { capturePhotoCompressed, appendPhotoToForm } from '../utils/photo';
-import QRCode from '../components/QRCode';
 import ShiftTimer from '../components/ShiftTimer';
 import Toast from '../components/Toast';
+import CheckInModal from '../components/shift/CheckInModal';
+import CheckOutModal from '../components/shift/CheckOutModal';
+import ShiftQrModal from '../components/shift/ShiftQrModal';
+import useShiftQr from '../components/shift/useShiftQr';
 import { parseWallClock, formatShiftStart, normalizeTimeLabel, isToday } from '../utils/datetime';
-
-// Match the Vue staff portal's check-in time format: 'YYYY-MM-DD HH:mm' in the
-// SITE's local timezone. The Vue web works because users browse from the same
-// timezone as the site; on mobile we can't assume that, so we use Intl to
-// format `now` in the provided timezone (which we get from the shift item).
-//
-// Falls back to device-local time if no timezone is supplied.
-const nowForApi = (timezone, when) => {
-    const now = when instanceof Date ? when : new Date();
-    if (!timezone) {
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    }
-    try {
-        const parts = new Intl.DateTimeFormat('en-CA', {
-            timeZone: timezone,
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit',
-            hour12: false,
-        }).formatToParts(now);
-        const get = (t) => parts.find((p) => p.type === t)?.value || '00';
-        // Note: 'en-CA' returns 24-hour times even in 'hour12: false' mode and
-        // formats date as YYYY-MM-DD natively — handy.
-        return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`;
-    } catch {
-        // Bad timezone string — fall back to device-local
-        return nowForApi(undefined);
-    }
-};
 
 const fmtDateForApi = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -113,54 +84,22 @@ export default function RosterScreen() {
     const [markAbsence, setMarkAbsence] = useState(false);
     const [absenceReason, setAbsenceReason] = useState('');
     const [toast, setToast] = useState(null);
-    // Check-in modal state
+    // Which shift each sheet is acting on. The sheets own their own form state.
     const [checkInTarget, setCheckInTarget] = useState(null);
-    const [checkInTime, setCheckInTime] = useState(new Date());
-    const [checkInNote, setCheckInNote] = useState('');
-    const [checkInPhoto, setCheckInPhoto] = useState(null);
-    const [showCheckInTimePicker, setShowCheckInTimePicker] = useState(false);
-    const [checkInSubmitting, setCheckInSubmitting] = useState(false);
-    const [showCheckInQR, setShowCheckInQR] = useState(false);
-    const [qrToken, setQrToken] = useState('');
-    const [qrLoading, setQrLoading] = useState(false);
-    const [qrError, setQrError] = useState('');
-
-    // Check-out modal state (mirrors check-in)
     const [checkOutTarget, setCheckOutTarget] = useState(null);
-    const [checkOutTime, setCheckOutTime] = useState(new Date());
-    const [checkOutNote, setCheckOutNote] = useState('');
-    const [checkOutPhoto, setCheckOutPhoto] = useState(null);
-    const [showCheckOutTimePicker, setShowCheckOutTimePicker] = useState(false);
-    const [checkOutSubmitting, setCheckOutSubmitting] = useState(false);
+    // Organisation switches for in-app and kiosk check in/out, delivered on the
+    // roster-log query. Default to permitted so a stale response never hides
+    // controls that actually work.
+    const [permissions, setPermissions] = useState({ app_checkinout: true, kiosk_checkinout: true });
     const inFlightRef = useRef(false);
-    const prevQrOpenRef = useRef(false);
+
+    // The shift-detail sheet offers a QR too, independently of the check-in and
+    // check-out sheets, which each own theirs.
+    const detailQr = useShiftQr();
 
     const resetModalState = () => {
         setMarkAbsence(false);
         setAbsenceReason('');
-    };
-
-    // Fetch this shift's per-shift kiosk token and show it as a QR. The kiosk
-    // scans QBXSHIFT:<uuid> to clock the staff in (or out) of this specific shift.
-    const openShiftQr = async (item) => {
-        const rosterId = item?.staff_roster_id;
-        setShowCheckInQR(true);
-        setQrToken('');
-        setQrError('');
-        if (!rosterId) {
-            setQrError('This shift has no roster to generate a QR for.');
-            return;
-        }
-        setQrLoading(true);
-        try {
-            const res = await api.getRosterCheckinToken(rosterId);
-            setQrToken(res?.token || '');
-            if (!res?.token) setQrError('No QR token returned.');
-        } catch (err) {
-            setQrError(err.body?.message || err.message || 'Could not load the QR code.');
-        } finally {
-            setQrLoading(false);
-        }
     };
 
     useEffect(() => {
@@ -207,6 +146,7 @@ export default function RosterScreen() {
                 setTotal(totalCount);
                 setPage(targetPage);
                 setOpenShift(res?.open_shift || null);
+                if (res?.permissions) setPermissions(res.permissions);
                 setShifts((prev) => (targetPage === 1 ? incoming : [...prev, ...incoming]));
             } catch (err) {
                 console.error('Roster load error', err);
@@ -241,15 +181,17 @@ export default function RosterScreen() {
         }, [fetchPage])
     );
 
-    // Closing the Check-in QR modal is a strong signal the user just clocked in
-    // (or out) at the kiosk while staying on this screen — where useFocusEffect
-    // never fires. Re-sync so the Check Out card appears/updates right away.
+    // Dismissing either sheet is a strong signal the user may have just clocked in
+    // or out at a kiosk while staying on this screen, where useFocusEffect never
+    // fires. Re-sync so the Check Out card appears or clears right away.
+    const sheetOpen = Boolean(checkInTarget || checkOutTarget);
+    const prevSheetOpenRef = useRef(false);
     useEffect(() => {
-        if (prevQrOpenRef.current && !showCheckInQR) {
+        if (prevSheetOpenRef.current && !sheetOpen) {
             fetchPage({ targetPage: 1, mode: 'refresh' });
         }
-        prevQrOpenRef.current = showCheckInQR;
-    }, [showCheckInQR, fetchPage]);
+        prevSheetOpenRef.current = sheetOpen;
+    }, [sheetOpen, fetchPage]);
 
     const onRefresh = () => {
         setIsRefreshing(true);
@@ -338,9 +280,6 @@ export default function RosterScreen() {
     // Backend response shapes vary:
     //   POST /staff-roster-log         → { data: {...} }
     //   PUT  /staff-roster-log/{id}    → { message, rosterLog: { data: {...} } }
-    const unwrapShift = (res) =>
-        res?.rosterLog?.data || res?.rosterLog || res?.data || res;
-
     // Replace the matched item in `shifts` with the freshly returned one,
     // so we don't drop already-loaded pages by re-fetching.
     const spliceShift = (oldItem, updated) => {
@@ -358,167 +297,15 @@ export default function RosterScreen() {
         });
     };
 
-    const openCheckInModal = (item) => {
-        setCheckInTarget(item);
-        setCheckInTime(new Date());
-        setCheckInNote('');
-        setCheckInPhoto(null);
-        setShowCheckInQR(false);
-    };
+    const openCheckInModal = (item) => setCheckInTarget(item);
+    const openCheckOutModal = (item) => setCheckOutTarget(item);
 
-    const closeCheckInModal = () => {
-        setCheckInTarget(null);
-        setShowCheckInTimePicker(false);
-        setShowCheckInQR(false);
-        setCheckInNote('');
-        setCheckInPhoto(null);
-        setCheckInTime(new Date());
-    };
-
-    const submitCheckIn = async () => {
-        const item = checkInTarget;
-        if (!item) return;
-        try {
-            setCheckInSubmitting(true);
-            setActingOnId(item.id || item.staff_roster_id);
-            const checkInStr = nowForApi(item.timezone, checkInTime);
-            const payload = {
-                staff_id: staff.id,
-                site_id: Number(siteId),
-                staff_roster_id: item.staff_roster_id || null,
-                claimed_start: item.claimed_start || checkInStr,
-                claimed_end: item.claimed_end || null,
-                actual_start: checkInStr,
-            };
-            if (checkInNote.trim()) payload.checkin_comments = checkInNote.trim();
-
-            let res;
-            if (checkInPhoto) {
-                const form = new FormData();
-                Object.entries(payload).forEach(([k, v]) => {
-                    if (v !== null && v !== undefined) form.append(k, String(v));
-                });
-                await appendPhotoToForm(form, 'check_in_photo', checkInPhoto, 'check_in_photo.jpg');
-                if (item.id) {
-                    form.append('_method', 'PUT');
-                    form.append('id', String(item.id));
-                    res = await api.requestForm(`staff-roster-log/${item.id}`, 'POST', form);
-                } else {
-                    res = await api.requestForm('staff-roster-log', 'POST', form);
-                }
-            } else if (item.id) {
-                res = await api.updateShiftLog(item.id, { ...payload, id: item.id });
-            } else {
-                res = await api.createShiftLog(payload);
-            }
-
-            spliceShift(item, unwrapShift(res));
-            closeCheckInModal();
-            // spliceShift only flips the row; refetch so the pinned "On shift"
-            // card (driven by openShift) reflects the now-open shift too.
-            fetchPage({ targetPage: 1, mode: 'refresh' });
-            setToast({ message: 'Checked in', variant: 'success' });
-        } catch (err) {
-            console.error('Check-in error', err);
-            const isActiveShiftError =
-                err.status === 422 &&
-                /already has an active shift/i.test(err.body?.message || '');
-            setToast({
-                message: isActiveShiftError
-                    ? 'You already have an open shift — use “Check Out” on the card above.'
-                    : (err.body?.message || err.message || 'Check-in failed. Please try again.'),
-                variant: 'error',
-            });
-        } finally {
-            setActingOnId(null);
-            setCheckInSubmitting(false);
-        }
-    };
-
-    const handleAttachCheckInPhoto = async () => {
-        try {
-            const photo = await capturePhotoCompressed();
-            if (photo) setCheckInPhoto(photo);
-        } catch (err) {
-            console.error('Photo capture error', err);
-            setToast({ message: err.message || 'Could not capture photo.', variant: 'error' });
-        }
-    };
-
-    const openCheckOutModal = (item) => {
-        setCheckOutTarget(item);
-        setCheckOutTime(new Date());
-        setCheckOutNote('');
-        setCheckOutPhoto(null);
-    };
-
-    const closeCheckOutModal = () => {
-        setCheckOutTarget(null);
-        setShowCheckOutTimePicker(false);
-        setCheckOutNote('');
-        setCheckOutPhoto(null);
-        setCheckOutTime(new Date());
-    };
-
-    const submitCheckOut = async () => {
-        const item = checkOutTarget;
-        if (!item) return;
-        try {
-            setCheckOutSubmitting(true);
-            setActingOnId(item.id);
-            const checkOutStr = nowForApi(item.timezone, checkOutTime);
-            const payload = {
-                id: item.id,
-                staff_id: staff.id,
-                site_id: Number(siteId),
-                staff_roster_id: item.staff_roster_id || null,
-                claimed_start: item.claimed_start,
-                claimed_end: checkOutStr,
-                actual_start: item.actual_start,
-                actual_end: checkOutStr,
-            };
-            if (checkOutNote.trim()) payload.checkout_comments = checkOutNote.trim();
-
-            let res;
-            if (checkOutPhoto) {
-                const form = new FormData();
-                Object.entries(payload).forEach(([k, v]) => {
-                    if (v !== null && v !== undefined) form.append(k, String(v));
-                });
-                await appendPhotoToForm(form, 'check_out_photo', checkOutPhoto, 'check_out_photo.jpg');
-                form.append('_method', 'PUT');
-                res = await api.requestForm(`staff-roster-log/${item.id}`, 'POST', form);
-            } else {
-                res = await api.updateShiftLog(item.id, payload);
-            }
-
-            spliceShift(item, unwrapShift(res));
-            closeCheckOutModal();
-            // The shift is closed now — drop the pinned card immediately, then
-            // refetch to reconcile (open_shift should come back null).
-            setOpenShift(null);
-            fetchPage({ targetPage: 1, mode: 'refresh' });
-            setToast({ message: 'Checked out', variant: 'success' });
-        } catch (err) {
-            console.error('Check-out error', err);
-            setToast({
-                message: err.body?.message || err.message || 'Check-out failed. Please try again.',
-                variant: 'error',
-            });
-        } finally {
-            setActingOnId(null);
-            setCheckOutSubmitting(false);
-        }
-    };
-
-    const handleAttachCheckOutPhoto = async () => {
-        try {
-            const photo = await capturePhotoCompressed();
-            if (photo) setCheckOutPhoto(photo);
-        } catch (err) {
-            console.error('Photo capture error', err);
-            setToast({ message: err.message || 'Could not capture photo.', variant: 'error' });
-        }
+    // Both sheets hand back the freshly saved log. Splice it into the loaded page
+    // so we keep pagination, then refetch to reconcile the pinned "On shift" card
+    // (which is driven by openShift, not by the row).
+    const onShiftSaved = (updated, original) => {
+        spliceShift(original, updated);
+        fetchPage({ targetPage: 1, mode: 'refresh' });
     };
 
     // Marking yourself as absent updates the StaffRoster row (the schedule),
@@ -791,13 +578,15 @@ export default function RosterScreen() {
                                             }
                                             colors={colors}
                                         />
-                                        {selectedShift.staff_roster_id ? (
+                                        {selectedShift.staff_roster_id && permissions.kiosk_checkinout !== false ? (
                                             <TouchableOpacity
-                                                onPress={() => openShiftQr(selectedShift)}
+                                                onPress={() => detailQr.open(selectedShift)}
                                                 style={[styles.btn, { backgroundColor: colors.primary }]}
                                             >
                                                 <Ionicons name="qr-code-outline" size={16} color="#fff" />
-                                                <Text style={styles.btnText}>Clock-in QR</Text>
+                                                <Text style={styles.btnText}>
+                                                    {shiftStatus(selectedShift) === 'in_progress' ? 'Clock-out QR' : 'Clock-in QR'}
+                                                </Text>
                                             </TouchableOpacity>
                                         ) : null}
                                         {selectedShift.checkin_comments ? (
@@ -881,293 +670,42 @@ export default function RosterScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            {/* Check-in modal */}
-            <Modal
-                visible={Boolean(checkInTarget)}
-                transparent
-                animationType="fade"
-                onRequestClose={closeCheckInModal}
-            >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={closeCheckInModal}
-                >
-                    <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
-                        <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <View style={styles.modalHeader}>
-                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Check in</Text>
-                                <TouchableOpacity onPress={closeCheckInModal} style={styles.iconButton}>
-                                    <Ionicons name="close" size={22} color={colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
-                                <View style={{ gap: 6 }}>
-                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Check-in time</Text>
-                                    <TouchableOpacity
-                                        onPress={() => setShowCheckInTimePicker(true)}
-                                        style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.background }]}
-                                    >
-                                        <Ionicons name="time-outline" size={16} color={colors.textPrimary} />
-                                        <Text style={{ color: colors.textPrimary, flex: 1 }}>
-                                            {checkInTime.toLocaleString(undefined, {
-                                                year: 'numeric', month: 'short', day: 'numeric',
-                                                hour: '2-digit', minute: '2-digit',
-                                            })}
-                                        </Text>
-                                        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                    {showCheckInTimePicker ? (
-                                        <DateTimePicker
-                                            value={checkInTime}
-                                            mode="datetime"
-                                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                            onChange={(event, date) => {
-                                                if (Platform.OS !== 'ios') setShowCheckInTimePicker(false);
-                                                if (date) setCheckInTime(date);
-                                            }}
-                                        />
-                                    ) : null}
-                                </View>
+            <CheckInModal
+                shift={checkInTarget}
+                staff={staff}
+                siteId={siteId}
+                permissions={permissions}
+                onClose={() => setCheckInTarget(null)}
+                onSuccess={(updated, original) => {
+                    onShiftSaved(updated, original);
+                    setToast({ message: 'Checked in', variant: 'success' });
+                }}
+                onError={(message) => setToast({ message, variant: 'error' })}
+            />
 
-                                <View style={{ gap: 6 }}>
-                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Check-in note (optional)</Text>
-                                    <TextInput
-                                        value={checkInNote}
-                                        onChangeText={setCheckInNote}
-                                        placeholder=""
-                                        placeholderTextColor={colors.textSecondary}
-                                        multiline
-                                        numberOfLines={3}
-                                        style={[styles.absenceInput, {
-                                            borderColor: colors.border,
-                                            color: colors.textPrimary,
-                                            backgroundColor: colors.background,
-                                        }]}
-                                        textAlignVertical="top"
-                                    />
-                                </View>
+            <CheckOutModal
+                shift={checkOutTarget}
+                staff={staff}
+                siteId={siteId}
+                permissions={permissions}
+                onClose={() => setCheckOutTarget(null)}
+                onSuccess={(updated, original) => {
+                    // Drop the pinned card at once, then let the refetch reconcile.
+                    setOpenShift(null);
+                    onShiftSaved(updated, original);
+                    setToast({ message: 'Checked out', variant: 'success' });
+                }}
+                onError={(message) => setToast({ message, variant: 'error' })}
+            />
 
-                                <View style={{ gap: 8 }}>
-                                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                                        <TouchableOpacity
-                                            onPress={handleAttachCheckInPhoto}
-                                            style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
-                                        >
-                                            <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
-                                            <Text style={{ color: colors.textPrimary }} numberOfLines={1}>
-                                                {checkInPhoto ? 'Retake' : 'Take a photo'}
-                                            </Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => openShiftQr(checkInTarget)}
-                                            style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
-                                        >
-                                            <Ionicons name="qr-code-outline" size={18} color={colors.textPrimary} />
-                                            <Text style={{ color: colors.textPrimary }} numberOfLines={1}>Check In QR</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    {checkInPhoto ? (
-                                        <View style={{ gap: 8 }}>
-                                            <Image
-                                                source={{ uri: checkInPhoto.uri }}
-                                                style={styles.photoPreview}
-                                                resizeMode="cover"
-                                            />
-                                            <TouchableOpacity
-                                                onPress={() => setCheckInPhoto(null)}
-                                                style={[styles.btnOutline, { borderColor: colors.error || colors.warning }]}
-                                            >
-                                                <Ionicons name="trash-outline" size={16} color={colors.error || colors.warning} />
-                                                <Text style={[styles.btnOutlineText, { color: colors.error || colors.warning }]}>
-                                                    Remove photo
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    ) : null}
-                                </View>
-
-                                <TouchableOpacity
-                                    onPress={submitCheckIn}
-                                    disabled={checkInSubmitting}
-                                    style={[styles.btn, { backgroundColor: colors.primary, opacity: checkInSubmitting ? 0.6 : 1, marginTop: 4 }]}
-                                >
-                                    {checkInSubmitting ? (
-                                        <ActivityIndicator color="#fff" />
-                                    ) : (
-                                        <>
-                                            <Ionicons name="log-in-outline" size={16} color="#fff" />
-                                            <Text style={styles.btnText}>Check In</Text>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
-                            </ScrollView>
-                        </View>
-                    </TouchableOpacity>
-                </TouchableOpacity>
-            </Modal>
-
-            {/* Check-in QR — staff shows this at the kiosk to check in */}
-            <Modal
-                visible={showCheckInQR}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowCheckInQR(false)}
-            >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowCheckInQR(false)}
-                >
-                    <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 360 }}>
-                        <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <View style={styles.modalHeader}>
-                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Clock-in QR</Text>
-                                <TouchableOpacity onPress={() => setShowCheckInQR(false)} style={styles.iconButton}>
-                                    <Ionicons name="close" size={22} color={colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-                            <Text style={[styles.qrHint, { color: colors.textSecondary }]}>
-                                Scan this at the kiosk to clock in or out.
-                            </Text>
-                            {qrLoading ? (
-                                <View style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
-                                    <ActivityIndicator color={colors.primary} />
-                                </View>
-                            ) : qrToken ? (
-                                <View style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
-                                    <QRCode value={qrToken} size={260} />
-                                </View>
-                            ) : (
-                                <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                    {qrError || 'No QR available.'}
-                                </Text>
-                            )}
-                        </View>
-                    </TouchableOpacity>
-                </TouchableOpacity>
-            </Modal>
-
-            {/* Check-out modal */}
-            <Modal
-                visible={Boolean(checkOutTarget)}
-                transparent
-                animationType="fade"
-                onRequestClose={closeCheckOutModal}
-            >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={closeCheckOutModal}
-                >
-                    <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
-                        <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <View style={styles.modalHeader}>
-                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Check out</Text>
-                                <TouchableOpacity onPress={closeCheckOutModal} style={styles.iconButton}>
-                                    <Ionicons name="close" size={22} color={colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView style={{ maxHeight: 520 }} contentContainerStyle={{ gap: 12 }}>
-                                <View style={{ gap: 6 }}>
-                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Check-out time</Text>
-                                    <TouchableOpacity
-                                        onPress={() => setShowCheckOutTimePicker(true)}
-                                        style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.background }]}
-                                    >
-                                        <Ionicons name="time-outline" size={16} color={colors.textPrimary} />
-                                        <Text style={{ color: colors.textPrimary, flex: 1 }}>
-                                            {checkOutTime.toLocaleString(undefined, {
-                                                year: 'numeric', month: 'short', day: 'numeric',
-                                                hour: '2-digit', minute: '2-digit',
-                                            })}
-                                        </Text>
-                                        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                    {showCheckOutTimePicker ? (
-                                        <DateTimePicker
-                                            value={checkOutTime}
-                                            mode="datetime"
-                                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                            onChange={(event, date) => {
-                                                if (Platform.OS !== 'ios') setShowCheckOutTimePicker(false);
-                                                if (date) setCheckOutTime(date);
-                                            }}
-                                        />
-                                    ) : null}
-                                </View>
-
-                                <View style={{ gap: 6 }}>
-                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Check-out note (optional)</Text>
-                                    <TextInput
-                                        value={checkOutNote}
-                                        onChangeText={setCheckOutNote}
-                                        placeholder=""
-                                        placeholderTextColor={colors.textSecondary}
-                                        multiline
-                                        numberOfLines={3}
-                                        style={[styles.absenceInput, {
-                                            borderColor: colors.border,
-                                            color: colors.textPrimary,
-                                            backgroundColor: colors.background,
-                                        }]}
-                                        textAlignVertical="top"
-                                    />
-                                </View>
-
-                                <View style={{ gap: 6 }}>
-                                    <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Photo (optional)</Text>
-                                    {checkOutPhoto ? (
-                                        <View style={{ gap: 8 }}>
-                                            <Image
-                                                source={{ uri: checkOutPhoto.uri }}
-                                                style={styles.photoPreview}
-                                                resizeMode="cover"
-                                            />
-                                            <TouchableOpacity
-                                                onPress={() => setCheckOutPhoto(null)}
-                                                style={[styles.btnOutline, { borderColor: colors.error || colors.warning }]}
-                                            >
-                                                <Ionicons name="trash-outline" size={16} color={colors.error || colors.warning} />
-                                                <Text style={[styles.btnOutlineText, { color: colors.error || colors.warning }]}>
-                                                    Remove photo
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    ) : (
-                                        <TouchableOpacity
-                                            onPress={handleAttachCheckOutPhoto}
-                                            style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.background }]}
-                                        >
-                                            <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
-                                            <Text style={{ color: colors.textPrimary, flex: 1 }}>Take a photo</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-
-                                <TouchableOpacity
-                                    onPress={submitCheckOut}
-                                    disabled={checkOutSubmitting}
-                                    style={[styles.btn, {
-                                        backgroundColor: colors.warning || colors.primary,
-                                        opacity: checkOutSubmitting ? 0.6 : 1,
-                                        marginTop: 4,
-                                    }]}
-                                >
-                                    {checkOutSubmitting ? (
-                                        <ActivityIndicator color="#fff" />
-                                    ) : (
-                                        <>
-                                            <Ionicons name="log-out-outline" size={16} color="#fff" />
-                                            <Text style={styles.btnText}>Check Out</Text>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
-                            </ScrollView>
-                        </View>
-                    </TouchableOpacity>
-                </TouchableOpacity>
-            </Modal>
+            <ShiftQrModal
+                visible={detailQr.visible}
+                onClose={detailQr.close}
+                token={detailQr.token}
+                loading={detailQr.loading}
+                error={detailQr.error}
+                direction={shiftStatus(selectedShift || {}) === 'in_progress' ? 'out' : 'in'}
+            />
 
             <Toast toast={toast} onHide={() => setToast(null)} />
         </View>
