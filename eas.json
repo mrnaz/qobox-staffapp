@@ -20,6 +20,13 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
+        "EXPO_PUBLIC_API_URL": "https://app.qobox.com"
+      }
+    },
+    "staging": {
+      "autoIncrement": true,
+      "channel": "staging",
+      "env": {
         "EXPO_PUBLIC_API_URL": "https://st.qobox.com"
       }
     },
