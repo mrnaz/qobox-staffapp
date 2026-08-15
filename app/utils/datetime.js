@@ -25,6 +25,9 @@ export const parseApiDate = (value, { assumeUtc = false } = {}) => {
     let s = String(value).trim();
     if (!s) return null;
     s = s.replace(' ', 'T');
+    // Postgres can emit microsecond fractions ("…:28.850088+02"); Hermes only
+    // accepts millisecond precision, so truncate anything longer.
+    s = s.replace(/\.(\d{3})\d+/, '.$1');
 
     // Explicit zone at the end? e.g. "Z", "+00", "+0000", "+10:30", "-05"
     const tz = s.match(/(Z|[+-]\d{2}(?::?\d{2})?)$/);

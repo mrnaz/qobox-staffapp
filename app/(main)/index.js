@@ -107,44 +107,36 @@ export default function DashboardScreen() {
             try {
                 if (!opts.refresh) setIsLoading(true);
 
-                const [nb, rl, td] = await Promise.allSettled([
+                const [nb, td] = await Promise.allSettled([
                     api.getDashboardNoticeboard({ limit: 5, page: 1 }),
-                    // Past-inclusive, purely to locate an open shift — one that
-                    // began before today (a night shift) still needs its card.
+                    // Today's roster. Omitting show_past_shifts makes the backend
+                    // return ONLY shifts rostered today in the site's timezone —
+                    // 'false' would mean "today and every future shift", which is
+                    // how future shifts ended up on the dashboard as "Shift today".
+                    // The same response carries a top-level `open_shift` whenever
+                    // one exists, with NO date filter, so a shift the user forgot
+                    // to close days ago still surfaces here.
                     siteId
                         ? api.getMyShifts({
                               staff_id: staff.id,
                               site_id: siteId,
                               page: 1,
-                              limit: 1,
-                              show_past_shifts: 'true',
+                              limit: 50,
                           })
-                        : Promise.resolve({ open_shift: null }),
-                    // Today's roster. The backend defaults `start` to today when
-                    // show_past_shifts is false, which is exactly the set the
-                    // "today's shift" card needs.
-                    siteId
-                        ? api.getMyShifts({
-                              staff_id: staff.id,
-                              site_id: siteId,
-                              page: 1,
-                              limit: 10,
-                              show_past_shifts: 'false',
-                          })
-                        : Promise.resolve({ data: [] }),
+                        : Promise.resolve({ data: [], open_shift: null }),
                 ]);
 
                 if (nb.status === 'fulfilled') {
                     const list = nb.value?.noticeboard || nb.value?.data || nb.value || [];
                     setNotices(Array.isArray(list) ? list : []);
                 }
-                if (rl.status === 'fulfilled') {
+                if (td.status === 'fulfilled') {
                     // Top-level `open_shift` is set when the user has an active
                     // (checked-in but not checked-out) shift. Per-row open_shift
                     // fields exist too — fall back to scanning the data list.
-                    let open = rl.value?.open_shift || null;
-                    if (!open && Array.isArray(rl.value?.data)) {
-                        const item = rl.value.data.find((s) => s.has_open_shift || (s.actual_start && !s.actual_end));
+                    let open = td.value?.open_shift || null;
+                    if (!open && Array.isArray(td.value?.data)) {
+                        const item = td.value.data.find((s) => s.has_open_shift || (s.actual_start && !s.actual_end));
                         if (item?.has_open_shift) {
                             open = {
                                 id: item.open_shift_id,
@@ -166,8 +158,7 @@ export default function DashboardScreen() {
                         }
                     }
                     setOpenShift(open);
-                }
-                if (td.status === 'fulfilled') {
+
                     const rows = Array.isArray(td.value?.data) ? td.value.data : [];
                     // Only shifts still waiting to be started belong on the
                     // "today's shift" card; an in-progress one is already
