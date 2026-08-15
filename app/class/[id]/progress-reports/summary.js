@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -6,6 +6,8 @@ import {
     ScrollView,
     ActivityIndicator,
     TouchableOpacity,
+    FlatList,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -46,6 +48,11 @@ export default function ProgressReportSummaryScreen() {
     const [studentMeta, setStudentMeta] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+
+    // Horizontal pager state — one assessment per page, newest first.
+    const { width: pageWidth } = useWindowDimensions();
+    const pagerRef = useRef(null);
+    const [page, setPage] = useState(0);
 
     const load = useCallback(async () => {
         try {
@@ -129,6 +136,19 @@ export default function ProgressReportSummaryScreen() {
     // Re-run on every focus so a newly-saved assessment appears immediately
     // when the user navigates back from the fill screen.
     useFocusEffect(useCallback(() => { load(); }, [load]));
+
+    // After a reload the list may have grown (new assessment) or shrunk —
+    // snap back to the newest card so the counter never points past the end.
+    useEffect(() => {
+        setPage(0);
+        pagerRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }, [details.length]);
+
+    const goTo = (index) => {
+        const clamped = Math.max(0, Math.min(index, details.length - 1));
+        setPage(clamped);
+        pagerRef.current?.scrollToOffset({ offset: clamped * pageWidth, animated: true });
+    };
 
     // Group rows: ungrouped assessments first, then groups with children.
     // Each "row" gets rendered inside every card; the cell content per card
@@ -236,13 +256,39 @@ export default function ProgressReportSummaryScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <ScrollView contentContainerStyle={styles.list}>
-                    {/* Sticky "+ New assessment" action at the top, so it's
-                        always one tap away regardless of history depth. */}
+                <View style={{ flex: 1 }}>
+                    {/* Pager bar: prev/next arrows + "1 of N" counter on the
+                        left, the "+ New assessment" action on the right. */}
                     <View style={styles.titleRow}>
-                        <Text style={[styles.listTitle, { color: colors.textSecondary }]}>
-                            {details.length} assessment{details.length === 1 ? '' : 's'} · newest first
-                        </Text>
+                        <View style={styles.pagerControls}>
+                            <TouchableOpacity
+                                onPress={() => goTo(page - 1)}
+                                disabled={page === 0}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                style={[
+                                    styles.pagerBtn,
+                                    { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                                    page === 0 && { opacity: 0.35 },
+                                ]}
+                            >
+                                <Ionicons name="chevron-back" size={16} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                            <Text style={[styles.pagerCounter, { color: colors.textSecondary }]}>
+                                {page + 1} of {details.length}
+                            </Text>
+                            <TouchableOpacity
+                                onPress={() => goTo(page + 1)}
+                                disabled={page === details.length - 1}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                style={[
+                                    styles.pagerBtn,
+                                    { borderColor: colors.border, backgroundColor: colors.cardBackground },
+                                    page === details.length - 1 && { opacity: 0.35 },
+                                ]}
+                            >
+                                <Ionicons name="chevron-forward" size={16} color={colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
                         <TouchableOpacity
                             onPress={newAssessment}
                             activeOpacity={0.85}
@@ -254,16 +300,43 @@ export default function ProgressReportSummaryScreen() {
                             </Text>
                         </TouchableOpacity>
                     </View>
-                    {details.map((r) => (
-                        <ResultCard
-                            key={r.id}
-                            result={r}
-                            rows={rows}
-                            onPress={() => openResult(r)}
-                            colors={colors}
-                        />
-                    ))}
-                </ScrollView>
+
+                    {/* One assessment per page; swipe or use the arrows. Each
+                        page scrolls vertically on its own so tall cards stay
+                        fully reachable. */}
+                    <FlatList
+                        ref={pagerRef}
+                        data={details}
+                        keyExtractor={(r) => String(r.id)}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onScroll={(e) => {
+                            const idx = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
+                            if (idx !== page && idx >= 0 && idx < details.length) setPage(idx);
+                        }}
+                        scrollEventThrottle={16}
+                        getItemLayout={(_, index) => ({
+                            length: pageWidth,
+                            offset: pageWidth * index,
+                            index,
+                        })}
+                        renderItem={({ item }) => (
+                            <ScrollView
+                                style={{ width: pageWidth }}
+                                contentContainerStyle={styles.page}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                <ResultCard
+                                    result={item}
+                                    rows={rows}
+                                    onPress={() => openResult(item)}
+                                    colors={colors}
+                                />
+                            </ScrollView>
+                        )}
+                    />
+                </View>
             )}
         </SafeAreaView>
     );
@@ -333,13 +406,16 @@ function ResultCard({ result, rows, onPress, colors }) {
                                 <Text style={[styles.itemLabel, { color: colors.textPrimary }]} numberOfLines={2}>
                                     {row.assessment.label}
                                 </Text>
-                                {/* Per-item comment, readable right here — previously
-                                    only an icon hinted at it and the text required
-                                    opening the result. */}
+                                {/* Per-item comment, shown in full inside the
+                                    same green bubble the fill screen uses so
+                                    both screens read identically. */}
                                 {outcome?.comment ? (
-                                    <Text style={[styles.itemComment, { color: colors.textSecondary }]} numberOfLines={4}>
-                                        {outcome.comment}
-                                    </Text>
+                                    <View style={[styles.commentBubble, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '44' }]}>
+                                        <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.primary} />
+                                        <Text style={{ color: colors.textSecondary, fontSize: 11, lineHeight: 15, flex: 1 }}>
+                                            {outcome.comment}
+                                        </Text>
+                                    </View>
                                 ) : null}
                             </View>
                             <View style={styles.itemValue}>
@@ -354,7 +430,7 @@ function ResultCard({ result, rows, onPress, colors }) {
             {result.comment ? (
                 <View style={[styles.commentBox, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '40' }]}>
                     <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.primary} />
-                    <Text style={[styles.commentText, { color: colors.textSecondary }]} numberOfLines={3}>
+                    <Text style={[styles.commentText, { color: colors.textSecondary }]}>
                         {result.comment}
                     </Text>
                 </View>
@@ -410,26 +486,11 @@ function OutcomeValue({ outcome, assessment, colors }) {
             items.push(<Unspecified key="u" colors={colors} />);
         }
     } else if (t === 'C') {
-        if (outcome.comment) {
-            items.push(
-                <Ionicons key="c" name="chatbubble-ellipses" size={14} color={colors.success || colors.primary} />
-            );
-        } else {
+        // Comment-type items render their text in full under the label —
+        // nothing to show in the value column when a comment exists.
+        if (!outcome.comment) {
             items.push(<Unspecified key="u" colors={colors} />);
         }
-    }
-
-    // Trailing comment indicator for non-comment-type items
-    if (t !== 'C' && outcome.comment) {
-        items.push(
-            <Ionicons
-                key="ic"
-                name="chatbubble-ellipses"
-                size={12}
-                color={colors.success || colors.primary}
-                style={{ marginLeft: 6 }}
-            />
-        );
     }
 
     return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>{items}</View>;
@@ -453,15 +514,33 @@ const styles = StyleSheet.create({
     headerSub: { fontSize: 12, marginTop: 2 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
-    list: { padding: 16, paddingBottom: 32, gap: 12 },
+    page: { paddingHorizontal: 16, paddingBottom: 32 },
     titleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 8,
-        marginBottom: 2,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 10,
     },
-    listTitle: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, flex: 1 },
+    pagerControls: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    pagerBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 999,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    pagerCounter: {
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        minWidth: 44,
+        textAlign: 'center',
+    },
     newBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -513,7 +592,11 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
     },
     itemLabel: { fontSize: 13, fontWeight: '500' },
-    itemComment: { fontSize: 12, lineHeight: 16, marginTop: 3 },
+    commentBubble: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        borderWidth: 1, borderRadius: 8, padding: 6,
+        marginTop: 4,
+    },
     itemValue: { alignItems: 'flex-end' },
     commentBox: {
         flexDirection: 'row',

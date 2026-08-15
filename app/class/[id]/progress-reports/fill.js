@@ -576,23 +576,29 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                     </Text>
                 ) : null}
                 {value.comment ? (
-                    <View style={[styles.commentBubble, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '44' }]}>
+                    // The bubble IS the comment control: shows the full text
+                    // and opens the editor on tap. No separate icon button —
+                    // that read as a duplicated comment indicator.
+                    <TouchableOpacity
+                        disabled={disabled}
+                        onPress={onOpenComment}
+                        activeOpacity={0.7}
+                        style={[styles.commentBubble, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '44' }]}
+                    >
                         <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.primary} />
-                        <Text style={{ color: colors.textSecondary, fontSize: 11, flex: 1 }} numberOfLines={3}>
+                        <Text style={{ color: colors.textSecondary, fontSize: 11, flex: 1 }}>
                             {value.comment}
                         </Text>
-                    </View>
+                    </TouchableOpacity>
                 ) : null}
             </View>
             <View style={{ alignItems: 'flex-end', gap: 6 }}>
                 {renderValue()}
-                <TouchableOpacity disabled={disabled} onPress={onOpenComment}>
-                    <Ionicons
-                        name={value.comment ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
-                        size={18}
-                        color={value.comment ? colors.primary : colors.textSecondary}
-                    />
-                </TouchableOpacity>
+                {!value.comment ? (
+                    <TouchableOpacity disabled={disabled} onPress={onOpenComment}>
+                        <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                ) : null}
             </View>
         </View>
     );
