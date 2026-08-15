@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Theme from '../context/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
+import GlassPanel from './GlassPanel';
 
 const JUMP_TABS = [
     { name: 'Dashboard',  route: 'index',      path: '/(main)/',           icon: 'home' },
@@ -175,13 +176,11 @@ export default function StaffInfo() {
                     onPress={() => setIsJumpVisible(false)}
                 >
                     <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-                        <SafeAreaView edges={['top']} style={{ backgroundColor: colors.cardBackground }}>
-                            <View style={{
-                                backgroundColor: colors.cardBackground,
-                                borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
-                                borderBottomWidth: 1, borderColor: colors.border,
-                                paddingTop: 8,
-                            }}>
+                        <GlassPanel style={{
+                            borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
+                            borderBottomWidth: 1, borderColor: colors.border + '88',
+                        }}>
+                            <SafeAreaView edges={['top']} style={{ paddingTop: 8 }}>
                                 {/* Title */}
                                 <View style={{
                                     alignItems: 'center', paddingTop: 12, paddingBottom: 16,
@@ -206,7 +205,7 @@ export default function StaffInfo() {
                                                     width: '30%',
                                                     paddingVertical: 16,
                                                     borderRadius: 16,
-                                                    backgroundColor: isActive ? colors.primary + '18' : colors.surface,
+                                                    backgroundColor: isActive ? colors.primary + '2E' : colors.surface + '55',
                                                     borderWidth: 1,
                                                     borderColor: isActive ? colors.primary : colors.border,
                                                     alignItems: 'center',
@@ -232,8 +231,8 @@ export default function StaffInfo() {
                                         );
                                     })}
                                 </View>
-                            </View>
-                        </SafeAreaView>
+                            </SafeAreaView>
+                        </GlassPanel>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
@@ -249,12 +248,10 @@ export default function StaffInfo() {
                     onPress={() => setIsMenuVisible(false)}
                 >
                     <TouchableOpacity activeOpacity={1} style={{ width: '100%', maxWidth: 360 }} onPress={() => {}}>
-                        <View style={{
-                            backgroundColor: colors.cardBackground,
+                        <GlassPanel style={{
                             borderRadius: 20,
                             borderWidth: 1,
-                            borderColor: colors.border,
-                            overflow: 'hidden',
+                            borderColor: colors.border + '88',
                         }}>
 
                             {/* Staff header */}
@@ -346,7 +343,7 @@ export default function StaffInfo() {
                                 <View style={{ flex: 1 }}><ThemeToggle /></View>
                                 <View style={{ flex: 1 }}><LogoutButton /></View>
                             </View>
-                        </View>
+                        </GlassPanel>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
