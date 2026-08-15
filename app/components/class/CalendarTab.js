@@ -240,6 +240,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 12,
         marginTop: 6,
+        // Clip the background to the rounded shape — tall cards otherwise show
+        // it bleeding past the border curve at the bottom corners on Android.
+        overflow: 'hidden',
     },
     accent: { width: 4, borderRadius: 2 },
     eventTitle: { fontSize: 14, fontWeight: '600' },

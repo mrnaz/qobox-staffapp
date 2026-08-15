@@ -267,10 +267,17 @@ export default function CalendarScreen() {
                 ))}
             </View>
             <View style={[styles.grid, { borderColor: colors.border }]}>
-                {grid.map((date) => {
+                {grid.map((date, idx) => {
                     const inMonth = date.getMonth() === month.getMonth();
                     const dayEvents = eventsByDay.get(fmtDate(date)) || [];
                     const isToday = isSameDay(date, today);
+                    // The rounded outline is drawn by the parent; cells only draw
+                    // the inner dividers. Cells on the last column/row must not
+                    // draw their outer edge — a straight hairline there gets
+                    // clipped by the parent's border radius and used to leave the
+                    // card's bottom corners visibly broken.
+                    const lastCol = idx % 7 === 6;
+                    const lastRow = idx >= grid.length - 7;
                     return (
                         <TouchableOpacity
                             key={date.toISOString()}
@@ -284,6 +291,8 @@ export default function CalendarScreen() {
                             style={[
                                 styles.gridCell,
                                 { borderColor: colors.border },
+                                lastCol && { borderRightWidth: 0 },
+                                lastRow && { borderBottomWidth: 0 },
                                 isToday && { backgroundColor: colors.primary + '20' },
                             ]}
                         >
@@ -565,8 +574,10 @@ const styles = StyleSheet.create({
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderLeftWidth: StyleSheet.hairlineWidth,
+        // Full border here (not just top/left): the bottom/right outline used to
+        // come from the cells' square hairlines, which the rounded clipping cut
+        // off at the corners.
+        borderWidth: StyleSheet.hairlineWidth,
         borderRadius: 8,
         overflow: 'hidden',
     },
@@ -602,6 +613,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 12,
         marginTop: 6,
+        // Clip the background to the rounded shape — tall cards otherwise show
+        // it bleeding past the border curve at the bottom corners on Android.
+        overflow: 'hidden',
     },
     accent: { width: 4, borderRadius: 2 },
     eventTitle: { fontSize: 14, fontWeight: '600' },

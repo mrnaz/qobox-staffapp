@@ -169,7 +169,9 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 18, fontWeight: '700' },
     container: { padding: 16, paddingBottom: 40 },
     sectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-    card: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 },
+    // overflow hidden: rows touch the card's top/bottom edges (no vertical
+    // padding), so their content must clip to the rounded corners.
+    card: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, overflow: 'hidden' },
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     rowTitle: { fontSize: 15, fontWeight: '600' },
     rowSub: { fontSize: 12, marginTop: 2 },

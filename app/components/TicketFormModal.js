@@ -163,13 +163,9 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                     <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
                         {isEdit ? 'Edit ticket' : 'New ticket'}
                     </Text>
-                    <TouchableOpacity onPress={submit} disabled={submitting} style={styles.iconBtn}>
-                        {submitting ? (
-                            <ActivityIndicator color={colors.primary} />
-                        ) : (
-                            <Text style={{ color: colors.primary, fontWeight: '700' }}>Save</Text>
-                        )}
-                    </TouchableOpacity>
+                    {/* Spacer balancing the close button so the title stays centered.
+                        Saving happens via the footer button below the form. */}
+                    <View style={styles.iconBtn} />
                 </View>
 
                 <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
@@ -296,6 +292,28 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                         ) : null}
                     </Field>
                 </ScrollView>
+
+                {/* Pinned footer save — a real button at the bottom of the sheet
+                    instead of the old text link tucked into the header. */}
+                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                    <TouchableOpacity
+                        onPress={submit}
+                        disabled={submitting}
+                        activeOpacity={0.85}
+                        style={[styles.saveBtn, { backgroundColor: colors.primary, opacity: submitting ? 0.6 : 1 }]}
+                    >
+                        {submitting ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Ionicons name="checkmark" size={18} color="#fff" />
+                                <Text style={styles.saveBtnText}>
+                                    {isEdit ? 'Save changes' : 'Save ticket'}
+                                </Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </KeyboardAvoidingView>
         </Modal>
     );
@@ -353,4 +371,21 @@ const styles = StyleSheet.create({
         width: 22, height: 22, borderRadius: 11,
         alignItems: 'center', justifyContent: 'center',
     },
+    footer: {
+        borderTopWidth: 1,
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        // Clears the home indicator on modern iPhones; pageSheet modals don't
+        // get safe-area insets from SafeAreaView here.
+        paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    },
+    saveBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        borderRadius: 10,
+        paddingVertical: 14,
+    },
+    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
