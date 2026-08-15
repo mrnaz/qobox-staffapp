@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -159,6 +160,16 @@ export default function MessagesScreen() {
                 draftId: row.message.id,
                 subject: row.message.message_subject || '',
                 body: stripHtml(row.message.message_body),
+                // Seed the existing recipients: saving a draft rewrites its
+                // recipient rows from this payload, so opening with an empty
+                // list would wipe them server-side.
+                recipients: (row.message.recipients || []).map((r) => ({
+                    key: r.staff_id ? `staff-${r.staff_id}` : `client-${r.client_id}`,
+                    result_type: r.staff_id ? 'staff' : 'client',
+                    result_id: r.staff_id || r.client_id,
+                    full_name: r.full_name || 'Recipient',
+                    photo: r.photo || null,
+                })),
             });
             setComposeVisible(true);
             return;
@@ -262,7 +273,7 @@ export default function MessagesScreen() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
@@ -414,7 +425,7 @@ export default function MessagesScreen() {
             />
 
             <Toast toast={toast} onHide={() => setToast(null)} />
-        </View>
+        </SafeAreaView>
     );
 }
 

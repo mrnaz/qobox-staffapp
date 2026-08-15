@@ -10,8 +10,8 @@ import {
     KeyboardAvoidingView,
     Platform,
     Linking,
-    SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -95,14 +95,14 @@ export default function MessageDetailScreen() {
 
     const sendReply = async () => {
         const body = replyText.trim();
-        if (!body || sendingReply) return;
+        if (!body || sendingReply || !replyTarget) return;
         try {
             setSendingReply(true);
             // message_subject is required in practice: the backend reply
             // handler reads it unguarded and 500s when it is missing.
             const baseSubject = message.message_subject || '';
             await api.replyMessage({
-                replyto: message.id,
+                replyto: replyTarget.id,
                 message_subject: baseSubject.startsWith('RE:') ? baseSubject : `RE: ${baseSubject}`.trim(),
                 message_body: body,
             });
@@ -120,7 +120,18 @@ export default function MessageDetailScreen() {
         () => (message?.recipients || []).find((r) => Number(r.staff_id) === Number(staff?.id)),
         [message, staff]
     );
-    const iAmSender = message && Number(message.sender_staff_id) === Number(staff?.id);
+
+    // The backend addresses a reply to the SENDER of whatever we reply to, so
+    // replying to our own message would silently send it to ourselves. Target
+    // the most recent message in the thread that someone else sent instead.
+    const replyTarget = useMemo(() => {
+        if (!message) return null;
+        const chain = [...(earlier || []), message, ...(message.replies || [])];
+        for (let i = chain.length - 1; i >= 0; i--) {
+            if (Number(chain[i].sender_staff_id) !== Number(staff?.id)) return chain[i];
+        }
+        return null;
+    }, [message, earlier, staff]);
 
     const markUnread = async () => {
         try {
@@ -198,7 +209,7 @@ export default function MessageDetailScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
@@ -267,7 +278,16 @@ export default function MessageDetailScreen() {
                         {timeline.map(renderBubble)}
                     </ScrollView>
 
-                    {/* Pinned reply composer */}
+                    {/* Pinned reply composer — only when there is someone to
+                        reply TO. Replying to a thread that is entirely ours
+                        would address the reply back to us. */}
+                    {!replyTarget ? (
+                        <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                            <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1, textAlign: 'center' }}>
+                                No one has replied yet — use Forward to send this on.
+                            </Text>
+                        </View>
+                    ) : (
                     <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
                         <TextInput
                             value={replyText}
@@ -296,6 +316,7 @@ export default function MessageDetailScreen() {
                             )}
                         </TouchableOpacity>
                     </View>
+                    )}
                 </KeyboardAvoidingView>
             )}
 

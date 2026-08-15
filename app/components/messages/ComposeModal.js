@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Platform,
+    KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -50,7 +51,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
     useEffect(() => {
         if (!visible) return;
         const seed = initialRef.current;
-        setRecipients([]);
+        setRecipients(seed?.recipients || []);
         setQuery('');
         setResults([]);
         setSubject(seed?.subject || '');
@@ -213,6 +214,12 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
             setFormError('Could not identify you. Please sign in again.');
             return;
         }
+        // Saving rewrites the draft's recipient rows from this payload, so an
+        // empty list would silently delete the ones it already has.
+        if (initial?.draftId && recipients.length === 0) {
+            setFormError('Add at least one recipient before saving this draft.');
+            return;
+        }
         try {
             setBusy('draft');
             const payload = buildPayload();
@@ -229,7 +236,10 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
 
     return (
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={requestClose}>
-            <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <KeyboardAvoidingView
+                style={[styles.container, { backgroundColor: colors.background }]}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
                 {/* Header */}
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
                     <TouchableOpacity onPress={requestClose} style={styles.iconBtn}>
@@ -384,7 +394,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                     onConfirm={() => { setConfirmDiscard(false); onClose(); }}
                     onCancel={() => setConfirmDiscard(false)}
                 />
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 }
