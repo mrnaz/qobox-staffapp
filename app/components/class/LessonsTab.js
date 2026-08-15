@@ -27,6 +27,7 @@ export default function LessonsTab({ classId }) {
     const router = useRouter();
 
     const [lessons, setLessons] = useState([]);
+    const [sessions, setSessions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState('');
@@ -36,9 +37,15 @@ export default function LessonsTab({ classId }) {
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
+                // education/lessons/{class} returns BOTH the authored lessons and
+                // the class's scheduled sessions. Many orgs never author lessons —
+                // sessions are then the only "lessons" a teacher can see (they're
+                // also what the classes list counts as "0/64 lessons"), so we keep
+                // them as a fallback list.
                 const res = await api.getClassLessons(classId);
                 const list = res?.lessons || res?.data || res || [];
                 setLessons(Array.isArray(list) ? list : []);
+                setSessions(Array.isArray(res?.sessions) ? res.sessions : []);
             } catch (err) {
                 console.error('Lessons load error', err);
                 setError(err.body?.message || err.message || 'Failed to load lessons.');
@@ -57,14 +64,15 @@ export default function LessonsTab({ classId }) {
         load({ refresh: true });
     };
 
+    const openLesson = (lesson) =>
+        router.push({
+            pathname: `/class/${classId}/lesson/${lesson.id}`,
+            params: { lesson: JSON.stringify(lesson) },
+        });
+
     const renderItem = ({ item }) => (
         <TouchableOpacity
-            onPress={() =>
-                router.push({
-                    pathname: `/class/${classId}/lesson/${item.id}`,
-                    params: { lesson: JSON.stringify(item) },
-                })
-            }
+            onPress={() => openLesson(item)}
             activeOpacity={0.8}
             style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
         >
@@ -87,10 +95,55 @@ export default function LessonsTab({ classId }) {
         </TouchableOpacity>
     );
 
-    if (isLoading && lessons.length === 0) {
+    // Fallback row when no lessons are authored: one scheduled session, titled
+    // by its linked lesson(s) when any exist. Tappable only when it can open a
+    // linked lesson's detail page.
+    const renderSession = ({ item }) => {
+        const linked = Array.isArray(item.lessons) ? item.lessons : [];
+        const title = linked.length
+            ? linked.map((l) => l.title).filter(Boolean).join(', ') || 'Lesson'
+            : (item.label || 'No lesson planned');
+        const roomName = item.room?.name || item.room_name;
+        return (
+            <TouchableOpacity
+                onPress={() => { if (linked[0]) openLesson(linked[0]); }}
+                disabled={!linked[0]}
+                activeOpacity={0.8}
+                style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            >
+                <View style={{ flex: 1, gap: 4 }}>
+                    <Text
+                        style={[
+                            styles.title,
+                            { color: linked.length ? colors.textPrimary : colors.textSecondary },
+                            !linked.length && { fontStyle: 'italic', fontWeight: '400' },
+                        ]}
+                        numberOfLines={2}
+                    >
+                        {title}
+                    </Text>
+                    {item.session_start_formatted || item.session_start ? (
+                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                            {item.session_start_formatted || item.session_start}
+                        </Text>
+                    ) : null}
+                    {roomName ? (
+                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{roomName}</Text>
+                    ) : null}
+                </View>
+                {linked[0] ? (
+                    <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                ) : null}
+            </TouchableOpacity>
+        );
+    };
+
+    const showingSessions = lessons.length === 0 && sessions.length > 0;
+
+    if (isLoading && lessons.length === 0 && sessions.length === 0) {
         return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
     }
-    if (error && lessons.length === 0) {
+    if (error && lessons.length === 0 && sessions.length === 0) {
         return (
             <View style={styles.center}>
                 <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
@@ -104,11 +157,18 @@ export default function LessonsTab({ classId }) {
 
     return (
         <FlatList
-            data={lessons}
+            data={showingSessions ? sessions : lessons}
             keyExtractor={(it, i) => String(it.id ?? i)}
-            renderItem={renderItem}
+            renderItem={showingSessions ? renderSession : renderItem}
             contentContainerStyle={styles.list}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+            ListHeaderComponent={
+                showingSessions ? (
+                    <Text style={[styles.listHeader, { color: colors.textSecondary }]}>
+                        {sessions.length} scheduled session{sessions.length === 1 ? '' : 's'}
+                    </Text>
+                ) : null
+            }
             ListEmptyComponent={
                 <View style={styles.center}>
                     <Ionicons name="book-outline" size={32} color={colors.textSecondary} />
@@ -121,6 +181,7 @@ export default function LessonsTab({ classId }) {
 
 const styles = StyleSheet.create({
     list: { padding: 16, paddingBottom: 32, gap: 10 },
+    listHeader: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
     row: {
         flexDirection: 'row',
         alignItems: 'center',

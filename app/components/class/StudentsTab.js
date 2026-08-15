@@ -38,8 +38,14 @@ export default function StudentsTab({ classId }) {
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
-                const res = await api.getClassStudents(classId);
-                const list = res?.students || res?.data || res || [];
+                // all=true → `students` is a plain array (and not capped at the
+                // default 50-per-page). Without it the backend wraps the list in
+                // a paginator ({students: {data, meta}}), which is also handled
+                // below in case the param is ever dropped.
+                const res = await api.getClassStudents(classId, { all: 'true' });
+                const list = Array.isArray(res?.students)
+                    ? res.students
+                    : res?.students?.data || res?.data || [];
                 setStudents(Array.isArray(list) ? list : []);
             } catch (err) {
                 console.error('Class students load error', err);
