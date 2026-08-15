@@ -91,8 +91,11 @@ class ApiService {
         });
     }
 
-    async delete(endpoint) {
-        return this.request(endpoint, { method: 'DELETE' });
+    async delete(endpoint, data = null) {
+        return this.request(endpoint, {
+            method: 'DELETE',
+            ...(data ? { body: JSON.stringify(data) } : {}),
+        });
     }
 
     // For multipart/form-data uploads (photos, files). FormData body — do NOT
@@ -326,6 +329,62 @@ class ApiService {
 
     async deleteProgressReportResult(resultId) {
         return this.delete(endpoints.DELETE_PROGRESS_REPORT_RESULT.replace('{result_id}', resultId));
+    }
+
+    // Messages
+    async getMessages(params = {}) {
+        return this.get(endpoints.GET_MESSAGES, params);
+    }
+    async getMessageRecipients(params = {}) {
+        return this.get(endpoints.GET_MESSAGE_RECIPIENTS, params);
+    }
+    async getMessage(messageId) {
+        return this.get(endpoints.GET_MESSAGE.replace('{message}', messageId));
+    }
+    async getMessageThread(messageId) {
+        return this.get(endpoints.GET_MESSAGE_THREAD.replace('{message}', messageId));
+    }
+    async readMessage(messageId) {
+        return this.put(endpoints.READ_MESSAGE.replace('{message}', messageId));
+    }
+    async unreadMessage(messageId) {
+        return this.put(endpoints.UNREAD_MESSAGE.replace('{message}', messageId));
+    }
+    async sendMessage(data) {
+        return this.post(endpoints.SEND_MESSAGE, data);
+    }
+    async replyMessage(data) {
+        return this.post(endpoints.REPLY_MESSAGE, data);
+    }
+    async storeMessage(data) {
+        return this.post(endpoints.STORE_MESSAGE, data);
+    }
+    async updateMessage(messageId, data) {
+        return this.put(endpoints.UPDATE_MESSAGE.replace('{message}', messageId), data);
+    }
+    async deleteMessage(messageId) {
+        return this.delete(endpoints.DELETE_MESSAGE.replace('{message}', messageId));
+    }
+    async getMessageFolderCounts(params = {}) {
+        return this.get(endpoints.GET_MESSAGE_FOLDER_COUNTS, params);
+    }
+    async deleteMessageRecipient(recipientId) {
+        return this.delete(endpoints.DELETE_MESSAGE_RECIPIENT.replace('{messageRecipient}', recipientId));
+    }
+    async deleteMessageRecipients(ids) {
+        return this.delete(endpoints.DELETE_MESSAGE_RECIPIENTS, { ids });
+    }
+    async searchMessageRecipients(query, params = {}) {
+        return this.get(
+            endpoints.GENERAL_SEARCH.replace('{search}', encodeURIComponent(query)),
+            { context: 'messaging', ...params }
+        );
+    }
+    async uploadTempFiles(formData) {
+        return this.requestForm(endpoints.UPLOAD_TEMP_FILES, 'POST', formData);
+    }
+    async removeTempFile(fileId) {
+        return this.delete(endpoints.REMOVE_TEMP_FILE, { file_id: fileId });
     }
 
     // Tickets / Service Requests (Maintenance Reports)

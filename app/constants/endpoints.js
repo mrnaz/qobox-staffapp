@@ -87,6 +87,29 @@ export const endpoints = {
     UPDATE_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
     DELETE_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
 
+    // Messages
+    //  - inbox rows come from message-recipients (per-recipient read state);
+    //    sent/draft come from messages?type=… (backend default is 'sent', so
+    //    ALWAYS pass type). message-recipients + folder-counts need an
+    //    explicit staff_id param — the backend does not infer it from auth.
+    GET_MESSAGES: 'messages',
+    GET_MESSAGE: 'messages/{message}',
+    GET_MESSAGE_THREAD: 'messages/{message}/thread',
+    READ_MESSAGE: 'messages/{message}/read',
+    UNREAD_MESSAGE: 'messages/{message}/unread',
+    SEND_MESSAGE: 'messages/send',
+    REPLY_MESSAGE: 'messages/reply',
+    STORE_MESSAGE: 'messages',
+    UPDATE_MESSAGE: 'messages/{message}',
+    DELETE_MESSAGE: 'messages/{message}',
+    GET_MESSAGE_FOLDER_COUNTS: 'messages/folder-counts',
+    GET_MESSAGE_RECIPIENTS: 'message-recipients',
+    DELETE_MESSAGE_RECIPIENT: 'message-recipients/{messageRecipient}',
+    DELETE_MESSAGE_RECIPIENTS: 'message-recipients',
+    GENERAL_SEARCH: 'search/{search}',
+    UPLOAD_TEMP_FILES: 'temp-files/upload',
+    REMOVE_TEMP_FILE: 'temp-files/remove',
+
     // Tickets / Service Requests (Maintenance Reports)
     GET_MAINTENANCE_REPORTS: 'maintenance-reports',
     GET_MAINTENANCE_REPORT: 'maintenance-reports/{id}',
