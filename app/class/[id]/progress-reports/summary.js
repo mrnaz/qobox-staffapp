@@ -329,9 +329,19 @@ function ResultCard({ result, rows, onPress, colors }) {
                                 row.indented && { paddingLeft: 16 },
                             ]}
                         >
-                            <Text style={[styles.itemLabel, { color: colors.textPrimary }]} numberOfLines={2}>
-                                {row.assessment.label}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.itemLabel, { color: colors.textPrimary }]} numberOfLines={2}>
+                                    {row.assessment.label}
+                                </Text>
+                                {/* Per-item comment, readable right here — previously
+                                    only an icon hinted at it and the text required
+                                    opening the result. */}
+                                {outcome?.comment ? (
+                                    <Text style={[styles.itemComment, { color: colors.textSecondary }]} numberOfLines={4}>
+                                        {outcome.comment}
+                                    </Text>
+                                ) : null}
+                            </View>
                             <View style={styles.itemValue}>
                                 <OutcomeValue outcome={outcome} assessment={row.assessment} colors={colors} />
                             </View>
@@ -502,7 +512,8 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderTopWidth: 1,
     },
-    itemLabel: { flex: 1, fontSize: 13, fontWeight: '500' },
+    itemLabel: { fontSize: 13, fontWeight: '500' },
+    itemComment: { fontSize: 12, lineHeight: 16, marginTop: 3 },
     itemValue: { alignItems: 'flex-end' },
     commentBox: {
         flexDirection: 'row',
