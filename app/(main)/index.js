@@ -281,7 +281,9 @@ export default function DashboardScreen() {
                     {[
                         { icon: 'school-outline', count: todayClasses.length, label: 'Classes' },
                         { icon: 'calendar-outline', count: todayEvents.length, label: 'Calendar Events' },
-                        { icon: 'chatbubbles-outline', count: todayPtms.length, label: 'PTM Meetings' },
+                        ...(todayPtms.length > 0
+                            ? [{ icon: 'chatbubbles-outline', count: todayPtms.length, label: 'PTM Meetings' }]
+                            : []),
                     ].map((row) => (
                         <View key={row.label} style={styles.todayRow}>
                             <Ionicons name={row.icon} size={22} color={colors.textPrimary} style={styles.todayIcon} />
