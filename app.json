@@ -70,13 +70,13 @@
         "origin": false
       },
       "eas": {
-        "projectId": "72ae77a7-e98a-4778-bb65-5302905762ca"
+        "projectId": "d1e31be3-59ff-4345-a7f4-0fef1787eb58"
       }
     },
     "updates": {
-      "url": "https://u.expo.dev/72ae77a7-e98a-4778-bb65-5302905762ca"
+      "url": "https://u.expo.dev/d1e31be3-59ff-4345-a7f4-0fef1787eb58"
     },
     "runtimeVersion": "1.0.0",
-    "owner": "anllqdev"
+    "owner": "krecinic33"
   }
 }
