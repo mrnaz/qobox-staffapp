@@ -331,6 +331,11 @@ class ApiService {
         return this.delete(endpoints.DELETE_PROGRESS_REPORT_RESULT.replace('{result_id}', resultId));
     }
 
+    // System (sysadmin)
+    async getSystemOrganisations(params = {}) {
+        return this.get(endpoints.GET_SYSTEM_ORGANISATIONS, params);
+    }
+
     // Messages
     async getMessages(params = {}) {
         return this.get(endpoints.GET_MESSAGES, params);

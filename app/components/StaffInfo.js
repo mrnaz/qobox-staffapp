@@ -38,6 +38,7 @@ export default function StaffInfo() {
     const [isMenuVisible, setIsMenuVisible] = useState(false);
     const [isJumpVisible, setIsJumpVisible] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isSysadmin, setIsSysadmin] = useState(false);
 
     useEffect(() => { loadStaffData(); }, []);
 
@@ -52,6 +53,7 @@ export default function StaffInfo() {
             try {
                 const parsed = staffJson ? JSON.parse(staffJson) : null;
                 setStaff(parsed);
+                setIsSysadmin(parsed?.type === 'sysadmin' || parsed?.account_type === 'sysadmin');
                 if (parsed && typeof parsed.has_unread === 'number') {
                     setUnreadCount(parsed.has_unread);
                 }
@@ -286,6 +288,27 @@ export default function StaffInfo() {
                                     ) : null}
                                 </View>
                             </View>
+
+                            {/* Sysadmins work across organisations, so give them a
+                                way back to the picker without signing out. */}
+                            {isSysadmin ? (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setIsMenuVisible(false);
+                                        router.replace('/(auth)/select-organisation');
+                                    }}
+                                    style={{
+                                        flexDirection: 'row', alignItems: 'center', gap: 12,
+                                        paddingHorizontal: 20, paddingVertical: 14,
+                                        borderBottomWidth: 1, borderBottomColor: colors.border,
+                                    }}
+                                >
+                                    <FontAwesome name="building-o" size={16} color={iconColor('building-o', colors)} />
+                                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '500' }}>
+                                        Switch organisation
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : null}
 
                             {/* Messages link */}
                             <TouchableOpacity

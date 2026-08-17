@@ -87,6 +87,10 @@ export const endpoints = {
     UPDATE_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
     DELETE_PROGRESS_REPORT_RESULT: 'education/progress-report-results/{result_id}',
 
+    // System (sysadmin only). Organisations come back with their sites nested,
+    // so picking an organisation and then a site needs one request.
+    GET_SYSTEM_ORGANISATIONS: 'system/organisations',
+
     // Messages
     //  - inbox rows come from message-recipients (per-recipient read state);
     //    sent/draft come from messages?type=… (backend default is 'sent', so

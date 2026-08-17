@@ -77,14 +77,26 @@ const finalizeFromSelectSite = async (siteRes, role, router) => {
 // Given a response from /login OR /check-otp (when not site_selected),
 // figure out where the user should land next.
 export const routePostAuth = async (response, router) => {
-    // No roles → sysadmin or profile-only user, done
+    // No roles → sysadmin or profile-only user.
     if (!response.roles) {
+        // The API exposes the staff.account_type column as `type`; accept both
+        // so a transformer change on either side cannot silently drop this.
+        const isSysadmin = response.staff?.type === 'sysadmin'
+            || response.staff?.account_type === 'sysadmin';
+
+        if (isSysadmin) {
+            // A sysadmin has no site, and almost nothing in the app works
+            // without one — the API scopes itself off the token's site. Send
+            // them to pick an organisation, mirroring the web's admin mode.
+            await stashPendingToken(response.token);
+            router.replace('/(auth)/select-organisation');
+            return;
+        }
+
         await persistAuth({
             token: response.token,
             staff: response.staff,
-            abilities:
-                response.abilities ??
-                (response.staff?.type === 'sysadmin' ? ['sysadmin'] : []),
+            abilities: response.abilities ?? [],
         });
         router.replace('/(main)');
         return;
