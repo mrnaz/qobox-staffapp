@@ -10,9 +10,12 @@ import {
     FlatList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../../utils/iconColors';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
+import Card, { cardBodyPadding } from '../../../components/Card';
 
 const stripHtml = (html = '') => html.replace(/<[^>]*>/g, '').trim();
 
@@ -36,6 +39,7 @@ export default function AssignmentDetailScreen() {
     const { colors } = theme;
     const router = useRouter();
     const { id: classId, assignmentId, assignment: assignmentParam } = useLocalSearchParams();
+    const goBack = useGoBack(`/class/${classId}`);
 
     const initial = (() => {
         try { return assignmentParam ? JSON.parse(assignmentParam) : null; } catch { return null; }
@@ -89,7 +93,7 @@ export default function AssignmentDetailScreen() {
     const totalCount = rosterRows.length;
 
     const renderRow = ({ item }) => (
-        <View style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+        <Card style={styles.row}>
             <View style={[styles.dot, { backgroundColor: item.isSubmitted ? (colors.success || colors.primary) : (colors.error || colors.warning) }]} />
             <Text style={[styles.studentName, { color: colors.textPrimary }]} numberOfLines={1}>
                 {item.name}
@@ -97,13 +101,13 @@ export default function AssignmentDetailScreen() {
             <Text style={[styles.studentStatus, { color: item.isSubmitted ? (colors.success || colors.primary) : colors.textSecondary }]}>
                 {item.label}
             </Text>
-        </View>
+        </Card>
     );
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -127,12 +131,14 @@ export default function AssignmentDetailScreen() {
                                 </Text>
                             ) : null}
                             {assignment?.description ? (
-                                <Text style={[styles.description, { color: colors.textPrimary }]}>
-                                    {stripHtml(assignment.description)}
-                                </Text>
+                                <Card style={styles.descriptionCard}>
+                                    <Text style={[styles.description, { color: colors.textPrimary }]}>
+                                        {stripHtml(assignment.description)}
+                                    </Text>
+                                </Card>
                             ) : null}
 
-                            <View style={[styles.summary, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                            <Card style={styles.summary}>
                                 <View style={styles.summaryItem}>
                                     <Text style={[styles.summaryNumber, { color: colors.success || colors.primary }]}>
                                         {submittedCount}
@@ -149,7 +155,7 @@ export default function AssignmentDetailScreen() {
                                     <Text style={[styles.summaryNumber, { color: colors.textPrimary }]}>{totalCount}</Text>
                                     <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total</Text>
                                 </View>
-                            </View>
+                            </Card>
 
                             {error ? (
                                 <Text style={[styles.errorText, { color: colors.error || colors.warning }]}>{error}</Text>
@@ -160,7 +166,7 @@ export default function AssignmentDetailScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
+                            <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>No students on this assignment.</Text>
                         </View>
                     }
@@ -185,11 +191,10 @@ const styles = StyleSheet.create({
     body: { padding: 20, gap: 8 },
     title: { fontSize: 20, fontWeight: '700' },
     meta: { fontSize: 13 },
-    description: { fontSize: 14, lineHeight: 20, marginTop: 4 },
+    description: { fontSize: 14, lineHeight: 20 },
+    descriptionCard: { ...cardBodyPadding, marginTop: 4 },
     summary: {
         flexDirection: 'row',
-        borderWidth: 1,
-        borderRadius: 12,
         paddingVertical: 14,
         marginTop: 12,
     },
@@ -202,8 +207,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        borderWidth: 1,
-        borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 10,
         marginHorizontal: 20,

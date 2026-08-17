@@ -14,8 +14,10 @@ import { Ionicons, FontAwesome } from '@expo/vector-icons';
 // `/legacy` subpath (the default export is now the new File/Directory API).
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
+import Card from '../Card';
 
 const getFileIcon = (fileName) => {
     if (!fileName) return 'file';
@@ -192,7 +194,7 @@ export default function ResourcesTab({ classId }) {
         const files = Array.isArray(item.files) ? item.files.filter((f) => f && (f.name || f.filename)) : [];
         const hasFiles = files.length > 0;
         return (
-            <View style={[styles.folder, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+            <Card>
                 <TouchableOpacity
                     style={[styles.folderHead, { opacity: hasFiles ? 1 : 0.6 }]}
                     onPress={() => hasFiles && toggle(item.id)}
@@ -201,7 +203,7 @@ export default function ResourcesTab({ classId }) {
                     <FontAwesome
                         name={hasFiles ? 'folder' : 'folder-o'}
                         size={20}
-                        color={hasFiles ? colors.primary : colors.textDisabled}
+                        color={hasFiles ? iconColor('folder', colors) : colors.textDisabled}
                         style={{ marginRight: 12 }}
                     />
                     <View style={{ flex: 1 }}>
@@ -226,7 +228,7 @@ export default function ResourcesTab({ classId }) {
                 {isExpanded && hasFiles ? (
                     <View style={styles.fileList}>{files.map(renderFile)}</View>
                 ) : null}
-            </View>
+            </Card>
         );
     };
 
@@ -236,7 +238,7 @@ export default function ResourcesTab({ classId }) {
     if (error && resources.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="folder-outline" size={32} color={colors.textSecondary} />
+                <Ionicons name="folder-outline" size={32} color={iconColor('folder-outline', colors)} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                     <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -254,7 +256,7 @@ export default function ResourcesTab({ classId }) {
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
                 <View style={styles.center}>
-                    <Ionicons name="folder-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="folder-outline" size={32} color={iconColor('folder-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No resources for this class.</Text>
                 </View>
             }
@@ -264,7 +266,6 @@ export default function ResourcesTab({ classId }) {
 
 const styles = StyleSheet.create({
     list: { padding: 16, paddingBottom: 32, gap: 10 },
-    folder: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
     folderHead: { flexDirection: 'row', alignItems: 'center', padding: 14 },
     folderTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
     folderDesc: { fontSize: 12, marginBottom: 2 },

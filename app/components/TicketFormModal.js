@@ -16,8 +16,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import Card from './Card';
 import { PRIORITIES, PRIORITY_META } from '../utils/tickets';
 import { capturePhotoCompressed, pickPhotoCompressed, appendPhotoToForm } from '../utils/photo';
+import { iconColor } from '../utils/iconColors';
 
 // Reusable Create / Edit ticket form.
 // `existing` (optional) — when provided, the modal switches to edit mode and
@@ -171,7 +173,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                 <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
                     <Field label="Title *" colors={colors}>
                         <TextInput
-                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
                             placeholder="Short summary"
                             placeholderTextColor={colors.textSecondary}
                             value={title}
@@ -182,7 +184,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
 
                     <Field label="Location" colors={colors}>
                         <TextInput
-                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                            style={[styles.input, { color: colors.textPrimary, borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
                             placeholder="Where is this happening?"
                             placeholderTextColor={colors.textSecondary}
                             value={location}
@@ -200,7 +202,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                                             key={cat.id}
                                             onPress={() => setCategoryId(active ? null : cat.id)}
                                             style={[styles.chip, {
-                                                borderColor: active ? colors.primary : colors.border,
+                                                borderColor: active ? colors.primary : (colors.borderStrong || colors.border),
                                                 backgroundColor: active ? colors.primary + '22' : colors.cardBackground,
                                             }]}
                                         >
@@ -213,12 +215,12 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                             </View>
                         </Field>
                     ) : (
-                        <View style={[styles.note, { borderColor: colors.border }]}>
-                            <Ionicons name="information-circle-outline" size={13} color={colors.textSecondary} />
+                        <Card style={styles.note}>
+                            <Ionicons name="information-circle-outline" size={13} color={iconColor('information-circle-outline', colors)} />
                             <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1 }}>
                                 No categories are configured.
                             </Text>
-                        </View>
+                        </Card>
                     )}
 
                     <Field label="Priority" colors={colors}>
@@ -232,7 +234,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                                         key={p.value}
                                         onPress={() => setPriority(p.value)}
                                         style={[styles.chip, {
-                                            borderColor: active ? c : colors.border,
+                                            borderColor: active ? c : (colors.borderStrong || colors.border),
                                             backgroundColor: active ? c + '22' : colors.cardBackground,
                                         }]}
                                     >
@@ -248,7 +250,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
 
                     <Field label="Description" colors={colors}>
                         <TextInput
-                            style={[styles.textarea, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                            style={[styles.textarea, { color: colors.textPrimary, borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
                             placeholder="Provide details so we can act on it"
                             placeholderTextColor={colors.textSecondary}
                             value={description}
@@ -262,16 +264,16 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                         <View style={styles.photoActions}>
                             <TouchableOpacity
                                 onPress={handleCapturePhoto}
-                                style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                                style={[styles.photoBtn, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
                             >
-                                <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
+                                <Ionicons name="camera-outline" size={18} color={iconColor('camera-outline', colors)} />
                                 <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>Take photo</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handlePickPhoto}
-                                style={[styles.photoBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                                style={[styles.photoBtn, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
                             >
-                                <Ionicons name="image-outline" size={18} color={colors.textPrimary} />
+                                <Ionicons name="image-outline" size={18} color={iconColor('image-outline', colors)} />
                                 <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>From library</Text>
                             </TouchableOpacity>
                         </View>
@@ -353,8 +355,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 6,
-        borderWidth: 1,
-        borderRadius: 8,
         padding: 10,
     },
     photoActions: { flexDirection: 'row', gap: 10 },

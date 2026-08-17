@@ -3,7 +3,8 @@ import {
     View,
     Text,
     StyleSheet,
-    FlatList,
+    ScrollView,
+    Platform,
     ActivityIndicator,
     RefreshControl,
     TouchableOpacity,
@@ -11,7 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useGoBack } from '../../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../../../utils/iconColors';
 import api from '../../../../services/api';
 import Theme from '../../../../context/ThemeContext';
 import Avatar from '../../../../components/Avatar';
@@ -40,6 +43,7 @@ export default function ReportStudentRosterScreen() {
     const { colors } = theme;
     const router = useRouter();
     const { id: classId, reportId } = useLocalSearchParams();
+    const goBack = useGoBack(`/class/${classId}/progress-reports`);
 
     const [template, setTemplate] = useState(null);
     const [students, setStudents] = useState([]);
@@ -156,7 +160,16 @@ export default function ReportStudentRosterScreen() {
         });
     };
 
-    const renderItem = ({ item }) => {
+    // Matches the client app's day card; skipped on web, where the offset
+    // becomes a hard unblurred box-shadow instead of a soft elevation.
+    const cardShadowStyle = (c) => (Platform.OS === 'web' ? null : {
+        shadowColor: c.cardShadow,
+        shadowOffset: c.cardShadowOffset,
+        shadowOpacity: c.cardShadowOpacity,
+        elevation: c.cardElevation,
+    });
+
+    const renderItem = (item, index) => {
         const stateLabel = item.drafts > 0
             ? `${item.drafts} draft`
             : item.completed > 0
@@ -172,9 +185,13 @@ export default function ReportStudentRosterScreen() {
             <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => openStudent(item.id)}
-                style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                style={[
+                    styles.row,
+                    // Divider between rows; the header band already closes the top.
+                    index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+                ]}
             >
-                <Avatar uri={item.photo} name={item.name} size={36} />
+                <Avatar uri={item.photo} name={item.name} id={item.id} size={36} />
                 <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
                         {item.name}
@@ -192,7 +209,7 @@ export default function ReportStudentRosterScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
@@ -213,7 +230,7 @@ export default function ReportStudentRosterScreen() {
                 </View>
             ) : error && students.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -222,7 +239,7 @@ export default function ReportStudentRosterScreen() {
             ) : (
                 <>
                     {/* Search */}
-                    <View style={[styles.searchWrap, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                    <View style={[styles.searchWrap, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}>
                         <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
                         <TextInput
                             value={search}
@@ -238,21 +255,39 @@ export default function ReportStudentRosterScreen() {
                         ) : null}
                     </View>
 
-                    <FlatList
-                        data={rows}
-                        keyExtractor={(r) => String(r.id)}
-                        renderItem={renderItem}
+                    <ScrollView
                         contentContainerStyle={styles.list}
                         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-                        ListEmptyComponent={
+                    >
+                        {rows.length === 0 ? (
                             <View style={styles.center}>
-                                <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
+                                <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                                 <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                     {search ? 'No students match your search.' : 'No students enrolled in this class.'}
                                 </Text>
                             </View>
-                        }
-                    />
+                        ) : (
+                            <View style={[styles.card, {
+                                borderColor: colors.borderStrong || colors.border,
+                                backgroundColor: colors.cardBackground,
+                            }, cardShadowStyle(colors)]}>
+                                <View style={[styles.cardHeader, {
+                                    backgroundColor: colors.primary + '15',
+                                    borderBottomColor: colors.border,
+                                }]}>
+                                    <Text style={[styles.cardHeaderTitle, { color: colors.textPrimary }]}>
+                                        Students
+                                    </Text>
+                                    <Text style={[styles.cardHeaderMeta, { color: colors.textSecondary }]}>
+                                        {rows.length}
+                                    </Text>
+                                </View>
+                                {rows.map((item, index) => (
+                                    <View key={String(item.id)}>{renderItem(item, index)}</View>
+                                ))}
+                            </View>
+                        )}
+                    </ScrollView>
                 </>
             )}
         </SafeAreaView>
@@ -278,14 +313,28 @@ const styles = StyleSheet.create({
         marginHorizontal: 16, marginTop: 12,
     },
     searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingBottom: 32 },
+    card: {
+        borderWidth: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    cardHeaderTitle: { fontSize: 15, fontWeight: '700' },
+    cardHeaderMeta: { fontSize: 13, fontWeight: '600' },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
     name: { fontSize: 14, fontWeight: '700' },
     state: { fontSize: 12, fontWeight: '500' },

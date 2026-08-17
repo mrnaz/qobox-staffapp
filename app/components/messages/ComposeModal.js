@@ -16,7 +16,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import Avatar from '../Avatar';
+import Card from '../Card';
 import ConfirmDialog from '../ConfirmDialog';
+import { iconColor } from '../../utils/iconColors';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // matches the client app's 10 MB cap
 
@@ -261,7 +263,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                                     key={r.key}
                                     style={[styles.chip, { backgroundColor: colors.primary + '18', borderColor: colors.primary + '44' }]}
                                 >
-                                    <Avatar uri={r.photo} name={r.full_name} size={18} />
+                                    <Avatar uri={r.photo} name={r.full_name} id={r.result_id} size={18} />
                                     <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
                                         {r.full_name}
                                     </Text>
@@ -272,8 +274,8 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                             ))}
                         </View>
                     ) : null}
-                    <View style={[styles.input, styles.searchRow, { borderColor: colors.border, backgroundColor: colors.inputBackground || colors.cardBackground }]}>
-                        <Ionicons name="person-add-outline" size={15} color={colors.textSecondary} />
+                    <View style={[styles.input, styles.searchRow, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.inputBackground || colors.cardBackground }]}>
+                        <Ionicons name="person-add-outline" size={15} color={iconColor('person-add-outline', colors)} />
                         <TextInput
                             value={query}
                             onChangeText={setQuery}
@@ -284,10 +286,10 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                         {searching ? <ActivityIndicator size="small" color={colors.primary} /> : null}
                     </View>
                     {results.length > 0 ? (
-                        <View style={[styles.resultsBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                        <Card style={styles.resultsBox}>
                             {results.slice(0, 8).map((r) => (
                                 <TouchableOpacity key={r.key} onPress={() => addRecipient(r)} style={styles.resultRow}>
-                                    <Avatar uri={r.photo} name={r.full_name} size={28} />
+                                    <Avatar uri={r.photo} name={r.full_name} id={r.result_id} size={28} />
                                     <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 14 }} numberOfLines={1}>
                                         {r.full_name}
                                     </Text>
@@ -296,7 +298,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                                     </Text>
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </Card>
                     ) : null}
 
                     {/* Subject */}
@@ -341,7 +343,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                     </View>
                     {attachments.map((a) => (
                         <View key={a.id} style={[styles.attachmentRow, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                            <Ionicons name="document-outline" size={16} color={colors.primary} />
+                            <Ionicons name="document-outline" size={16} color={iconColor('document-outline', colors)} />
                             <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }} numberOfLines={1}>
                                 {a.name}
                             </Text>
@@ -440,7 +442,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    resultsBox: { borderWidth: 1, borderRadius: 10, marginTop: 6, overflow: 'hidden' },
+    resultsBox: { marginTop: 6 },
     resultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 9 },
     bodyInput: { minHeight: 130 },
     attachHeader: {

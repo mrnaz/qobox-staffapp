@@ -22,13 +22,15 @@ export const lightColors = {
     border: '#DDDDE3',
 
     cardBackground: '#ffffff',
-    cardShadow: '#000',
-    cardShadowOpacity: 0,
+    cardShadow: '#000000',
+    cardShadowOpacity: 0.1,
     cardShadowRadius: 0,
-    cardElevation: 0,
-    cardShadowOffset: { width: 0, height: 0 },
+    cardElevation: 3,
+    cardShadowOffset: { width: 5, height: 5 },
     cardBorderWidth: 1,
     cardBorderRadius: 16,
+
+    borderStrong: '#C4C4CE',
 
     inputBackground: '#ede8df',
     divider: '#e5ddd4',
@@ -139,6 +141,8 @@ export const darkColors = {
     info: '#58a0e0',
 
     border: '#48485e',
+
+    borderStrong: '#5C5C78',
 
     cardBackground: '#2a2a3e',
     cardShadow: '#000',

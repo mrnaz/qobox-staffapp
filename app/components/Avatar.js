@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import Theme from '../context/ThemeContext';
+import { avatarColors } from '../utils/colors';
 
 // Avatar with automatic fallback to initials if the photo URL fails to load
 // (404, broken media URL, network error, etc.). Reused across the app.
@@ -9,8 +10,10 @@ import Theme from '../context/ThemeContext';
 //   uri      string | null  — remote image URL
 //   name     string          — full name, used to compute initials
 //   size     number          — square size in dp (default 36)
-//   bgColor  string          — placeholder background color (default theme.primary)
-//   textColor string         — initials text color (default white)
+//   id       number|string  — entity id; picks the same tint the web app gives
+//                             this person (see avatarColors)
+//   bgColor  string          — override the computed background
+//   textColor string         — override the computed initials color
 const initialsOf = (name) =>
     String(name || '?')
         .split(/\s+/)
@@ -20,10 +23,11 @@ const initialsOf = (name) =>
         .join('')
         .toUpperCase() || '?';
 
-export default function Avatar({ uri, name, size = 36, bgColor, textColor = '#fff' }) {
+export default function Avatar({ uri, name, id, size = 36, bgColor, textColor }) {
     const { useTheme } = Theme;
-    const { theme } = useTheme();
+    const { theme, mode } = useTheme();
     const { colors } = theme;
+    const tint = avatarColors(id, name, mode);
     const [failed, setFailed] = useState(false);
 
     // If the URI changes (e.g. switching users), reset the failure flag so we
@@ -49,14 +53,14 @@ export default function Avatar({ uri, name, size = 36, bgColor, textColor = '#ff
                 styles.placeholder,
                 {
                     width: size, height: size, borderRadius: radius,
-                    backgroundColor: bgColor || colors.primary,
+                    backgroundColor: bgColor || tint.bg,
                 },
             ]}
         >
             <Text
                 style={[
                     styles.text,
-                    { color: textColor, fontSize: Math.max(10, size * 0.38) },
+                    { color: textColor || tint.text, fontSize: Math.max(10, size * 0.38) },
                 ]}
             >
                 {initialsOf(name)}

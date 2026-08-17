@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
+import Card from '../Card';
 
 const fmtDate = (s) => {
     if (!s) return null;
@@ -71,10 +73,10 @@ export default function LessonsTab({ classId }) {
         });
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity
+        <Card
             onPress={() => openLesson(item)}
             activeOpacity={0.8}
-            style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            style={styles.row}
         >
             <View style={{ flex: 1, gap: 4 }}>
                 <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
@@ -92,7 +94,7 @@ export default function LessonsTab({ classId }) {
                 ) : null}
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </Card>
     );
 
     // Fallback row when no lessons are authored: one scheduled session, titled
@@ -105,11 +107,11 @@ export default function LessonsTab({ classId }) {
             : (item.label || 'No lesson planned');
         const roomName = item.room?.name || item.room_name;
         return (
-            <TouchableOpacity
+            <Card
                 onPress={() => { if (linked[0]) openLesson(linked[0]); }}
                 disabled={!linked[0]}
                 activeOpacity={0.8}
-                style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                style={styles.row}
             >
                 <View style={{ flex: 1, gap: 4 }}>
                     <Text
@@ -134,7 +136,7 @@ export default function LessonsTab({ classId }) {
                 {linked[0] ? (
                     <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                 ) : null}
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -146,7 +148,7 @@ export default function LessonsTab({ classId }) {
     if (error && lessons.length === 0 && sessions.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                     <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -171,7 +173,7 @@ export default function LessonsTab({ classId }) {
             }
             ListEmptyComponent={
                 <View style={styles.center}>
-                    <Ionicons name="book-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="book-outline" size={32} color={iconColor('book-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No lessons yet.</Text>
                 </View>
             }
@@ -186,8 +188,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     title: { fontSize: 14, fontWeight: '600' },

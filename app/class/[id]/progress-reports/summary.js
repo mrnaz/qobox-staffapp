@@ -8,10 +8,13 @@ import {
     TouchableOpacity,
     FlatList,
     useWindowDimensions,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../../utils/iconColors';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
 import Avatar from '../../../components/Avatar';
@@ -42,6 +45,7 @@ export default function ProgressReportSummaryScreen() {
     const { colors } = theme;
     const router = useRouter();
     const { id: classId, reportId, studentId } = useLocalSearchParams();
+    const goBack = useGoBack(`/class/${classId}/progress-reports`);
 
     const [template, setTemplate] = useState(null);
     const [details, setDetails] = useState([]); // full results with outcomes (newest first)
@@ -205,10 +209,10 @@ export default function ProgressReportSummaryScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Avatar uri={studentMeta?.photo} name={studentMeta?.name || ''} size={32} />
+                <Avatar uri={studentMeta?.photo} name={studentMeta?.name || ''} id={studentId} size={32} />
                 <View style={{ flex: 1, marginLeft: 8 }}>
                     <Text
                         style={[styles.headerTitle, { color: colors.textPrimary }]}
@@ -233,14 +237,14 @@ export default function ProgressReportSummaryScreen() {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             ) : details.length === 0 ? (
                 // Zero-state — no assessments yet. Show a big CTA so the staff
                 // member can jump straight into the first one.
                 <View style={styles.center}>
-                    <Ionicons name="document-text-outline" size={36} color={colors.textSecondary} />
+                    <Ionicons name="document-text-outline" size={36} color={iconColor('document-text-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No assessments yet for this student.
                     </Text>
@@ -342,6 +346,16 @@ export default function ProgressReportSummaryScreen() {
     );
 }
 
+// Same card shadow the client app's day card uses. Kept off the web build:
+// react-native-web maps the offset to an unblurred box-shadow, which reads as
+// a hard grey block rather than the soft Android elevation.
+const cardShadowStyle = (colors) => (Platform.OS === 'web' ? null : {
+    shadowColor: colors.cardShadow,
+    shadowOffset: colors.cardShadowOffset,
+    shadowOpacity: colors.cardShadowOpacity,
+    elevation: colors.cardElevation,
+});
+
 // One card per saved result (one date). Lists every assessment item with its
 // outcome inline; tap the card to open the result.
 function ResultCard({ result, rows, onPress, colors }) {
@@ -358,10 +372,16 @@ function ResultCard({ result, rows, onPress, colors }) {
         <TouchableOpacity
             activeOpacity={0.9}
             onPress={onPress}
-            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            style={[styles.card, {
+                borderColor: colors.borderStrong || colors.border,
+                backgroundColor: colors.cardBackground,
+            }, cardShadowStyle(colors)]}
         >
             {/* Card header */}
-            <View style={styles.cardHeader}>
+            <View style={[styles.cardHeader, {
+                backgroundColor: colors.primary + '15',
+                borderBottomColor: colors.border,
+            }]}>
                 <View style={[styles.dot, { backgroundColor: accent }]} />
                 <View style={{ flex: 1 }}>
                     <Text style={[styles.cardDate, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -375,17 +395,21 @@ function ResultCard({ result, rows, onPress, colors }) {
                 <View style={[styles.chip, { backgroundColor: accent + '22' }]}>
                     <Text style={[styles.chipText, { color: accent }]}>{isDraft ? 'DRAFT' : 'DONE'}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
             </View>
 
             {/* Body — assessments */}
-            <View style={{ marginTop: 8 }}>
-                {rows.map((row) => {
+            <View style={styles.cardBody}>
+                {rows.map((row, idx) => {
                     if (row.type === 'group-header') {
                         return (
                             <Text
                                 key={row.key}
-                                style={[styles.groupLabel, { color: colors.textSecondary, borderTopColor: colors.border }]}
+                                style={[
+                                    styles.groupLabel,
+                                    { color: colors.textSecondary, borderTopColor: colors.border },
+                                    // The header band already draws a divider.
+                                    idx === 0 && { borderTopWidth: 0 },
+                                ]}
                                 numberOfLines={1}
                             >
                                 {row.label}
@@ -393,6 +417,9 @@ function ResultCard({ result, rows, onPress, colors }) {
                         );
                     }
                     const outcome = outcomeMap[row.assessment.id] || null;
+                    // Comment-type items render no value, so their comment can
+                    // sit on the label's line rather than below it.
+                    const inlineComment = row.assessment.type === 'C' && !!outcome?.comment;
                     return (
                         <View
                             key={row.key}
@@ -400,27 +427,45 @@ function ResultCard({ result, rows, onPress, colors }) {
                                 styles.itemRow,
                                 { borderTopColor: colors.border },
                                 row.indented && { paddingLeft: 16 },
+                                // The header band already draws a divider.
+                                idx === 0 && { borderTopWidth: 0 },
                             ]}
                         >
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.itemLabel, { color: colors.textPrimary }]} numberOfLines={2}>
+                            <View style={[
+                                styles.itemTopRow,
+                                // A wrapped comment makes the row tall; centring would
+                                // float the label to the middle of it.
+                                inlineComment && { alignItems: 'flex-start' },
+                            ]}>
+                                <Text
+                                    style={[
+                                        styles.itemLabel,
+                                        { color: colors.textPrimary },
+                                        inlineComment ? styles.itemLabelInline : { flex: 1 },
+                                    ]}
+                                    numberOfLines={2}
+                                >
                                     {row.assessment.label}
                                 </Text>
-                                {/* Per-item comment, shown in full inside the
-                                    same green bubble the fill screen uses so
-                                    both screens read identically. */}
-                                {outcome?.comment ? (
-                                    <View style={[styles.commentBubble, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '44' }]}>
-                                        <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.primary} />
-                                        <Text style={{ color: colors.textSecondary, fontSize: 11, lineHeight: 15, flex: 1 }}>
-                                            {outcome.comment}
-                                        </Text>
+                                {inlineComment ? (
+                                    <Text style={[styles.itemComment, styles.itemCommentInline]}>
+                                        {outcome.comment}
+                                    </Text>
+                                ) : (
+                                    <View style={styles.itemValue}>
+                                        <OutcomeValue outcome={outcome} assessment={row.assessment} colors={colors} />
                                     </View>
-                                ) : null}
+                                )}
                             </View>
-                            <View style={styles.itemValue}>
-                                <OutcomeValue outcome={outcome} assessment={row.assessment} colors={colors} />
-                            </View>
+                            {/* Scored items keep the comment under the number on
+                                the right; a comment-only item has no number, so
+                                it shares the label's line instead of costing a
+                                whole row of its own. */}
+                            {outcome?.comment && !inlineComment ? (
+                                <Text style={styles.itemComment}>
+                                    {outcome.comment}
+                                </Text>
+                            ) : null}
                         </View>
                     );
                 })}
@@ -429,7 +474,7 @@ function ResultCard({ result, rows, onPress, colors }) {
             {/* General comment tail */}
             {result.comment ? (
                 <View style={[styles.commentBox, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '40' }]}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.primary} />
+                    <Ionicons name="chatbubble-ellipses-outline" size={14} color={iconColor('chatbubble-ellipses-outline', colors)} />
                     <Text style={[styles.commentText, { color: colors.textSecondary }]}>
                         {result.comment}
                     </Text>
@@ -561,13 +606,21 @@ const styles = StyleSheet.create({
     },
     card: {
         borderWidth: 1,
-        borderRadius: 12,
-        padding: 14,
+        borderRadius: 16,
+        overflow: 'hidden',
     },
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    cardBody: {
+        paddingHorizontal: 16,
+        paddingTop: 4,
+        paddingBottom: 8,
     },
     dot: { width: 8, height: 8, borderRadius: 4 },
     cardDate: { fontSize: 14, fontWeight: '700' },
@@ -584,18 +637,37 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     itemRow: {
+        paddingVertical: 10,
+        borderTopWidth: 1,
+    },
+    itemTopRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 8,
-        paddingVertical: 8,
-        borderTopWidth: 1,
     },
     itemLabel: { fontSize: 13, fontWeight: '500' },
-    commentBubble: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        borderWidth: 1, borderRadius: 8, padding: 6,
+    // Inline variant: shares the label's line, so it drops the stacked
+    // spacing and takes the leftover width instead of a capped block.
+    itemLabelInline: { flexShrink: 0, marginRight: 8 },
+    itemCommentInline: {
+        flex: 1,
+        alignSelf: 'auto',
+        maxWidth: '100%',
+        marginTop: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+    },
+    itemComment: {
+        color: '#555',
+        fontSize: 11,
+        lineHeight: 15,
         marginTop: 4,
+        paddingTop: 2,
+        paddingBottom: 1,
+        alignSelf: 'flex-end',
+        maxWidth: '85%',
+        textAlign: 'right',
     },
     itemValue: { alignItems: 'flex-end' },
     commentBox: {
@@ -605,7 +677,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 8,
         padding: 8,
-        marginTop: 10,
+        // The card no longer pads its children, so this tail carries its own
+        // inset off the card edges.
+        marginHorizontal: 16,
+        marginBottom: 14,
     },
     commentText: { flex: 1, fontSize: 12, lineHeight: 16 },
 });

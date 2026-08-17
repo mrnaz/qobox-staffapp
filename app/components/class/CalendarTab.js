@@ -9,8 +9,10 @@ import {
     RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
+import Card from '../Card';
 
 const startOfMonth = (d) => {
     const x = new Date(d);
@@ -144,7 +146,7 @@ export default function CalendarTab({ classId }) {
                 </View>
             ) : error && events.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -155,7 +157,7 @@ export default function CalendarTab({ classId }) {
                     contentContainerStyle={styles.center}
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 >
-                    <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="calendar-outline" size={32} color={iconColor('calendar-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No sessions this month.</Text>
                 </ScrollView>
             ) : (
@@ -180,9 +182,9 @@ export default function CalendarTab({ classId }) {
                                 {items.map((ev, i) => {
                                     const accent = eventColor(ev.color, colors);
                                     return (
-                                        <View
+                                        <Card
                                             key={`${ev.id ?? i}-${day.toISOString()}`}
-                                            style={[styles.eventRow, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                                            style={styles.eventRow}
                                         >
                                             <View style={[styles.accent, { backgroundColor: accent }]} />
                                             <View style={{ flex: 1, gap: 3 }}>
@@ -203,7 +205,7 @@ export default function CalendarTab({ classId }) {
                                                     </Text>
                                                 ) : null}
                                             </View>
-                                        </View>
+                                        </Card>
                                     );
                                 })}
                             </View>
@@ -236,13 +238,8 @@ const styles = StyleSheet.create({
     eventRow: {
         flexDirection: 'row',
         gap: 10,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 12,
         marginTop: 6,
-        // Clip the background to the rounded shape — tall cards otherwise show
-        // it bleeding past the border curve at the bottom corners on Android.
-        overflow: 'hidden',
     },
     accent: { width: 4, borderRadius: 2 },
     eventTitle: { fontSize: 14, fontWeight: '600' },

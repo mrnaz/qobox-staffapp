@@ -12,14 +12,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useGoBack } from '../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
+import Card from '../components/Card';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ComposeModal from '../components/messages/ComposeModal';
 import { stripHtml, fmtMessageDate, recipientsSummary, persistUnreadCount } from '../utils/messages';
+import { iconColor } from '../utils/iconColors';
 
 const FOLDERS = [
     { key: 'inbox', label: 'Inbox' },
@@ -37,6 +40,7 @@ export default function MessagesScreen() {
     const { theme } = useTheme();
     const { colors } = theme;
     const router = useRouter();
+    const goBack = useGoBack('/(main)/');
 
     const [staff, setStaff] = useState(null);
     const [folder, setFolder] = useState('inbox');
@@ -218,16 +222,17 @@ export default function MessagesScreen() {
         const title = folder === 'inbox' ? (m.sender_full_name || 'Unknown sender') : `To: ${recipientsSummary(m)}`;
         const avatarName = folder === 'inbox' ? (m.sender_full_name || '?') : (m.recipients?.[0]?.full_name || '?');
         const avatarUri = folder === 'inbox' ? m.photo : m.recipients?.[0]?.photo;
+        const avatarId = folder === 'inbox'
+            ? (m.sender_staff_id || m.sender_client_id)
+            : (m.recipients?.[0]?.staff_id || m.recipients?.[0]?.client_id);
         const dateLabel = folder === 'draft' ? 'Draft' : fmtMessageDate(m.msg_sent);
 
         return (
-            <TouchableOpacity
-                activeOpacity={0.85}
+            <Card
                 onPress={() => openRow(item)}
                 onLongPress={() => toggleSelect(item.key)}
                 style={[
                     styles.row,
-                    { borderColor: colors.border, backgroundColor: colors.cardBackground },
                     isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + '11' },
                 ]}
             >
@@ -238,7 +243,7 @@ export default function MessagesScreen() {
                         color={isSelected ? colors.primary : colors.textSecondary}
                     />
                 ) : (
-                    <Avatar uri={avatarUri} name={avatarName} size={40} />
+                    <Avatar uri={avatarUri} name={avatarName} id={avatarId} size={40} />
                 )}
                 <View style={{ flex: 1, gap: 2 }}>
                     <View style={styles.rowTop}>
@@ -268,7 +273,7 @@ export default function MessagesScreen() {
                         ) : null}
                     </View>
                 </View>
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -276,7 +281,7 @@ export default function MessagesScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Messages</Text>
@@ -311,7 +316,7 @@ export default function MessagesScreen() {
             </View>
 
             {/* Search */}
-            <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.searchBox, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="search" size={16} color={colors.textSecondary} />
                 <TextInput
                     value={searchQuery}
@@ -334,7 +339,7 @@ export default function MessagesScreen() {
                 </View>
             ) : error && rows.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -358,7 +363,7 @@ export default function MessagesScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="mail-open-outline" size={32} color={colors.textSecondary} />
+                            <Ionicons name="mail-open-outline" size={32} color={iconColor('mail-open-outline', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {search
                                     ? 'No messages match your search.'
@@ -477,8 +482,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 12,
     },
     rowTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },

@@ -13,11 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../../utils/iconColors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
 import Avatar from '../../../components/Avatar';
+import Card, { CardHeader, cardBodyPadding } from '../../../components/Card';
 import Toast from '../../../components/Toast';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import { resolveRubricColor } from '../../../utils/colors';
@@ -35,6 +38,7 @@ export default function FillProgressReportScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { id: classId, reportId, resultId, studentId, readonly } = useLocalSearchParams();
+    const goBack = useGoBack(`/class/${classId}/progress-reports`);
 
     const isReadonly = readonly === '1' || readonly === 'true';
     const isEditMode = Boolean(resultId);
@@ -180,7 +184,7 @@ export default function FillProgressReportScreen() {
             // user can see the confirmation on screens where navigation is
             // instant.
             setToast({ message: asCompleted ? 'Saved & completed' : 'Draft saved', variant: 'success' });
-            setTimeout(() => router.back(), 700);
+            setTimeout(() => goBack(), 700);
         } catch (err) {
             console.error('Save progress report error', err);
             setToast({
@@ -203,7 +207,7 @@ export default function FillProgressReportScreen() {
             await api.deleteProgressReportResult(resultId);
             setConfirmDelete(false);
             setToast({ message: 'Result deleted', variant: 'success' });
-            setTimeout(() => router.back(), 600);
+            setTimeout(() => goBack(), 600);
         } catch (err) {
             setConfirmDelete(false);
             setToast({
@@ -219,7 +223,7 @@ export default function FillProgressReportScreen() {
         return (
             <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                    <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                 </View>
@@ -234,12 +238,12 @@ export default function FillProgressReportScreen() {
         return (
             <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                    <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                 </View>
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             </SafeAreaView>
@@ -254,13 +258,14 @@ export default function FillProgressReportScreen() {
             >
                 {/* Header */}
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                    <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                     {selectedStudent ? (
                         <Avatar
                             uri={selectedStudent.list_photo || selectedStudent.photo}
                             name={selectedStudent.name || `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`}
+                            id={selectedStudent.id ?? selectedStudent.client_id}
                             size={32}
                         />
                     ) : null}
@@ -293,95 +298,126 @@ export default function FillProgressReportScreen() {
                     {/* Student picker — locked when read-only or when editing a
                         result that's already been marked completed. Drafts
                         remain re-targetable, matching the web behaviour. */}
-                    <Label colors={colors}>Student</Label>
-                    <TouchableOpacity
-                        onPress={() => {
-                            if (isReadonly || (isEditMode && loadedCompleted)) return;
-                            setPicker({ type: 'student' });
-                        }}
-                        activeOpacity={0.8}
-                        disabled={isReadonly || (isEditMode && loadedCompleted)}
-                        style={[styles.fieldBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                    >
-                        {selectedStudent ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                                <Avatar
-                                    uri={selectedStudent.list_photo || selectedStudent.photo}
-                                    name={selectedStudent.name || `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`}
-                                    size={28}
-                                />
-                                <Text style={[styles.fieldText, { color: colors.textPrimary }]} numberOfLines={1}>
-                                    {selectedStudent.name ||
-                                        `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`.trim()}
-                                </Text>
-                            </View>
-                        ) : (
-                            <Text style={[styles.fieldPlaceholder, { color: colors.textSecondary }]}>
-                                Select a student…
-                            </Text>
-                        )}
-                        {!isReadonly && !(isEditMode && loadedCompleted) ? (
-                            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-                        ) : null}
-                    </TouchableOpacity>
+                    <Card>
+                        <CardHeader title="Student" />
+                        <View style={cardBodyPadding}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    if (isReadonly || (isEditMode && loadedCompleted)) return;
+                                    setPicker({ type: 'student' });
+                                }}
+                                activeOpacity={0.8}
+                                disabled={isReadonly || (isEditMode && loadedCompleted)}
+                                style={[styles.fieldBtn, {
+                                    borderColor: colors.borderStrong || colors.border,
+                                    backgroundColor: colors.cardBackground,
+                                }]}
+                            >
+                                {selectedStudent ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                                        <Avatar
+                                            uri={selectedStudent.list_photo || selectedStudent.photo}
+                                            name={selectedStudent.name || `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`}
+                                            id={selectedStudent.id ?? selectedStudent.client_id}
+                                            size={28}
+                                        />
+                                        <Text style={[styles.fieldText, { color: colors.textPrimary }]} numberOfLines={1}>
+                                            {selectedStudent.name ||
+                                                `${selectedStudent.fname || ''} ${selectedStudent.sname || ''}`.trim()}
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <Text style={[styles.fieldPlaceholder, { color: colors.textSecondary }]}>
+                                        Select a student…
+                                    </Text>
+                                )}
+                                {!isReadonly && !(isEditMode && loadedCompleted) ? (
+                                    <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+                                ) : null}
+                            </TouchableOpacity>
+                        </View>
+                    </Card>
 
                     {/* General comment */}
-                    <Label colors={colors} style={{ marginTop: 16 }}>General comments</Label>
-                    <TextInput
-                        value={generalComment}
-                        onChangeText={setGeneralComment}
-                        editable={!isReadonly}
-                        placeholder="Add a general comment…"
-                        placeholderTextColor={colors.textSecondary}
-                        multiline
-                        style={[styles.textarea, {
-                            borderColor: colors.border,
-                            backgroundColor: colors.cardBackground,
-                            color: colors.textPrimary,
-                        }]}
-                    />
+                    <Card>
+                        <CardHeader title="General comments" />
+                        <View style={cardBodyPadding}>
+                            <TextInput
+                                value={generalComment}
+                                onChangeText={setGeneralComment}
+                                editable={!isReadonly}
+                                placeholder="Add a general comment…"
+                                placeholderTextColor={colors.textSecondary}
+                                multiline
+                                style={[styles.textarea, {
+                                    borderColor: colors.borderStrong || colors.border,
+                                    backgroundColor: colors.cardBackground,
+                                    color: colors.textPrimary,
+                                }]}
+                            />
+                        </View>
+                    </Card>
 
                     {/* Assessment rows */}
-                    <Label colors={colors} style={{ marginTop: 16 }}>Assessments</Label>
-                    <View style={{ gap: 8 }}>
-                        {rows.length === 0 ? (
-                            <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                This template has no assessment items.
-                            </Text>
-                        ) : (
-                            rows.map((row) => {
-                                if (row.type === 'group') {
-                                    return (
-                                        <View key={row.key} style={{ marginTop: 8 }}>
-                                            <Text style={[styles.groupTitle, { color: colors.textPrimary }]}>
-                                                {row.group.label}
-                                            </Text>
-                                            {row.group.description ? (
-                                                <Text style={[styles.groupDesc, { color: colors.textSecondary }]}>
-                                                    {row.group.description}
+                    <Card>
+                        <CardHeader title="Assessments" />
+                        <View style={cardBodyPadding}>
+                            {rows.length === 0 ? (
+                                <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                                    This template has no assessment items.
+                                </Text>
+                            ) : (
+                                rows.map((row, idx) => {
+                                    if (row.type === 'group') {
+                                        return (
+                                            <View
+                                                key={row.key}
+                                                style={[
+                                                    styles.groupBlock,
+                                                    { borderTopColor: colors.border },
+                                                    // The header band already draws a divider.
+                                                    idx === 0 && { borderTopWidth: 0, marginTop: 0, paddingTop: 0 },
+                                                ]}
+                                            >
+                                                <Text style={[styles.groupTitle, { color: colors.textPrimary }]}>
+                                                    {row.group.label}
                                                 </Text>
-                                            ) : null}
+                                                {row.group.description ? (
+                                                    <Text style={[styles.groupDesc, { color: colors.textSecondary }]}>
+                                                        {row.group.description}
+                                                    </Text>
+                                                ) : null}
+                                            </View>
+                                        );
+                                    }
+                                    const a = row.assessment;
+                                    const value = outcomes[a.id] || {};
+                                    return (
+                                        <View
+                                            key={row.key}
+                                            style={[
+                                                styles.itemWrap,
+                                                { borderTopColor: colors.border },
+                                                // The header band already draws a divider.
+                                                idx === 0 && { borderTopWidth: 0 },
+                                            ]}
+                                        >
+                                            <AssessmentItem
+                                                assessment={a}
+                                                value={value}
+                                                disabled={isReadonly || !formStudentId}
+                                                onChange={(patch) => setOutcome(a.id, patch)}
+                                                onOpenComment={() => setPicker({ type: 'comment', assessment: a })}
+                                                onOpenRubric={() => setPicker({ type: 'rubric', assessment: a })}
+                                                onOpenScore={() => setPicker({ type: 'score', assessment: a })}
+                                                colors={colors}
+                                            />
                                         </View>
                                     );
-                                }
-                                const a = row.assessment;
-                                const value = outcomes[a.id] || {};
-                                return (
-                                    <AssessmentItem
-                                        key={row.key}
-                                        assessment={a}
-                                        value={value}
-                                        disabled={isReadonly || !formStudentId}
-                                        onChange={(patch) => setOutcome(a.id, patch)}
-                                        onOpenComment={() => setPicker({ type: 'comment', assessment: a })}
-                                        onOpenRubric={() => setPicker({ type: 'rubric', assessment: a })}
-                                        onOpenScore={() => setPicker({ type: 'score', assessment: a })}
-                                        colors={colors}
-                                    />
-                                );
-                            })
-                        )}
-                    </View>
+                                })
+                            )}
+                        </View>
+                    </Card>
                 </ScrollView>
 
                 {/* Save bar — hidden while a picker is open so the bottom-sheet
@@ -519,7 +555,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                                 disabled={disabled}
                                 onPress={() => onChange({ passed: selected ? null : opt.v })}
                                 style={[styles.pill, {
-                                    borderColor: selected ? accent : colors.border,
+                                    borderColor: selected ? accent : (colors.borderStrong || colors.border),
                                     backgroundColor: selected ? accent + '22' : 'transparent',
                                 }]}
                             >
@@ -537,7 +573,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
             const score = value.score;
             const empty = score === null || score === undefined || score === '';
             return (
-                <TouchableOpacity disabled={disabled} onPress={onOpenScore} style={[styles.pill, { borderColor: colors.border }]}>
+                <TouchableOpacity disabled={disabled} onPress={onOpenScore} style={[styles.pill, { borderColor: colors.borderStrong || colors.border }]}>
                     <Text style={{ color: empty ? colors.textSecondary : colors.textPrimary, fontWeight: '600', fontSize: 12 }}>
                         {empty ? 'Set score' : `${score} / ${max}`}
                     </Text>
@@ -548,7 +584,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
             const selected = (assessment.rubrics || []).find((r) => r.id === value.rubric_selection);
             const dot = resolveRubricColor(selected?.color);
             return (
-                <TouchableOpacity disabled={disabled} onPress={onOpenRubric} style={[styles.pill, { borderColor: colors.border, flexDirection: 'row', gap: 6 }]}>
+                <TouchableOpacity disabled={disabled} onPress={onOpenRubric} style={[styles.pill, { borderColor: colors.borderStrong || colors.border, flexDirection: 'row', gap: 6 }]}>
                     {selected ? (
                         <>
                             <View style={[styles.dot, { backgroundColor: dot }]} />
@@ -564,7 +600,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
     };
 
     return (
-        <View style={[styles.assessmentCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+        <View style={styles.assessmentRow}>
             <View style={{ flex: 1, gap: 4 }}>
                 <Text style={[styles.assessmentLabel, { color: colors.textPrimary }]}>
                     {assessment.label}
@@ -585,7 +621,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                         activeOpacity={0.7}
                         style={[styles.commentBubble, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '44' }]}
                     >
-                        <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.primary} />
+                        <Ionicons name="chatbubble-ellipses-outline" size={12} color={iconColor('chatbubble-ellipses-outline', colors)} />
                         <Text style={{ color: colors.textSecondary, fontSize: 11, flex: 1 }}>
                             {value.comment}
                         </Text>
@@ -596,7 +632,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                 {renderValue()}
                 {!value.comment ? (
                     <TouchableOpacity disabled={disabled} onPress={onOpenComment}>
-                        <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textSecondary} />
+                        <Ionicons name="chatbubble-ellipses-outline" size={18} color={iconColor('chatbubble-ellipses-outline', colors)} />
                     </TouchableOpacity>
                 ) : null}
             </View>
@@ -661,7 +697,7 @@ function StudentPicker({ students, selected, onSelect, colors }) {
     return (
         <View style={{ paddingHorizontal: 16, flexShrink: 1 }}>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Select student</Text>
-            <View style={[styles.searchWrap, { borderColor: colors.border }]}>
+            <View style={[styles.searchWrap, { borderColor: colors.borderStrong || colors.border }]}>
                 <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
                 <TextInput
                     value={q}
@@ -682,11 +718,11 @@ function StudentPicker({ students, selected, onSelect, colors }) {
                             onPress={() => onSelect(id)}
                             style={[styles.pickerRow, { borderColor: colors.border }]}
                         >
-                            <Avatar uri={s.list_photo || s.photo} name={name} size={32} />
+                            <Avatar uri={s.list_photo || s.photo} name={name} id={id} size={32} />
                             <Text style={{ color: colors.textPrimary, flex: 1, fontWeight: '600' }} numberOfLines={1}>
                                 {name}
                             </Text>
-                            {isSel ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+                            {isSel ? <Ionicons name="checkmark" size={18} color={iconColor('checkmark', colors)} /> : null}
                         </TouchableOpacity>
                     );
                 })}
@@ -735,7 +771,7 @@ function RubricPicker({ assessment, value, onSave, colors }) {
                                     </Text>
                                 ) : null}
                             </View>
-                            {isSel ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+                            {isSel ? <Ionicons name="checkmark" size={18} color={iconColor('checkmark', colors)} /> : null}
                         </TouchableOpacity>
                     );
                 })}
@@ -862,7 +898,7 @@ const styles = StyleSheet.create({
     iconBtn: { padding: 8, borderRadius: 999 },
     headerTitle: { fontSize: 16, fontWeight: '700' },
     headerSub: { fontSize: 12, marginTop: 2 },
-    body: { padding: 16, paddingBottom: 96, gap: 4 },
+    body: { padding: 16, paddingBottom: 96, gap: 12 },
     label: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
     fieldBtn: {
         flexDirection: 'row', alignItems: 'center',
@@ -875,11 +911,18 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderRadius: 10, padding: 12,
         fontSize: 14, minHeight: 70, textAlignVertical: 'top',
     },
+    groupBlock: {
+        borderTopWidth: 1,
+        marginTop: 4,
+        paddingTop: 10,
+        paddingBottom: 2,
+    },
     groupTitle: { fontSize: 14, fontWeight: '700' },
     groupDesc: { fontSize: 12, marginTop: 2 },
-    assessmentCard: {
+    itemWrap: { borderTopWidth: 1 },
+    assessmentRow: {
         flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-        borderWidth: 1, borderRadius: 12, padding: 12,
+        paddingVertical: 10,
     },
     assessmentLabel: { fontSize: 13, fontWeight: '700' },
     assessmentDesc: { fontSize: 11 },

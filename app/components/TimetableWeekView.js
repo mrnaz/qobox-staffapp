@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
+import { iconColor } from '../utils/iconColors';
 
 // Shared week-grid timetable view used by both the staff "My Timetable" tab
 // and the student-detail Timetable tab. The parent owns *what* to fetch via
@@ -278,7 +279,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                 <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
             ) : error && items.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -307,7 +308,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
 
                         {placedItems.length === 0 ? (
                             <View style={styles.emptyDay}>
-                                <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
+                                <Ionicons name="calendar-outline" size={36} color={iconColor('calendar-outline', colors)} />
                                 <Text style={[styles.empty, { color: colors.textSecondary, fontSize: 14 }]}>
                                     Nothing scheduled.
                                 </Text>
@@ -445,7 +446,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
 function ModalRow({ icon, value, colors }) {
     return (
         <View style={styles.modalRow}>
-            <Ionicons name={icon} size={16} color={colors.textSecondary} />
+            <Ionicons name={icon} size={16} color={iconColor(icon, colors, colors.textSecondary)} />
             <Text style={[styles.modalRowText, { color: colors.textPrimary }]}>{value}</Text>
         </View>
     );

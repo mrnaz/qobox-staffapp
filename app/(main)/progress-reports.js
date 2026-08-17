@@ -13,7 +13,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import Card from '../components/Card';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import { iconColor } from '../utils/iconColors';
 
 // Cross-class progress-reports landing page. For every class the staff
 // teaches we fetch its linked report templates + filled results so the
@@ -147,7 +149,7 @@ export default function ProgressReportsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -157,13 +159,13 @@ export default function ProgressReportsScreen() {
     }
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity
+        <Card
             activeOpacity={0.85}
             onPress={() => router.push(`/class/${item.classId}/progress-reports`)}
-            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            style={styles.card}
         >
-            <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-                <FontAwesome name="file-text-o" size={18} color={colors.primary} />
+            <View style={[styles.iconWrap, { backgroundColor: iconColor('file-text-o', colors) + '22' }]}>
+                <FontAwesome name="file-text-o" size={18} color={iconColor('file-text-o', colors)} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -195,13 +197,13 @@ export default function ProgressReportsScreen() {
                 </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </Card>
     );
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             {rows.length > 0 ? (
-                <View style={[styles.summaryRow, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                <Card style={styles.summaryRow}>
                     <Stat label="Templates" value={totals.templates} colors={colors} />
                     <Stat
                         label="Drafts"
@@ -215,7 +217,7 @@ export default function ProgressReportsScreen() {
                         color={totals.completed ? (colors.success || colors.primary) : undefined}
                         colors={colors}
                     />
-                </View>
+                </Card>
             ) : null}
 
             {isLoading && rows.length === 0 ? (
@@ -224,7 +226,7 @@ export default function ProgressReportsScreen() {
                 </View>
             ) : error && rows.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -241,7 +243,7 @@ export default function ProgressReportsScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <FontAwesome name="file-text-o" size={32} color={colors.textSecondary} />
+                            <FontAwesome name="file-text-o" size={32} color={iconColor('file-text-o', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 None of your classes have progress reports linked yet.
                             </Text>
@@ -270,8 +272,6 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryRow: {
         flexDirection: 'row',
-        borderWidth: 1,
-        borderRadius: 12,
         marginHorizontal: 16,
         marginTop: 12,
         marginBottom: 8,
@@ -282,8 +282,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     iconWrap: {

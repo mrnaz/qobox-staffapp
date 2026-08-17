@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from '../QRCode';
+import Card from '../Card';
 import Theme from '../../context/ThemeContext';
 import styles from './styles';
 
@@ -44,7 +45,7 @@ export default function ShiftQrModal({ visible, onClose, token, loading, error, 
                         ) : (
                             <>
                                 <Text style={[styles.qrHint, { color: colors.textSecondary }]}>{hint}</Text>
-                                <View style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
+                                <Card style={[styles.qrBox, { backgroundColor: '#ffffff' }]}>
                                     {loading ? (
                                         <ActivityIndicator color={colors.primary} />
                                     ) : token ? (
@@ -52,7 +53,7 @@ export default function ShiftQrModal({ visible, onClose, token, loading, error, 
                                     ) : (
                                         <ActivityIndicator color={colors.primary} />
                                     )}
-                                </View>
+                                </Card>
                             </>
                         )}
                     </View>

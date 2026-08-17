@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import Avatar from '../Avatar';
+import Card from '../Card';
 
 const fullName = (s) =>
     (s.fname || s.sname)
@@ -69,20 +71,20 @@ export default function StudentsTab({ classId }) {
         const id = item.id ?? item.client_id;
         const name = fullName(item);
         return (
-            <TouchableOpacity
+            <Card
                 onPress={() => { if (id != null) router.push(`/student/${id}`); }}
                 disabled={id == null}
                 activeOpacity={0.8}
-                style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                style={styles.row}
             >
-                <Avatar uri={item.list_photo || item.photo || null} name={name} size={40} />
+                <Avatar uri={item.list_photo || item.photo || null} name={name} id={id} size={40} />
                 <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
                     {name}
                 </Text>
                 {id != null ? (
                     <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 ) : null}
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -92,7 +94,7 @@ export default function StudentsTab({ classId }) {
     if (error && students.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
+                <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                     <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -117,7 +119,7 @@ export default function StudentsTab({ classId }) {
             }
             ListEmptyComponent={
                 <View style={styles.center}>
-                    <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No students in this class.</Text>
                 </View>
             }
@@ -132,8 +134,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 12,
     },
     name: { flex: 1, fontSize: 14, fontWeight: '600' },

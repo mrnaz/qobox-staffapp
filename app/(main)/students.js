@@ -15,8 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
+import Card from '../components/Card';
 import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
 import PeriodPicker from '../components/PeriodPicker';
+import { iconColor } from '../utils/iconColors';
 
 export default function MyStudentsScreen() {
     const { useTheme } = Theme;
@@ -131,7 +133,7 @@ export default function MyStudentsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -141,12 +143,12 @@ export default function MyStudentsScreen() {
     }
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity
+        <Card
             activeOpacity={0.85}
             onPress={() => router.push(`/student/${item.id}`)}
-            style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            style={styles.row}
         >
-            <Avatar uri={item.photo} name={item.name} size={40} />
+            <Avatar uri={item.photo} name={item.name} id={item.id} size={40} />
             <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
                     {item.name}
@@ -158,7 +160,7 @@ export default function MyStudentsScreen() {
                 </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </Card>
     );
 
     return (
@@ -172,7 +174,7 @@ export default function MyStudentsScreen() {
             ) : null}
 
             {/* Search */}
-            <View style={[styles.searchWrap, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+            <View style={[styles.searchWrap, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
                 <TextInput
                     value={search}
@@ -194,7 +196,7 @@ export default function MyStudentsScreen() {
                 </View>
             ) : error && students.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -209,7 +211,7 @@ export default function MyStudentsScreen() {
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
+                            <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {search
                                     ? 'No students match your search.'
@@ -249,8 +251,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 12,
     },
     title: { fontSize: 14, fontWeight: '700' },

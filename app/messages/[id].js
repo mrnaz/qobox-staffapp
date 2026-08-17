@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useGoBack } from '../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
@@ -22,6 +23,7 @@ import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ComposeModal from '../components/messages/ComposeModal';
 import { stripHtml, adjustUnreadCount } from '../utils/messages';
+import { iconColor } from '../utils/iconColors';
 
 // Message reader: the opened message plus its replies as a chat-style
 // timeline (mine right, theirs left), optional earlier-thread loading, and a
@@ -31,6 +33,7 @@ export default function MessageDetailScreen() {
     const { theme } = useTheme();
     const { colors } = theme;
     const router = useRouter();
+    const goBack = useGoBack('/messages');
     const { id } = useLocalSearchParams();
 
     const [staff, setStaff] = useState(null);
@@ -137,7 +140,7 @@ export default function MessageDetailScreen() {
         try {
             await api.unreadMessage(message.id);
             adjustUnreadCount(1);
-            router.back();
+            goBack();
         } catch (err) {
             setToast({ message: err.body?.message || err.message || 'Could not mark unread.', variant: 'error' });
         }
@@ -148,7 +151,7 @@ export default function MessageDetailScreen() {
             setDeleting(true);
             if (myRecipientRow) await api.deleteMessageRecipient(myRecipientRow.id);
             else await api.deleteMessage(message.id);
-            router.back();
+            goBack();
         } catch (err) {
             console.error('Delete message error', err);
             setToast({ message: err.body?.message || err.message || 'Delete failed.', variant: 'error' });
@@ -179,7 +182,14 @@ export default function MessageDetailScreen() {
                 ]}
             >
                 <View style={styles.bubbleHeader}>
-                    {!mine ? <Avatar uri={m.photo} name={m.sender_full_name || '?'} size={22} /> : null}
+                    {!mine ? (
+                        <Avatar
+                            uri={m.photo}
+                            name={m.sender_full_name || '?'}
+                            id={m.sender_staff_id || m.sender_client_id}
+                            size={22}
+                        />
+                    ) : null}
                     <Text style={[styles.bubbleAuthor, { color: colors.textSecondary }]} numberOfLines={1}>
                         {mine ? 'You' : m.sender_full_name || 'Unknown'}
                         {' · '}
@@ -195,7 +205,7 @@ export default function MessageDetailScreen() {
                         onPress={() => a.original_url && Linking.openURL(a.original_url)}
                         style={[styles.attachment, { borderColor: colors.border, backgroundColor: colors.background }]}
                     >
-                        <Ionicons name="document-attach-outline" size={16} color={colors.primary} />
+                        <Ionicons name="document-attach-outline" size={16} color={iconColor('document-attach-outline', colors)} />
                         <Text style={[styles.attachmentName, { color: colors.textPrimary }]} numberOfLines={1}>
                             {a.name || a.file_name || 'Attachment'}
                         </Text>
@@ -212,7 +222,7 @@ export default function MessageDetailScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -222,7 +232,7 @@ export default function MessageDetailScreen() {
                     <View style={{ flexDirection: 'row' }}>
                         {myRecipientRow ? (
                             <TouchableOpacity onPress={markUnread} style={styles.iconBtn}>
-                                <Ionicons name="mail-unread-outline" size={20} color={colors.textPrimary} />
+                                <Ionicons name="mail-unread-outline" size={20} color={iconColor('mail-unread-outline', colors)} />
                             </TouchableOpacity>
                         ) : null}
                         <TouchableOpacity onPress={() => setForwardVisible(true)} style={styles.iconBtn}>
@@ -243,7 +253,7 @@ export default function MessageDetailScreen() {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={load} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -266,7 +276,7 @@ export default function MessageDetailScreen() {
                                     <ActivityIndicator size="small" color={colors.primary} />
                                 ) : (
                                     <>
-                                        <Ionicons name="time-outline" size={14} color={colors.primary} />
+                                        <Ionicons name="time-outline" size={14} color={iconColor('time-outline', colors)} />
                                         <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12 }}>
                                             Load earlier messages
                                         </Text>

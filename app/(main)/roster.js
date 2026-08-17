@@ -20,11 +20,13 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import ShiftTimer from '../components/ShiftTimer';
 import Toast from '../components/Toast';
+import Card, { CardHeader, cardBodyPadding } from '../components/Card';
 import CheckInModal from '../components/shift/CheckInModal';
 import CheckOutModal from '../components/shift/CheckOutModal';
 import ShiftQrModal from '../components/shift/ShiftQrModal';
 import useShiftQr from '../components/shift/useShiftQr';
 import { parseWallClock, formatShiftStart, normalizeTimeLabel, isToday } from '../utils/datetime';
+import { iconColor } from '../utils/iconColors';
 
 const fmtDateForApi = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -237,7 +239,7 @@ export default function RosterScreen() {
         ? (colors.warning || colors.primary)
         : (colors.success || colors.primary);
     const openShiftHeader = openShift ? (
-        <View style={[styles.pinnedCard, { borderColor: openAccent, backgroundColor: openAccent + '18' }]}>
+        <Card style={[styles.pinnedCard, { borderColor: openAccent, backgroundColor: openAccent + '18' }]}>
             <View style={styles.pinnedHeaderRow}>
                 <View style={[styles.runningDot, { backgroundColor: openAccent }]} />
                 <Text style={[styles.pinnedLabel, { color: openAccent }]}>On shift</Text>
@@ -274,7 +276,7 @@ export default function RosterScreen() {
                     </>
                 )}
             </TouchableOpacity>
-        </View>
+        </Card>
     ) : null;
 
     // Backend response shapes vary:
@@ -360,98 +362,99 @@ export default function RosterScreen() {
         const canCheckOut = showAction && !item.absent && item.actual_start && !item.actual_end;
 
         return (
-            <TouchableOpacity
-                style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            <Card
                 onPress={() => setSelectedShift(item)}
                 activeOpacity={0.8}
             >
-                <View style={styles.cardHeader}>
+                <CardHeader>
                     <Text style={[styles.cardDate, { color: colors.textPrimary }]}>{dateLabel}</Text>
                     <View style={[styles.statusPill, { borderColor: statusMeta.color, backgroundColor: statusMeta.color + '22' }]}>
                         <Text style={[styles.statusText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
                     </View>
-                </View>
+                </CardHeader>
 
-                {/* Rostered times */}
-                <View style={styles.timeRow}>
-                    <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-                    <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Rostered</Text>
-                    <Text style={[styles.timeValue, { color: colors.textPrimary }]}>
-                        {item.rostered_start_time && item.rostered_end_time
-                            ? `${item.rostered_start_time} – ${item.rostered_end_time}`
-                            : '—'}
-                    </Text>
-                </View>
-
-                {/* Claimed times */}
-                {(item.claimed_start_time || item.claimed_end_time) ? (
+                <View style={[cardBodyPadding, styles.cardBody]}>
+                    {/* Rostered times */}
                     <View style={styles.timeRow}>
-                        <Ionicons name="checkmark-circle-outline" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Claimed</Text>
+                        <Ionicons name="calendar-outline" size={14} color={iconColor('calendar-outline', colors)} />
+                        <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Rostered</Text>
                         <Text style={[styles.timeValue, { color: colors.textPrimary }]}>
-                            {item.claimed_start_time || '—'}
-                            {' – '}
-                            {item.claimed_end_time || (item.claimed_start_time ? 'in progress' : '—')}
+                            {item.rostered_start_time && item.rostered_end_time
+                                ? `${item.rostered_start_time} – ${item.rostered_end_time}`
+                                : '—'}
                         </Text>
                     </View>
-                ) : null}
 
-                {item.site_name ? (
-                    <View style={styles.timeRow}>
-                        <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Site</Text>
-                        <Text style={[styles.timeValue, { color: colors.textPrimary }]} numberOfLines={1}>
-                            {item.site_name}
-                        </Text>
-                    </View>
-                ) : null}
+                    {/* Claimed times */}
+                    {(item.claimed_start_time || item.claimed_end_time) ? (
+                        <View style={styles.timeRow}>
+                            <Ionicons name="checkmark-circle-outline" size={14} color={colors.textSecondary} />
+                            <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Claimed</Text>
+                            <Text style={[styles.timeValue, { color: colors.textPrimary }]}>
+                                {item.claimed_start_time || '—'}
+                                {' – '}
+                                {item.claimed_end_time || (item.claimed_start_time ? 'in progress' : '—')}
+                            </Text>
+                        </View>
+                    ) : null}
 
-                {item.absent ? (
-                    <View style={[styles.absentRow, { borderColor: colors.error || colors.warning }]}>
-                        <Ionicons name="close-circle-outline" size={14} color={colors.error || colors.warning} />
-                        <Text style={[styles.absentText, { color: colors.error || colors.warning }]}>
-                            Marked absent
-                        </Text>
-                    </View>
-                ) : null}
+                    {item.site_name ? (
+                        <View style={styles.timeRow}>
+                            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+                            <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Site</Text>
+                            <Text style={[styles.timeValue, { color: colors.textPrimary }]} numberOfLines={1}>
+                                {item.site_name}
+                            </Text>
+                        </View>
+                    ) : null}
 
-                {/* Actions */}
-                {canCheckIn || canCheckOut ? (
-                    <View style={styles.actions}>
-                        {canCheckIn ? (
-                            <TouchableOpacity
-                                onPress={() => openCheckInModal(item)}
-                                disabled={isBusy}
-                                style={[styles.btn, { backgroundColor: colors.primary, opacity: isBusy ? 0.6 : 1 }]}
-                            >
-                                {isBusy && actingOnId === (item.id || item.staff_roster_id) ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <>
-                                        <Ionicons name="log-in-outline" size={16} color="#fff" />
-                                        <Text style={styles.btnText}>Check In</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        ) : canCheckOut ? (
-                            <TouchableOpacity
-                                onPress={() => openCheckOutModal(item)}
-                                disabled={isBusy}
-                                style={[styles.btn, { backgroundColor: colors.warning || colors.primary, opacity: isBusy ? 0.6 : 1 }]}
-                            >
-                                {isBusy ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <>
-                                        <Ionicons name="log-out-outline" size={16} color="#fff" />
-                                        <Text style={styles.btnText}>Check Out</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        ) : null}
-                    </View>
-                ) : null}
-            </TouchableOpacity>
+                    {item.absent ? (
+                        <View style={[styles.absentRow, { borderColor: colors.error || colors.warning }]}>
+                            <Ionicons name="close-circle-outline" size={14} color={colors.error || colors.warning} />
+                            <Text style={[styles.absentText, { color: colors.error || colors.warning }]}>
+                                Marked absent
+                            </Text>
+                        </View>
+                    ) : null}
+
+                    {/* Actions */}
+                    {canCheckIn || canCheckOut ? (
+                        <View style={styles.actions}>
+                            {canCheckIn ? (
+                                <TouchableOpacity
+                                    onPress={() => openCheckInModal(item)}
+                                    disabled={isBusy}
+                                    style={[styles.btn, { backgroundColor: colors.primary, opacity: isBusy ? 0.6 : 1 }]}
+                                >
+                                    {isBusy && actingOnId === (item.id || item.staff_roster_id) ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="log-in-outline" size={16} color="#fff" />
+                                            <Text style={styles.btnText}>Check In</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            ) : canCheckOut ? (
+                                <TouchableOpacity
+                                    onPress={() => openCheckOutModal(item)}
+                                    disabled={isBusy}
+                                    style={[styles.btn, { backgroundColor: colors.warning || colors.primary, opacity: isBusy ? 0.6 : 1 }]}
+                                >
+                                    {isBusy ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="log-out-outline" size={16} color="#fff" />
+                                            <Text style={styles.btnText}>Check Out</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            ) : null}
+                        </View>
+                    ) : null}
+                </View>
+            </Card>
         );
     };
 
@@ -488,7 +491,7 @@ export default function RosterScreen() {
                 </View>
             ) : error && shifts.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity
                         onPress={() => fetchPage({ targetPage: 1, mode: 'initial' })}
@@ -535,7 +538,7 @@ export default function RosterScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} />
+                            <Ionicons name="calendar-outline" size={32} color={iconColor('calendar-outline', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {showPast ? 'No past shifts.' : 'No upcoming shifts.'}
                             </Text>
@@ -557,7 +560,7 @@ export default function RosterScreen() {
                     onPress={() => setSelectedShift(null)}
                 >
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
-                        <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                        <Card style={styles.modalCard}>
                             <View style={styles.modalHeader}>
                                 <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Shift details</Text>
                                 <TouchableOpacity onPress={() => setSelectedShift(null)} style={styles.iconButton}>
@@ -665,7 +668,7 @@ export default function RosterScreen() {
                                     </View>
                                 )}
                             </ScrollView>
-                        </View>
+                        </Card>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
@@ -727,18 +730,7 @@ const styles = StyleSheet.create({
     switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     switchLabel: { fontSize: 13 },
     list: { paddingHorizontal: 16, paddingVertical: 8, paddingBottom: 24, gap: 10 },
-    card: {
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 14,
-        gap: 8,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 8,
-    },
+    cardBody: { gap: 8 },
     cardDate: { flex: 1, fontSize: 15, fontWeight: '600' },
     statusPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
     statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
@@ -784,8 +776,6 @@ const styles = StyleSheet.create({
 
     // Pinned active-shift card (rendered above the list)
     pinnedCard: {
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
         marginBottom: 10,
         gap: 4,
@@ -825,8 +815,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     modalCard: {
-        borderWidth: 1,
-        borderRadius: 16,
         padding: 18,
     },
     modalHeader: {

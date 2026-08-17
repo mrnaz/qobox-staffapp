@@ -13,8 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import { iconColor } from '../utils/iconColors';
 import DailyAttendanceModal from '../components/DailyAttendanceModal';
 import Toast from '../components/Toast';
+import Card, { CardHeader, cardBodyPadding } from '../components/Card';
 
 const fmtDate = (s) => {
     if (!s) return '—';
@@ -129,8 +131,7 @@ export default function AttendanceScreen() {
             : colors.warning || colors.primary;
 
         return (
-            <TouchableOpacity
-                activeOpacity={0.85}
+            <Card
                 onPress={() => {
                     // Submitted/completed attendance is read-only on the backend
                     // (gated by completed_at). Don't open it — just tell the user.
@@ -144,9 +145,8 @@ export default function AttendanceScreen() {
                         status: item.status,
                     });
                 }}
-                style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
             >
-                <View style={styles.cardHeader}>
+                <CardHeader>
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.date, { color: colors.textPrimary }]}>
                             {fmtDate(item.academic_date || item.date)}
@@ -161,19 +161,21 @@ export default function AttendanceScreen() {
                     <View style={[styles.pill, { borderColor: statusColor, backgroundColor: statusColor + '22' }]}>
                         <Text style={[styles.pillText, { color: statusColor }]}>{status}</Text>
                     </View>
+                </CardHeader>
+                <View style={styles.cardBody}>
+                    {item.attendance ? (
+                        <Text style={[styles.attendancePct, { color: colors.primary }]}>
+                            {item.attendance} attendance
+                        </Text>
+                    ) : null}
+                    <View style={styles.statsRow}>
+                        <Stat label="Present" value={present} color={colors.success || colors.primary} colors={colors} />
+                        <Stat label="Absent" value={absent} color={colors.error || colors.warning} colors={colors} />
+                        <Stat label="Late" value={late} color={colors.warning || colors.primary} colors={colors} />
+                        <Stat label="Total" value={total} color={colors.textPrimary} colors={colors} />
+                    </View>
                 </View>
-                {item.attendance ? (
-                    <Text style={[styles.attendancePct, { color: colors.primary }]}>
-                        {item.attendance} attendance
-                    </Text>
-                ) : null}
-                <View style={styles.statsRow}>
-                    <Stat label="Present" value={present} color={colors.success || colors.primary} colors={colors} />
-                    <Stat label="Absent" value={absent} color={colors.error || colors.warning} colors={colors} />
-                    <Stat label="Late" value={late} color={colors.warning || colors.primary} colors={colors} />
-                    <Stat label="Total" value={total} color={colors.textPrimary} colors={colors} />
-                </View>
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -185,7 +187,7 @@ export default function AttendanceScreen() {
                 </View>
             ) : error && items.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -238,7 +240,7 @@ function Stat({ label, value, color, colors }) {
 
 function AttendanceLegend({ colors }) {
     return (
-        <View style={[styles.legend, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <Card style={styles.legend}>
             {STATUS_LEGEND.map((s) => {
                 const c = statusColor(colors, s.key);
                 return (
@@ -250,15 +252,14 @@ function AttendanceLegend({ colors }) {
                     </View>
                 );
             })}
-        </View>
+        </Card>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
     list: { padding: 16, paddingTop: 4, paddingBottom: 32, gap: 10 },
-    card: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 8 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    cardBody: { ...cardBodyPadding, gap: 8 },
     date: { fontSize: 14, fontWeight: '700', flex: 1 },
     pill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
     pillText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
@@ -274,8 +275,6 @@ const styles = StyleSheet.create({
 
     // Status legend (mirrors the client attendance-calendar legend)
     legend: {
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 12,
         marginBottom: 10,
         flexDirection: 'row',

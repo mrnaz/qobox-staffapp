@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useGoBack } from '../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
+import Card, { CardHeader } from '../components/Card';
 import useTodayAgenda from '../hooks/useTodayAgenda';
 import { formatClock } from '../utils/datetime';
+import { iconColor } from '../utils/iconColors';
 
 const pluralAttendees = (n) => (n === 1 ? '1 attendee' : `${n} attendees`);
 
@@ -28,6 +31,7 @@ export default function TodayScreen() {
     const { theme } = useTheme();
     const { colors } = theme;
     const router = useRouter();
+    const goBack = useGoBack('/(main)/');
 
     const [staff, setStaff] = React.useState(null);
     const [orgId, setOrgId] = React.useState(null);
@@ -48,7 +52,7 @@ export default function TodayScreen() {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Today</Text>
@@ -70,7 +74,7 @@ export default function TodayScreen() {
                                 const title = it.class?.title || it.class_title || it.title || 'Class';
                                 return (
                                     <Row key={`c-${it.id ?? i}`} colors={colors}
-                                        avatar={<Avatar uri={it.class?.photo} name={title} size={40} />}
+                                        avatar={<Avatar uri={it.class?.photo} name={title} id={it.class_id ?? it.class?.id} size={40} />}
                                         title={title}
                                         subtitle={it.room?.name || it.room_name}
                                         right={formatClock(it.session_start || it.start)}
@@ -88,7 +92,7 @@ export default function TodayScreen() {
                                             {ev.title || ev.name || 'Event'}
                                         </Text>
                                         <View style={styles.metaRow}>
-                                            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                                            <Ionicons name="calendar-outline" size={14} color={iconColor('calendar-outline', colors)} />
                                             <Text style={[styles.metaText, { color: colors.textSecondary }]}>
                                                 {ev.all_day ? 'All day' : `Today @ ${formatClock(ev.start_at || ev.start_date || ev.start)}`}
                                             </Text>
@@ -111,7 +115,7 @@ export default function TodayScreen() {
                                 const heading = count > 0 ? `${name} (${pluralAttendees(count)})` : name;
                                 return (
                                     <Row key={`p-${p.id ?? i}`} colors={colors}
-                                        avatar={<Avatar name={name} size={40} />}
+                                        avatar={<Avatar name={name} id={p.student?.id} size={40} />}
                                         title={heading}
                                         subtitle={p.location_label}
                                         right={formatClock(p.timeslot?.ptm_start)}
@@ -129,14 +133,14 @@ export default function TodayScreen() {
 
 function Section({ title, children, colors, empty, count }) {
     return (
-        <View style={{ marginBottom: 20 }}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{title.toUpperCase()}</Text>
-            <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+        <Card style={styles.section}>
+            <CardHeader title={title} />
+            <View style={styles.cardBody}>
                 {count === 0 ? (
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{empty}</Text>
                 ) : children}
             </View>
-        </View>
+        </Card>
     );
 }
 
@@ -168,10 +172,10 @@ const styles = StyleSheet.create({
     iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '700' },
     container: { padding: 16, paddingBottom: 40 },
-    sectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-    // overflow hidden: rows touch the card's top/bottom edges (no vertical
-    // padding), so their content must clip to the rounded corners.
-    card: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, overflow: 'hidden' },
+    section: { marginBottom: 20 },
+    // No vertical padding: rows touch the card's bottom edge, so their content
+    // relies on Card's overflow: hidden to clip to the rounded corners.
+    cardBody: { paddingHorizontal: 16 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     rowTitle: { fontSize: 15, fontWeight: '600' },
     rowSub: { fontSize: 12, marginTop: 2 },

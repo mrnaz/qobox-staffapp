@@ -14,6 +14,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import { iconColor } from '../utils/iconColors';
+import Card, { CardHeader, cardBodyPadding } from '../components/Card';
 
 const startOfMonth = (d) => {
     const x = new Date(d);
@@ -241,7 +243,7 @@ export default function CalendarScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -266,7 +268,7 @@ export default function CalendarScreen() {
                     </View>
                 ))}
             </View>
-            <View style={[styles.grid, { borderColor: colors.border }]}>
+            <Card style={styles.grid}>
                 {grid.map((date, idx) => {
                     const inMonth = date.getMonth() === month.getMonth();
                     const dayEvents = eventsByDay.get(fmtDate(date)) || [];
@@ -313,7 +315,7 @@ export default function CalendarScreen() {
                         </TouchableOpacity>
                     );
                 })}
-            </View>
+            </Card>
         </ScrollView>
     );
 
@@ -378,7 +380,7 @@ export default function CalendarScreen() {
                 </View>
             ) : error && events.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -391,7 +393,7 @@ export default function CalendarScreen() {
                     contentContainerStyle={styles.center}
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 >
-                    <Ionicons name="calendar-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="calendar-outline" size={32} color={iconColor('calendar-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No events this month.</Text>
                 </ScrollView>
             ) : (
@@ -402,8 +404,8 @@ export default function CalendarScreen() {
                     {grouped.map(({ day, items }) => {
                         const isToday = isSameDay(day, today);
                         return (
-                            <View key={day.toISOString()} style={styles.dayBlock}>
-                                <View style={styles.dayHeader}>
+                            <Card key={day.toISOString()} style={styles.dayBlock}>
+                                <CardHeader>
                                     <Text style={[styles.dayHeaderText, { color: isToday ? colors.primary : colors.textPrimary }]}>
                                         {dateHeader(day)}
                                     </Text>
@@ -412,13 +414,16 @@ export default function CalendarScreen() {
                                             <Text style={[styles.todayText, { color: colors.primary }]}>Today</Text>
                                         </View>
                                     ) : null}
-                                </View>
+                                </CardHeader>
                                 {items.map((ev, i) => {
                                     const accent = eventColor(ev.color, colors);
                                     return (
                                         <View
                                             key={`${ev.id ?? i}-${day.toISOString()}`}
-                                            style={[styles.eventRow, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                                            style={[
+                                                styles.eventRow,
+                                                i < items.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                                            ]}
                                         >
                                             <View style={[styles.accent, { backgroundColor: accent }]} />
                                             <View style={{ flex: 1, gap: 3 }}>
@@ -444,7 +449,7 @@ export default function CalendarScreen() {
                                         </View>
                                     );
                                 })}
-                            </View>
+                            </Card>
                         );
                     })}
                 </ScrollView>
@@ -463,13 +468,13 @@ export default function CalendarScreen() {
                     onPress={() => setFilterVisible(false)}
                 >
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
-                        <View style={[styles.filterCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <View style={styles.filterHeader}>
+                        <Card>
+                            <CardHeader>
                                 <Text style={[styles.filterTitle, { color: colors.textPrimary }]}>Calendar Types</Text>
                                 <TouchableOpacity onPress={() => setFilterVisible(false)} style={{ padding: 4 }}>
                                     <Ionicons name="close" size={20} color={colors.textSecondary} />
                                 </TouchableOpacity>
-                            </View>
+                            </CardHeader>
                             <ScrollView style={{ maxHeight: 440 }} contentContainerStyle={{ paddingBottom: 8 }}>
                                 <Text style={[styles.filterSection, { color: colors.textSecondary }]}>Special Calendars</Text>
                                 {SPECIAL_EVENT_TYPES.map((t) => (
@@ -516,7 +521,7 @@ export default function CalendarScreen() {
                                     onToggle={() => setShowUncategorized((v) => !v)}
                                 />
                             </ScrollView>
-                        </View>
+                        </Card>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
@@ -574,12 +579,9 @@ const styles = StyleSheet.create({
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        // Full border here (not just top/left): the bottom/right outline used to
-        // come from the cells' square hairlines, which the rounded clipping cut
-        // off at the corners.
-        borderWidth: StyleSheet.hairlineWidth,
-        borderRadius: 8,
-        overflow: 'hidden',
+        // The full outline comes from Card (not just top/left): the bottom/right
+        // edge used to come from the cells' square hairlines, which the rounded
+        // clipping cut off at the corners.
     },
     gridCell: {
         width: '14.2857%',
@@ -602,20 +604,13 @@ const styles = StyleSheet.create({
     gridBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
     list: { padding: 16, paddingBottom: 32 },
     dayBlock: { marginBottom: 16 },
-    dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
     dayHeaderText: { fontSize: 14, fontWeight: '700' },
     todayPill: { paddingHorizontal: 8, paddingVertical: 1, borderRadius: 999, borderWidth: 1 },
     todayText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
     eventRow: {
         flexDirection: 'row',
         gap: 10,
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 12,
-        marginTop: 6,
-        // Clip the background to the rounded shape — tall cards otherwise show
-        // it bleeding past the border curve at the bottom corners on Android.
-        overflow: 'hidden',
+        ...cardBodyPadding,
     },
     accent: { width: 4, borderRadius: 2 },
     eventTitle: { fontSize: 14, fontWeight: '600' },
@@ -632,15 +627,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,
-    },
-    filterCard: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
-    filterHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: 14,
-        paddingBottom: 8,
     },
     filterTitle: { fontSize: 16, fontWeight: '700' },
     filterSection: {

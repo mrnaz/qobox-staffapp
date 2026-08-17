@@ -72,7 +72,6 @@ export default StyleSheet.create({
     btnOutlineText: { fontWeight: '700' },
     qrBox: {
         alignItems: 'center',
-        borderRadius: 12,
         padding: 16,
     },
     qrHint: { fontSize: 13, textAlign: 'center', marginBottom: 4 },

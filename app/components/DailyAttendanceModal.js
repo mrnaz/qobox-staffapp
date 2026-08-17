@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from './Avatar';
+import Card from './Card';
+import { iconColor } from '../utils/iconColors';
 
 // Daily attendance marking modal — mobile counterpart of the staff web
 // DailyAttendanceMarkingDialog.vue. The scope/course filter and per-student
@@ -259,6 +261,7 @@ export default function DailyAttendanceModal({
                 <Avatar
                     uri={item.list_photo || item.photo || null}
                     name={`${item.fname || ''} ${item.sname || ''}`}
+                    id={clientId}
                     size={40}
                 />
                 <View style={{ flex: 1, gap: 2 }}>
@@ -300,7 +303,7 @@ export default function DailyAttendanceModal({
 
                 {/* Summary — all 5 totals in one box, one line */}
                 <View style={styles.summaryWrap}>
-                    <View style={[styles.summaryBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                    <Card style={styles.summaryBox}>
                         {['present', 'absent', 'late', 'left', 'notset'].map((key) => {
                             const meta = STATUS_META[key];
                             const sColor = statusColor(colors, key);
@@ -324,12 +327,12 @@ export default function DailyAttendanceModal({
                                 </TouchableOpacity>
                             );
                         })}
-                    </View>
+                    </Card>
                 </View>
 
                 {/* Search */}
                 <View style={styles.searchWrap}>
-                    <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
+                    <View style={[styles.searchBox, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}>
                         <Ionicons name="search" size={16} color={colors.textSecondary} />
                         <TextInput
                             style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -355,7 +358,7 @@ export default function DailyAttendanceModal({
                     </View>
                 ) : error ? (
                     <View style={styles.center}>
-                        <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                        <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                         <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                         <TouchableOpacity onPress={loadData} style={[styles.retry, { borderColor: colors.primary }]}>
                             <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -369,7 +372,7 @@ export default function DailyAttendanceModal({
                         contentContainerStyle={styles.list}
                         ListEmptyComponent={
                             <View style={styles.center}>
-                                <Ionicons name="people-outline" size={32} color={colors.textSecondary} />
+                                <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                                 <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                     {search || filterStatus ? 'No students match your filter.' : 'No students found.'}
                                 </Text>
@@ -400,7 +403,7 @@ export default function DailyAttendanceModal({
                     <TouchableOpacity
                         onPress={onClose}
                         disabled={isSubmitting}
-                        style={[styles.btnOutline, { borderColor: colors.border, flex: (canSubmit && canManageAttendance) ? 0.5 : 1 }]}
+                        style={[styles.btnOutline, { borderColor: colors.borderStrong || colors.border, flex: (canSubmit && canManageAttendance) ? 0.5 : 1 }]}
                     >
                         <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>Close</Text>
                     </TouchableOpacity>
@@ -476,8 +479,6 @@ const styles = StyleSheet.create({
     },
     summaryBox: {
         flexDirection: 'row',
-        borderWidth: 1,
-        borderRadius: 10,
         paddingVertical: 8,
         paddingHorizontal: 4,
     },
