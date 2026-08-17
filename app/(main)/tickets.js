@@ -14,7 +14,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import Card, { CardHeader, cardBodyPadding } from '../components/Card';
 import TicketFormModal from '../components/TicketFormModal';
+import { iconColor } from '../utils/iconColors';
 import {
     PRIORITY_META,
     STATUS_META,
@@ -105,45 +107,46 @@ export default function TicketsScreen() {
         const s = STATUS_META[deriveStatus(item)];
         const noteCount = Array.isArray(item.notes) ? item.notes.length : 0;
         return (
-            <TouchableOpacity
+            <Card
                 onPress={() => router.push(`/tickets/${item.id}`)}
                 activeOpacity={0.8}
-                style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
             >
-                <View style={styles.cardHeader}>
+                <CardHeader style={styles.cardHeader}>
                     <Ionicons name={p.icon} size={16} color={p.color(colors)} />
                     <Text style={[styles.ref, { color: colors.textSecondary }]}>#{item.report_ref}</Text>
                     <View style={[styles.statusPill, { backgroundColor: s.bg(colors), borderColor: s.fg(colors) }]}>
                         <Text style={[styles.statusText, { color: s.fg(colors) }]}>{s.label}</Text>
                     </View>
-                </View>
-                <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
-                    {item.title || 'Untitled'}
-                </Text>
-                {item.location ? (
-                    <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                        <Ionicons name="location-outline" size={11} color={colors.textSecondary} /> {item.location}
+                </CardHeader>
+                <View style={[cardBodyPadding, styles.cardBody]}>
+                    <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
+                        {item.title || 'Untitled'}
                     </Text>
-                ) : null}
-                <View style={styles.metaRow}>
-                    <Text style={[styles.meta, { color: colors.textSecondary }]}>
-                        By {item.reported_by?.name || '—'} · {fmtDate(item.reported || item.created_at)}
-                    </Text>
-                    {noteCount > 0 ? (
-                        <View style={styles.commentBadge}>
-                            <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.textSecondary} />
-                            <Text style={[styles.meta, { color: colors.textSecondary }]}>{noteCount}</Text>
-                        </View>
+                    {item.location ? (
+                        <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                            <Ionicons name="location-outline" size={11} color={colors.textSecondary} /> {item.location}
+                        </Text>
                     ) : null}
+                    <View style={styles.metaRow}>
+                        <Text style={[styles.meta, { color: colors.textSecondary }]}>
+                            By {item.reported_by?.name || '—'} · {fmtDate(item.reported || item.created_at)}
+                        </Text>
+                        {noteCount > 0 ? (
+                            <View style={styles.commentBadge}>
+                                <Ionicons name="chatbubble-ellipses-outline" size={12} color={iconColor('chatbubble-ellipses-outline', colors)} />
+                                <Text style={[styles.meta, { color: colors.textSecondary }]}>{noteCount}</Text>
+                            </View>
+                        ) : null}
+                    </View>
                 </View>
-            </TouchableOpacity>
+            </Card>
         );
     };
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.toolbar}>
-                <View style={[styles.searchBox, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <View style={[styles.searchBox, { backgroundColor: colors.cardBackground, borderColor: colors.borderStrong || colors.border }]}>
                     <Ionicons name="search" size={16} color={colors.textSecondary} />
                     <TextInput
                         style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -192,7 +195,7 @@ export default function TicketsScreen() {
                 <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
             ) : error && tickets.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -260,8 +263,10 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     list: { padding: 16, paddingTop: 8, paddingBottom: 100, gap: 10 },
-    card: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 6 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    cardBody: { gap: 6 },
+    // The status pill pushes itself right with marginLeft:'auto', so the icon
+    // and ref stay packed together on the left.
+    cardHeader: { justifyContent: 'flex-start' },
     ref: { fontSize: 12, fontWeight: '700' },
     statusPill: { marginLeft: 'auto', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
     statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },

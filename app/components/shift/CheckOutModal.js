@@ -16,6 +16,7 @@ import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import { capturePhotoCompressed, appendPhotoToForm } from '../../utils/photo';
 import { nowForApi } from '../../utils/datetime';
+import { iconColor } from '../../utils/iconColors';
 import ShiftQrModal from './ShiftQrModal';
 import useShiftQr, { canShowShiftQr } from './useShiftQr';
 import { unwrapShift } from './CheckInModal';
@@ -142,9 +143,9 @@ export default function CheckOutModal({
                                             <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Check-out time</Text>
                                             <TouchableOpacity
                                                 onPress={() => setShowTimePicker(true)}
-                                                style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+                                                style={[styles.pickerButton, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.background }]}
                                             >
-                                                <Ionicons name="time-outline" size={16} color={colors.textPrimary} />
+                                                <Ionicons name="time-outline" size={16} color={iconColor('time-outline', colors)} />
                                                 <Text style={{ color: colors.textPrimary, flex: 1 }}>
                                                     {time.toLocaleString(undefined, {
                                                         year: 'numeric', month: 'short', day: 'numeric',
@@ -175,7 +176,7 @@ export default function CheckOutModal({
                                                 multiline
                                                 numberOfLines={3}
                                                 style={[styles.noteInput, {
-                                                    borderColor: colors.border,
+                                                    borderColor: colors.borderStrong || colors.border,
                                                     color: colors.textPrimary,
                                                     backgroundColor: colors.background,
                                                 }]}
@@ -195,9 +196,9 @@ export default function CheckOutModal({
                                         {allowApp ? (
                                             <TouchableOpacity
                                                 onPress={attachPhoto}
-                                                style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+                                                style={[styles.pickerButton, styles.halfButton, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.background }]}
                                             >
-                                                <Ionicons name="camera-outline" size={18} color={colors.textPrimary} />
+                                                <Ionicons name="camera-outline" size={18} color={iconColor('camera-outline', colors)} />
                                                 <Text style={{ color: colors.textPrimary }} numberOfLines={1}>
                                                     {photo ? 'Retake' : 'Take a photo'}
                                                 </Text>
@@ -206,9 +207,9 @@ export default function CheckOutModal({
                                         {qrAvailable ? (
                                             <TouchableOpacity
                                                 onPress={() => qr.open(shift)}
-                                                style={[styles.pickerButton, styles.halfButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+                                                style={[styles.pickerButton, styles.halfButton, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.background }]}
                                             >
-                                                <Ionicons name="qr-code-outline" size={18} color={colors.textPrimary} />
+                                                <Ionicons name="qr-code-outline" size={18} color={iconColor('qr-code-outline', colors)} />
                                                 <Text style={{ color: colors.textPrimary }} numberOfLines={1}>Check Out QR</Text>
                                             </TouchableOpacity>
                                         ) : null}

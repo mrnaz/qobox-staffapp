@@ -11,12 +11,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '../utils/nav';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
+import Card, { CardHeader } from '../components/Card';
 import TimetableWeekView from '../components/TimetableWeekView';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import { iconColor } from '../utils/iconColors';
 
 const TABS = [
     { id: 'info',      label: 'Info',      icon: 'user' },
@@ -39,6 +42,7 @@ export default function StudentDetailScreen() {
     const { theme } = useTheme();
     const { colors } = theme;
     const router = useRouter();
+    const goBack = useGoBack('/(main)/students');
     const { id } = useLocalSearchParams();
 
     const [activeTab, setActiveTab] = useState('info');
@@ -71,10 +75,10 @@ export default function StudentDetailScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Avatar uri={student?.list_photo || student?.photo} name={fullName} size={32} />
+                <Avatar uri={student?.list_photo || student?.photo} name={fullName} id={student?.id} size={32} />
                 <View style={{ flex: 1, marginLeft: 8 }}>
                     <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                         {fullName}
@@ -140,7 +144,7 @@ export default function StudentDetailScreen() {
                 </View>
             ) : error && !student ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={load} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -198,7 +202,7 @@ function InfoTab({ student, studentId, colors }) {
         <ScrollView contentContainerStyle={styles.tabBody}>
             {/* Large avatar hero */}
             <View style={styles.avatarHero}>
-                <Avatar uri={student.photo || student.list_photo} name={fullName} size={96} />
+                <Avatar uri={student.photo || student.list_photo} name={fullName} id={student.id} size={96} />
                 <Text style={[styles.heroName, { color: colors.textPrimary }]} numberOfLines={2}>
                     {fullName}
                 </Text>
@@ -303,7 +307,7 @@ function ClassesTab({ studentId, colors }) {
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
             ) : classes.length === 0 ? (
                 <View style={styles.emptyBlock}>
-                    <Ionicons name="school-outline" size={28} color={colors.textSecondary} />
+                    <Ionicons name="school-outline" size={28} color={iconColor('school-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No classes enrolled.
                     </Text>
@@ -324,14 +328,14 @@ function ClassesTab({ studentId, colors }) {
                         : null;
                     const room = c.room_name;
                     return (
-                        <TouchableOpacity
+                        <Card
                             key={classId ?? `${title}-${idx}`}
                             activeOpacity={0.85}
                             onPress={() => classId && router.push(`/class/${classId}`)}
-                            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                            style={styles.card}
                         >
                             <View style={styles.cardRow}>
-                                <FontAwesome name="graduation-cap" size={16} color={colors.primary} />
+                                <FontAwesome name="graduation-cap" size={16} color={iconColor('graduation-cap', colors)} />
                                 <View style={{ flex: 1 }}>
                                     <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={2}>
                                         {title}
@@ -347,7 +351,7 @@ function ClassesTab({ studentId, colors }) {
                                 <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
                                     {teacher ? (
                                         <View style={styles.metaPair}>
-                                            <FontAwesome name="user" size={11} color={colors.textSecondary} />
+                                            <FontAwesome name="user" size={11} color={iconColor('user', colors)} />
                                             <Text style={[styles.metaText, { color: colors.textSecondary }]} numberOfLines={1}>
                                                 {teacher}
                                             </Text>
@@ -355,7 +359,7 @@ function ClassesTab({ studentId, colors }) {
                                     ) : null}
                                     {next ? (
                                         <View style={styles.metaPair}>
-                                            <FontAwesome name="clock-o" size={11} color={colors.textSecondary} />
+                                            <FontAwesome name="clock-o" size={11} color={iconColor('clock-o', colors)} />
                                             <Text style={[styles.metaText, { color: colors.textSecondary }]} numberOfLines={1}>
                                                 {next}
                                                 {room ? ` · ${room}` : ''}
@@ -371,7 +375,7 @@ function ClassesTab({ studentId, colors }) {
                                     ) : null}
                                 </View>
                             ) : null}
-                        </TouchableOpacity>
+                        </Card>
                     );
                 })
             )}
@@ -382,10 +386,11 @@ function ClassesTab({ studentId, colors }) {
 // ---- Family (guardians + siblings) ----------------------------------------
 
 function FamilyPersonRow({ name, sub, icon, colors }) {
+    const tint = iconColor(icon, colors);
     return (
         <View style={[styles.familyRow, { borderTopColor: colors.border }]}>
-            <View style={[styles.familyAvatar, { backgroundColor: colors.primary + '22' }]}>
-                <FontAwesome name={icon} size={16} color={colors.primary} />
+            <View style={[styles.familyAvatar, { backgroundColor: tint + '22' }]}>
+                <FontAwesome name={icon} size={16} color={tint} />
             </View>
             <View style={{ flex: 1 }}>
                 <Text style={[styles.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -442,11 +447,11 @@ function FamilyBoxes({ student, studentId, colors }) {
     return (
         <>
             {/* Guardians card */}
-            <View style={[styles.familyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                <View style={styles.familyHeader}>
-                    <FontAwesome name="users" size={14} color={colors.textSecondary} />
+            <Card style={styles.familyCard}>
+                <CardHeader>
+                    <FontAwesome name="users" size={14} color={iconColor('users', colors)} />
                     <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Guardians</Text>
-                </View>
+                </CardHeader>
                 {guardians.length === 0 ? (
                     <Text style={[styles.familyEmpty, { color: colors.textSecondary }]}>No guardians on record.</Text>
                 ) : (
@@ -460,14 +465,14 @@ function FamilyBoxes({ student, studentId, colors }) {
                         />
                     ))
                 )}
-            </View>
+            </Card>
 
             {/* Siblings card */}
-            <View style={[styles.familyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                <View style={styles.familyHeader}>
+            <Card style={styles.familyCard}>
+                <CardHeader>
                     <FontAwesome name="child" size={14} color={colors.textSecondary} />
                     <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Siblings</Text>
-                </View>
+                </CardHeader>
                 {sibLoading ? (
                     <ActivityIndicator color={colors.primary} style={{ paddingVertical: 16 }} />
                 ) : siblings.length === 0 ? (
@@ -483,7 +488,7 @@ function FamilyBoxes({ student, studentId, colors }) {
                         />
                     ))
                 )}
-            </View>
+            </Card>
         </>
     );
 }
@@ -541,14 +546,12 @@ function TimetableTab({ studentId }) {
 
 // ---- Shared primitives ----------------------------------------------------
 
-function Section({ title, children, colors }) {
+function Section({ title, children }) {
     return (
-        <View style={{ marginBottom: 16 }}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{title}</Text>
-            <View style={[styles.sectionBody, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                {children}
-            </View>
-        </View>
+        <Card style={styles.section}>
+            <CardHeader title={title} />
+            {children}
+        </Card>
     );
 }
 
@@ -610,12 +613,10 @@ const styles = StyleSheet.create({
     avatarHero: { alignItems: 'center', paddingTop: 8, paddingBottom: 20, gap: 10 },
     heroName: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
     heroSub: { fontSize: 13 },
-    familyCard: { borderWidth: 1, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
-    familyHeader: {
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-        paddingHorizontal: 12, paddingVertical: 12,
-    },
-    familyTitle: { fontSize: 13, fontWeight: '700' },
+    familyCard: { marginBottom: 10 },
+    // flex: 1 so the title fills the header band instead of being pushed to
+    // its right edge by the header's space-between layout.
+    familyTitle: { fontSize: 13, fontWeight: '700', flex: 1 },
     familyRow: {
         flexDirection: 'row', alignItems: 'center', gap: 12,
         paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1,
@@ -630,7 +631,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase', letterSpacing: 0.6,
         marginBottom: 6, paddingHorizontal: 4,
     },
-    sectionBody: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
+    section: { marginBottom: 16 },
     fieldRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
     },
     fieldLabel: { fontSize: 12, fontWeight: '500', flex: 1 },
     fieldValue: { fontSize: 13, fontWeight: '600', flex: 1.4, textAlign: 'right' },
-    card: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 8 },
+    card: { padding: 12, marginBottom: 8 },
     cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     cardTitle: { fontSize: 14, fontWeight: '700' },
     cardSub: { fontSize: 12, marginTop: 2 },

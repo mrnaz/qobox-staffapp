@@ -4,10 +4,11 @@ import {
     Text,
     StyleSheet,
     ScrollView,
-    TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../utils/iconColors';
 import Theme from '../../context/ThemeContext';
+import Card from '../Card';
 
 export default function TestsTab({ classId, onOpenProgressReports, onOpenSchedule }) {
     const { useTheme } = Theme;
@@ -34,14 +35,14 @@ export default function TestsTab({ classId, onOpenProgressReports, onOpenSchedul
     return (
         <ScrollView contentContainerStyle={styles.container}>
             {cards.map((card) => (
-                <TouchableOpacity
+                <Card
                     key={card.id}
                     activeOpacity={0.85}
                     onPress={card.onPress}
-                    style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                    style={styles.card}
                 >
-                    <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-                        <Ionicons name={card.icon} size={22} color={colors.primary} />
+                    <View style={[styles.iconWrap, { backgroundColor: iconColor(card.icon, colors) + '22' }]}>
+                        <Ionicons name={card.icon} size={22} color={iconColor(card.icon, colors)} />
                     </View>
                     <View style={{ flex: 1, gap: 4 }}>
                         <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -52,7 +53,7 @@ export default function TestsTab({ classId, onOpenProgressReports, onOpenSchedul
                         </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
+                </Card>
             ))}
         </ScrollView>
     );
@@ -64,8 +65,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     iconWrap: {

@@ -13,8 +13,10 @@ import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import Card from '../components/Card';
 import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
 import PeriodPicker from '../components/PeriodPicker';
+import { iconColor } from '../utils/iconColors';
 
 export default function ClassesScreen() {
     const { useTheme } = Theme;
@@ -95,7 +97,7 @@ export default function ClassesScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -115,11 +117,11 @@ export default function ClassesScreen() {
             ? item.students.length
             : (item.student_count ?? item.students_count ?? null);
         return (
-            <TouchableOpacity
+            <Card
                 onPress={() => { if (isClass) router.push(`/class/${id}`); }}
                 disabled={!isClass}
                 activeOpacity={0.8}
-                style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                style={styles.card}
             >
                 <View style={{ flex: 1, gap: 4 }}>
                     <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
@@ -133,7 +135,7 @@ export default function ClassesScreen() {
                     <View style={styles.metaRow}>
                         {studentCount !== null ? (
                             <View style={styles.metaItem}>
-                                <FontAwesome name="users" size={11} color={colors.textSecondary} />
+                                <FontAwesome name="users" size={11} color={iconColor('users', colors)} />
                                 <Text style={[styles.meta, { color: colors.textSecondary }]}>
                                     {studentCount} student{studentCount === 1 ? '' : 's'}
                                 </Text>
@@ -152,7 +154,7 @@ export default function ClassesScreen() {
                 {isClass ? (
                     <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                 ) : null}
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -172,7 +174,7 @@ export default function ClassesScreen() {
                 </View>
             ) : error && classes.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -187,7 +189,7 @@ export default function ClassesScreen() {
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="school-outline" size={32} color={colors.textSecondary} />
+                            <Ionicons name="school-outline" size={32} color={iconColor('school-outline', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {period?.label
                                     ? `No classes in ${period.label}.`
@@ -213,8 +215,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     title: { fontSize: 15, fontWeight: '700' },

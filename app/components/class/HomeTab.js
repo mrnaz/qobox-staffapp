@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
+import Card, { CardHeader, cardBodyPadding } from '../Card';
 import { ensureAcademicPeriod } from '../../utils/academicPeriod';
 
 const stripHtml = (html = '') =>
@@ -83,21 +85,21 @@ export default function HomeTab({ classId }) {
     const renderItem = ({ item }) => {
         const body = stripHtml(item.body || item.content || '');
         return (
-            <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                <Text style={[styles.title, { color: colors.textPrimary }]}>
-                    {item.title || 'Untitled notice'}
-                </Text>
-                {body ? (
-                    <Text style={[styles.body, { color: colors.textSecondary }]} numberOfLines={6}>
-                        {body}
-                    </Text>
-                ) : null}
-                {(item.scheduled || item.created_at) ? (
-                    <Text style={[styles.date, { color: colors.textDisabled }]}>
-                        {fmtDate(item.scheduled || item.created_at)}
-                    </Text>
-                ) : null}
-            </View>
+            <Card>
+                <CardHeader title={item.title || 'Untitled notice'} />
+                <View style={styles.cardBody}>
+                    {body ? (
+                        <Text style={[styles.body, { color: colors.textSecondary }]} numberOfLines={6}>
+                            {body}
+                        </Text>
+                    ) : null}
+                    {(item.scheduled || item.created_at) ? (
+                        <Text style={[styles.date, { color: colors.textDisabled }]}>
+                            {fmtDate(item.scheduled || item.created_at)}
+                        </Text>
+                    ) : null}
+                </View>
+            </Card>
         );
     };
 
@@ -107,7 +109,7 @@ export default function HomeTab({ classId }) {
     if (error && notices.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="megaphone-outline" size={32} color={colors.textSecondary} />
+                <Ionicons name="megaphone-outline" size={32} color={iconColor('megaphone-outline', colors)} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
             </View>
         );
@@ -122,7 +124,7 @@ export default function HomeTab({ classId }) {
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
                 <View style={styles.center}>
-                    <Ionicons name="megaphone-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="megaphone-outline" size={32} color={iconColor('megaphone-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No class notices yet.</Text>
                     <Text style={[styles.emptySub, { color: colors.textDisabled }]}>
                         Announcements for this class will appear here.
@@ -135,8 +137,7 @@ export default function HomeTab({ classId }) {
 
 const styles = StyleSheet.create({
     list: { padding: 16, paddingBottom: 32, gap: 10 },
-    card: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 8 },
-    title: { fontSize: 14, fontWeight: '600' },
+    cardBody: { ...cardBodyPadding, gap: 8 },
     body: { fontSize: 13, lineHeight: 19 },
     date: { fontSize: 11 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },

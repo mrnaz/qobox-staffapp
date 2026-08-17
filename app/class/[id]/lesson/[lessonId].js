@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../../utils/iconColors';
 import Theme from '../../../context/ThemeContext';
+import Card, { CardHeader, cardBodyPadding } from '../../../components/Card';
 
 const stripHtml = (html = '') => html.replace(/<[^>]*>/g, '').trim();
 
@@ -19,6 +22,7 @@ export default function LessonDetailScreen() {
     const { colors } = theme;
     const router = useRouter();
     const params = useLocalSearchParams();
+    const goBack = useGoBack(params.id ? `/class/${params.id}` : '/(main)/classes');
 
     const lesson = (() => {
         try { return params.lesson ? JSON.parse(params.lesson) : null; } catch { return null; }
@@ -27,7 +31,7 @@ export default function LessonDetailScreen() {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -38,7 +42,7 @@ export default function LessonDetailScreen() {
             <ScrollView contentContainerStyle={styles.body}>
                 {!lesson ? (
                     <View style={styles.center}>
-                        <Ionicons name="document-outline" size={32} color={colors.textSecondary} />
+                        <Ionicons name="document-outline" size={32} color={iconColor('document-outline', colors)} />
                         <Text style={[styles.empty, { color: colors.textSecondary }]}>Lesson data unavailable.</Text>
                     </View>
                 ) : (
@@ -93,14 +97,12 @@ export default function LessonDetailScreen() {
     );
 }
 
-function Section({ label, children, colors }) {
+function Section({ label, children }) {
     return (
-        <View style={{ marginTop: 18 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
-                {label}
-            </Text>
-            {children}
-        </View>
+        <Card style={styles.section}>
+            <CardHeader title={label} />
+            <View style={cardBodyPadding}>{children}</View>
+        </Card>
     );
 }
 
@@ -118,6 +120,7 @@ const styles = StyleSheet.create({
     body: { padding: 20, paddingBottom: 40 },
     title: { fontSize: 20, fontWeight: '700' },
     meta: { fontSize: 13, marginTop: 4 },
+    section: { marginTop: 18 },
     body_text: { fontSize: 14, lineHeight: 20 },
     center: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center' },

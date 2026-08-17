@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Theme from '../context/ThemeContext';
+import { iconColor } from '../utils/iconColors';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
 
@@ -198,6 +199,7 @@ export default function StaffInfo() {
                                 }}>
                                     {JUMP_TABS.map(tab => {
                                         const isActive = currentRoute === tab.route;
+                                        const tint = iconColor(tab.icon, colors);
                                         return (
                                             <TouchableOpacity
                                                 key={tab.route}
@@ -214,11 +216,11 @@ export default function StaffInfo() {
                                             >
                                                 <View style={{
                                                     width: 40, height: 40, borderRadius: 20,
-                                                    backgroundColor: isActive ? colors.primary : colors.primary + '18',
+                                                    backgroundColor: isActive ? colors.primary : tint + '18',
                                                     alignItems: 'center', justifyContent: 'center',
                                                     marginBottom: 6,
                                                 }}>
-                                                    <FontAwesome name={tab.icon} size={18} color={isActive ? '#fff' : colors.primary} />
+                                                    <FontAwesome name={tab.icon} size={18} color={isActive ? '#fff' : tint} />
                                                 </View>
                                                 <Text style={{
                                                     color: isActive ? colors.primary : colors.textPrimary,

@@ -12,7 +12,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import Card from '../components/Card';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
+import { iconColor } from '../utils/iconColors';
 
 const formatDate = (s) => {
     if (!s) return '—';
@@ -89,8 +91,8 @@ export default function ReportsScreen() {
         const isClass = Boolean(item.class_title);
         const tagColor = isClass ? colors.primary : (colors.warning || colors.primary);
         return (
-            <TouchableOpacity
-                style={[styles.row, { borderColor: 'rgba(127,127,127,0.18)' }]}
+            <Card
+                style={styles.row}
                 onPress={() => {
                     // Drill-down (student list per class) is Tier 2 for this feature.
                 }}
@@ -139,7 +141,7 @@ export default function ReportsScreen() {
                         </Text>
                     </View>
                 </View>
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -162,7 +164,10 @@ export default function ReportsScreen() {
                 <View
                     style={[
                         styles.searchInputContainer,
-                        { backgroundColor: colors.card || 'rgba(127,127,127,0.12)' },
+                        {
+                            borderColor: colors.borderStrong || colors.border,
+                            backgroundColor: colors.cardBackground,
+                        },
                     ]}
                 >
                     <Ionicons name="search" size={18} color={colors.textSecondary} />
@@ -189,7 +194,7 @@ export default function ReportsScreen() {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -212,7 +217,7 @@ export default function ReportsScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="document-text-outline" size={32} color={colors.textSecondary} />
+                            <Ionicons name="document-text-outline" size={32} color={iconColor('document-text-outline', colors)} />
                             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                                 {debouncedSearch ? 'No reports match your search.' : 'No scheduled reports yet.'}
                             </Text>
@@ -235,13 +240,12 @@ const styles = StyleSheet.create({
         gap: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
+        borderWidth: 1,
         borderRadius: 10,
     },
     searchInput: { flex: 1, fontSize: 15, padding: 0 },
     listContent: { paddingHorizontal: 16, paddingBottom: 24, gap: 10 },
     row: {
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     rowHeader: {

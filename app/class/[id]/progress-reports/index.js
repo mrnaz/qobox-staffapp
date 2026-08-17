@@ -10,9 +10,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useGoBack } from '../../../utils/nav';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { iconColor } from '../../../utils/iconColors';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
+import Card from '../../../components/Card';
 
 // Per-class report list. Each row is one progress-report template linked to
 // the class; tapping it drills into the student roster for that report.
@@ -23,6 +26,7 @@ export default function ProgressReportsListScreen() {
     const { colors } = theme;
     const { id: classId } = useLocalSearchParams();
     const router = useRouter();
+    const goBack = useGoBack(`/class/${classId}`);
 
     const [templates, setTemplates] = useState([]);
     const [results, setResults] = useState([]); // class-wide filled results, used for per-report counts
@@ -105,13 +109,13 @@ export default function ProgressReportsListScreen() {
     };
 
     const renderReport = ({ item }) => (
-        <TouchableOpacity
+        <Card
             activeOpacity={0.85}
             onPress={() => openReport(item.id)}
-            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+            style={styles.card}
         >
-            <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-                <FontAwesome name="file-text-o" size={18} color={colors.primary} />
+            <View style={[styles.iconWrap, { backgroundColor: iconColor('file-text-o', colors) + '22' }]}>
+                <FontAwesome name="file-text-o" size={18} color={iconColor('file-text-o', colors)} />
             </View>
             <View style={{ flex: 1, gap: 4 }}>
                 <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
@@ -136,14 +140,14 @@ export default function ProgressReportsListScreen() {
                 </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </Card>
     );
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
@@ -159,7 +163,7 @@ export default function ProgressReportsListScreen() {
                 </View>
             ) : error && reports.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -176,7 +180,7 @@ export default function ProgressReportsListScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <FontAwesome name="file-text-o" size={32} color={colors.textSecondary} />
+                            <FontAwesome name="file-text-o" size={32} color={iconColor('file-text-o', colors)} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 No progress reports linked to this class.
                             </Text>
@@ -212,8 +216,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     iconWrap: {

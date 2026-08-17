@@ -14,16 +14,19 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 import TicketFormModal from '../components/TicketFormModal';
+import Card, { CardHeader, cardBodyPadding } from '../components/Card';
 import {
     PRIORITY_META,
     STATUS_META,
     deriveStatus,
 } from '../utils/tickets';
+import { iconColor } from '../utils/iconColors';
 
 const fmtDateTime = (iso) => {
     if (!iso) return '';
@@ -41,6 +44,7 @@ export default function TicketDetailScreen() {
     const { colors } = theme;
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const goBack = useGoBack('/(main)/tickets');
 
     const [ticket, setTicket] = useState(null);
     const [staff, setStaff] = useState(null);
@@ -122,7 +126,7 @@ export default function TicketDetailScreen() {
             setDeleting(true);
             await api.deleteMaintenanceReport(id);
             setConfirmDeleteOpen(false);
-            router.back();
+            goBack();
         } catch (err) {
             console.error('Delete ticket error', err);
             setConfirmDeleteOpen(false);
@@ -144,12 +148,12 @@ export default function TicketDetailScreen() {
         return (
             <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                    <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                 </View>
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={{ color: colors.textSecondary, paddingHorizontal: 24, textAlign: 'center' }}>
                         {error || 'Ticket not found.'}
                     </Text>
@@ -171,7 +175,7 @@ export default function TicketDetailScreen() {
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                    <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -192,135 +196,139 @@ export default function TicketDetailScreen() {
                     contentContainerStyle={styles.body}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                        <View style={styles.titleRow}>
+                    <Card>
+                        <CardHeader>
                             <Ionicons name={p.icon} size={18} color={p.color(colors)} />
                             <Text style={[styles.title, { color: colors.textPrimary }]}>
                                 {ticket.title || 'Untitled'}
                             </Text>
-                        </View>
+                        </CardHeader>
 
-                        <View style={[styles.statusPill, { backgroundColor: s.bg(colors), borderColor: s.fg(colors) }]}>
-                            <Text style={[styles.statusText, { color: s.fg(colors) }]}>{s.label}</Text>
-                        </View>
-
-                        <View style={styles.metaGrid}>
-                            <Meta label="Priority" colors={colors}>
-                                <Text style={[styles.metaValue, { color: p.color(colors) }]}>{p.label}</Text>
-                            </Meta>
-                            {ticket.category && !Array.isArray(ticket.category) ? (
-                                <Meta label="Category" colors={colors}>
-                                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
-                                        {ticket.category.label || ticket.category.name}
-                                    </Text>
-                                </Meta>
-                            ) : null}
-                            {ticket.location ? (
-                                <Meta label="Location" colors={colors}>
-                                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>{ticket.location}</Text>
-                                </Meta>
-                            ) : null}
-                            <Meta label="Reported by" colors={colors}>
-                                <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
-                                    {ticket.reported_by?.name || '—'}
-                                </Text>
-                            </Meta>
-                            <Meta label="Reported" colors={colors}>
-                                <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
-                                    {fmtDateTime(ticket.reported || ticket.created_at)}
-                                </Text>
-                            </Meta>
-                            {ticket.assigned_to ? (
-                                <Meta label="Assigned to" colors={colors}>
-                                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
-                                        {ticket.assigned_to.name}
-                                    </Text>
-                                </Meta>
-                            ) : null}
-                            {ticket.due_date ? (
-                                <Meta label="Due" colors={colors}>
-                                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
-                                        {fmtDateTime(ticket.due_date)}
-                                    </Text>
-                                </Meta>
-                            ) : null}
-                        </View>
-
-                        {ticket.description ? (
-                            <View style={[styles.descBlock, { borderTopColor: colors.border }]}>
-                                <Text style={[styles.descLabel, { color: colors.textSecondary }]}>Description</Text>
-                                <Text style={[styles.descText, { color: colors.textPrimary }]}>
-                                    {ticket.description}
-                                </Text>
+                        <View style={[cardBodyPadding, styles.cardBody]}>
+                            <View style={[styles.statusPill, { backgroundColor: s.bg(colors), borderColor: s.fg(colors) }]}>
+                                <Text style={[styles.statusText, { color: s.fg(colors) }]}>{s.label}</Text>
                             </View>
-                        ) : null}
 
-                        <TouchableOpacity
-                            onPress={toggleResolved}
-                            disabled={busy}
-                            style={[
-                                styles.resolveBtn,
-                                {
-                                    backgroundColor: isResolved
-                                        ? 'transparent'
-                                        : (colors.success || colors.primary),
-                                    borderColor: colors.success || colors.primary,
-                                    opacity: busy ? 0.6 : 1,
-                                },
-                            ]}
-                        >
-                            {busy ? (
-                                <ActivityIndicator color={isResolved ? (colors.success || colors.primary) : '#fff'} />
-                            ) : (
-                                <>
-                                    <Ionicons
-                                        name={isResolved ? 'refresh-outline' : 'checkmark-circle-outline'}
-                                        size={16}
-                                        color={isResolved ? (colors.success || colors.primary) : '#fff'}
-                                    />
-                                    <Text style={[
-                                        styles.resolveBtnText,
-                                        { color: isResolved ? (colors.success || colors.primary) : '#fff' },
-                                    ]}>
-                                        {isResolved ? 'Reopen ticket' : 'Mark resolved'}
+                            <View style={styles.metaGrid}>
+                                <Meta label="Priority" colors={colors}>
+                                    <Text style={[styles.metaValue, { color: p.color(colors) }]}>{p.label}</Text>
+                                </Meta>
+                                {ticket.category && !Array.isArray(ticket.category) ? (
+                                    <Meta label="Category" colors={colors}>
+                                        <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
+                                            {ticket.category.label || ticket.category.name}
+                                        </Text>
+                                    </Meta>
+                                ) : null}
+                                {ticket.location ? (
+                                    <Meta label="Location" colors={colors}>
+                                        <Text style={[styles.metaValue, { color: colors.textPrimary }]}>{ticket.location}</Text>
+                                    </Meta>
+                                ) : null}
+                                <Meta label="Reported by" colors={colors}>
+                                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
+                                        {ticket.reported_by?.name || '—'}
                                     </Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                                </Meta>
+                                <Meta label="Reported" colors={colors}>
+                                    <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
+                                        {fmtDateTime(ticket.reported || ticket.created_at)}
+                                    </Text>
+                                </Meta>
+                                {ticket.assigned_to ? (
+                                    <Meta label="Assigned to" colors={colors}>
+                                        <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
+                                            {ticket.assigned_to.name}
+                                        </Text>
+                                    </Meta>
+                                ) : null}
+                                {ticket.due_date ? (
+                                    <Meta label="Due" colors={colors}>
+                                        <Text style={[styles.metaValue, { color: colors.textPrimary }]}>
+                                            {fmtDateTime(ticket.due_date)}
+                                        </Text>
+                                    </Meta>
+                                ) : null}
+                            </View>
 
-                    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-                        Comments ({notes.length})
-                    </Text>
-                    {notes.length === 0 ? (
-                        <View style={[styles.emptyComments, { borderColor: colors.border }]}>
-                            <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
-                            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>No comments yet.</Text>
-                        </View>
-                    ) : (
-                        notes.map((c) => {
-                            const mine = c.staff?.id === staff?.id;
-                            return (
-                                <View
-                                    key={c.id}
-                                    style={[styles.comment, {
-                                        borderColor: colors.border,
-                                        backgroundColor: mine ? colors.primary + '11' : colors.cardBackground,
-                                        alignSelf: mine ? 'flex-end' : 'flex-start',
-                                    }]}
-                                >
-                                    <Text style={[styles.commentAuthor, { color: mine ? colors.primary : colors.textSecondary }]}>
-                                        {mine ? 'You' : (c.staff?.name || 'Unknown')}
-                                        {' · '}
-                                        {fmtDateTime(c.created_at || c.submitted_at)}
-                                    </Text>
-                                    <Text style={[styles.commentText, { color: colors.textPrimary }]}>
-                                        {c.note}
+                            {ticket.description ? (
+                                <View style={[styles.descBlock, { borderTopColor: colors.border }]}>
+                                    <Text style={[styles.descLabel, { color: colors.textSecondary }]}>Description</Text>
+                                    <Text style={[styles.descText, { color: colors.textPrimary }]}>
+                                        {ticket.description}
                                     </Text>
                                 </View>
-                            );
-                        })
-                    )}
+                            ) : null}
+
+                            <TouchableOpacity
+                                onPress={toggleResolved}
+                                disabled={busy}
+                                style={[
+                                    styles.resolveBtn,
+                                    {
+                                        backgroundColor: isResolved
+                                            ? 'transparent'
+                                            : (colors.success || colors.primary),
+                                        borderColor: colors.success || colors.primary,
+                                        opacity: busy ? 0.6 : 1,
+                                    },
+                                ]}
+                            >
+                                {busy ? (
+                                    <ActivityIndicator color={isResolved ? (colors.success || colors.primary) : '#fff'} />
+                                ) : (
+                                    <>
+                                        <Ionicons
+                                            name={isResolved ? 'refresh-outline' : 'checkmark-circle-outline'}
+                                            size={16}
+                                            color={isResolved ? (colors.success || colors.primary) : '#fff'}
+                                        />
+                                        <Text style={[
+                                            styles.resolveBtnText,
+                                            { color: isResolved ? (colors.success || colors.primary) : '#fff' },
+                                        ]}>
+                                            {isResolved ? 'Reopen ticket' : 'Mark resolved'}
+                                        </Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </Card>
+
+                    <Card>
+                        <CardHeader title="Comments" meta={notes.length} />
+                        <View style={[cardBodyPadding, styles.commentList]}>
+                            {notes.length === 0 ? (
+                                <View style={[styles.emptyComments, { borderColor: colors.border }]}>
+                                    <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
+                                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>No comments yet.</Text>
+                                </View>
+                            ) : (
+                                notes.map((c) => {
+                                    const mine = c.staff?.id === staff?.id;
+                                    return (
+                                        <View
+                                            key={c.id}
+                                            style={[styles.comment, {
+                                                borderColor: colors.border,
+                                                backgroundColor: mine ? colors.primary + '11' : colors.cardBackground,
+                                                alignSelf: mine ? 'flex-end' : 'flex-start',
+                                            }]}
+                                        >
+                                            <Text style={[styles.commentAuthor, { color: mine ? colors.primary : colors.textSecondary }]}>
+                                                {mine ? 'You' : (c.staff?.name || 'Unknown')}
+                                                {' · '}
+                                                {fmtDateTime(c.created_at || c.submitted_at)}
+                                            </Text>
+                                            <Text style={[styles.commentText, { color: colors.textPrimary }]}>
+                                                {c.note}
+                                            </Text>
+                                        </View>
+                                    );
+                                })
+                            )}
+                        </View>
+                    </Card>
                 </ScrollView>
 
                 <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
@@ -399,8 +407,7 @@ const styles = StyleSheet.create({
     headerActions: { flexDirection: 'row', alignItems: 'center' },
     headerTitle: { fontSize: 16, fontWeight: '700', flex: 1, textAlign: 'center' },
     body: { padding: 16, gap: 14, paddingBottom: 24 },
-    card: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 12 },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    cardBody: { gap: 12 },
     title: { fontSize: 18, fontWeight: '700', flex: 1 },
     statusPill: {
         flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -413,7 +420,7 @@ const styles = StyleSheet.create({
     descBlock: { borderTopWidth: 1, paddingTop: 12, gap: 4 },
     descLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
     descText: { fontSize: 14, lineHeight: 20 },
-    sectionLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 4 },
+    commentList: { gap: 10 },
     emptyComments: {
         borderWidth: 1, borderStyle: 'dashed', borderRadius: 12,
         padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

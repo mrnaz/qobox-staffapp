@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     ScrollView,
-    TouchableOpacity,
     RefreshControl,
     Dimensions,
 } from 'react-native';
@@ -15,11 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
+import Card, { CardHeader, cardBodyPadding } from '../components/Card';
 import ShiftTimer from '../components/ShiftTimer';
 import Toast from '../components/Toast';
 import CheckInModal from '../components/shift/CheckInModal';
 import CheckOutModal from '../components/shift/CheckOutModal';
 import { formatShiftStart, normalizeTimeLabel } from '../utils/datetime';
+import { iconColor } from '../utils/iconColors';
 import useTodayAgenda from '../hooks/useTodayAgenda';
 
 // Map post_scope → theme color group (matching client app's NoticeboardList)
@@ -189,7 +190,7 @@ export default function DashboardScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -210,9 +211,8 @@ export default function DashboardScreen() {
                 {/* On-shift card — it's part of today, so it lives under this heading.
                     Tapping it opens the check-out sheet, which carries the kiosk QR. */}
                 {openShift ? (
-                    <TouchableOpacity
+                    <Card
                         onPress={() => setCheckOutTarget(openShift)}
-                        activeOpacity={0.85}
                         style={[styles.runningCard, {
                             borderColor: colors.success || colors.primary,
                             backgroundColor: (colors.success || colors.primary) + '18',
@@ -237,22 +237,18 @@ export default function DashboardScreen() {
                             style={[styles.runningTimer, { color: colors.textPrimary }]}
                         />
                         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    </Card>
                 ) : null}
 
                 {/* Shifts rostered for today that have not been started yet.
                     Tapping one opens the check-in sheet with its kiosk QR. */}
                 {todayShifts.map((shift) => (
-                    <TouchableOpacity
+                    <Card
                         key={shift.id || `roster-${shift.staff_roster_id}`}
                         onPress={() => setCheckInTarget(shift)}
-                        activeOpacity={0.85}
-                        style={[styles.runningCard, {
-                            borderColor: colors.border,
-                            backgroundColor: colors.cardBackground,
-                        }]}
+                        style={styles.runningCard}
                     >
-                        <Ionicons name="time-outline" size={20} color={colors.primary} />
+                        <Ionicons name="time-outline" size={20} color={iconColor('time-outline', colors)} />
                         <View style={{ flex: 1 }}>
                             <Text style={[styles.runningLabel, { color: colors.primary }]}>
                                 Shift today
@@ -270,13 +266,12 @@ export default function DashboardScreen() {
                         </View>
                         <Text style={[styles.runningLabel, { color: colors.textSecondary }]}>Check in</Text>
                         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    </Card>
                 ))}
 
-                <TouchableOpacity
+                <Card
                     onPress={() => router.push('/today')}
-                    activeOpacity={0.85}
-                    style={[styles.todayBox, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                    style={styles.todayBox}
                 >
                     {[
                         { icon: 'school-outline', count: todayClasses.length, label: 'Classes' },
@@ -286,42 +281,41 @@ export default function DashboardScreen() {
                             : []),
                     ].map((row) => (
                         <View key={row.label} style={styles.todayRow}>
-                            <Ionicons name={row.icon} size={22} color={colors.textPrimary} style={styles.todayIcon} />
+                            <Ionicons name={row.icon} size={22} color={iconColor(row.icon, colors)} style={styles.todayIcon} />
                             <Text style={[styles.todayCount, { color: colors.textPrimary }]}>
                                 {agendaLoading && agendaEmpty ? '–' : row.count}
                             </Text>
                             <Text style={[styles.todayLabel, { color: colors.textPrimary }]}>{row.label}</Text>
                         </View>
                     ))}
-                </TouchableOpacity>
+                </Card>
             </Section>
 
             {/* Notices */}
             <Section title="Notices" colors={colors}>
                 {notices.length === 0 && !isLoading ? (
-                    <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                        <Ionicons name="megaphone-outline" size={28} color={colors.textSecondary} />
+                    <Card style={styles.emptyCard}>
+                        <Ionicons name="megaphone-outline" size={28} color={iconColor('megaphone-outline', colors)} />
                         <Text style={[styles.emptyCardTitle, { color: colors.textPrimary }]}>
                             No notices
                         </Text>
                         <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>
                             Announcements will appear here.
                         </Text>
-                    </View>
+                    </Card>
                 ) : (
                     notices.map((n) => {
                         const paletteKey = SCOPE_PALETTE[n.post_scope] || 'indigo';
                         const palette = colors[paletteKey];
                         const isExpanded = expandedNoticeId === n.id;
                         return (
-                            <TouchableOpacity
+                            <Card
                                 key={n.id}
                                 onPress={() => setExpandedNoticeId(isExpanded ? null : n.id)}
                                 activeOpacity={0.8}
-                                style={[styles.noticeCard, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
                             >
-                                <View style={styles.noticeHeader}>
-                                    <Avatar uri={n.photo} name={n.author_name} size={36} />
+                                <CardHeader style={styles.noticeHeader}>
+                                    <Avatar uri={n.photo} name={n.author_name} id={n.author_id} size={36} />
                                     <View style={{ flex: 1 }}>
                                         <Text style={[styles.noticeAuthor, { color: colors.textPrimary }]} numberOfLines={1}>
                                             {n.author_name || 'Unknown'}
@@ -340,66 +334,68 @@ export default function DashboardScreen() {
                                             </Text>
                                         </View>
                                     ) : null}
-                                </View>
-                                {n.title ? (
-                                    <Text
-                                        style={[styles.noticeTitle, { color: colors.textPrimary }]}
-                                        numberOfLines={isExpanded ? undefined : 2}
-                                    >
-                                        {n.title}
-                                    </Text>
-                                ) : null}
+                                </CardHeader>
+                                <View style={[cardBodyPadding, styles.noticeBodyBlock]}>
+                                    {n.title ? (
+                                        <Text
+                                            style={[styles.noticeTitle, { color: colors.textPrimary }]}
+                                            numberOfLines={isExpanded ? undefined : 2}
+                                        >
+                                            {n.title}
+                                        </Text>
+                                    ) : null}
 
-                                {n.body ? (
-                                    isExpanded ? (
-                                        <View style={{ marginTop: 4 }}>
-                                            <RenderHtml
-                                                contentWidth={Dimensions.get('window').width - 64}
-                                                source={{ html: n.body }}
-                                                baseStyle={{
-                                                    fontSize: 13,
-                                                    color: colors.textSecondary,
-                                                    lineHeight: 19,
-                                                }}
-                                                tagsStyles={{
-                                                    p:  { marginVertical: 4, color: colors.textSecondary },
-                                                    h1: { fontSize: 18, fontWeight: 'bold', marginVertical: 8, color: colors.textPrimary },
-                                                    h2: { fontSize: 16, fontWeight: 'bold', marginVertical: 6, color: colors.textPrimary },
-                                                    h3: { fontSize: 15, fontWeight: '600', marginVertical: 4, color: colors.textPrimary },
-                                                    b: { fontWeight: 'bold', color: colors.textSecondary },
-                                                    strong: { fontWeight: 'bold', color: colors.textSecondary },
-                                                    i: { fontStyle: 'italic', color: colors.textSecondary },
-                                                    em: { fontStyle: 'italic', color: colors.textSecondary },
-                                                    a: { color: colors.primary, textDecorationLine: 'underline' },
-                                                    ul: { marginVertical: 4, paddingLeft: 16 },
-                                                    ol: { marginVertical: 4, paddingLeft: 16 },
-                                                    li: { marginVertical: 2, color: colors.textSecondary },
-                                                }}
+                                    {n.body ? (
+                                        isExpanded ? (
+                                            <View style={{ marginTop: 4 }}>
+                                                <RenderHtml
+                                                    contentWidth={Dimensions.get('window').width - 64}
+                                                    source={{ html: n.body }}
+                                                    baseStyle={{
+                                                        fontSize: 13,
+                                                        color: colors.textSecondary,
+                                                        lineHeight: 19,
+                                                    }}
+                                                    tagsStyles={{
+                                                        p:  { marginVertical: 4, color: colors.textSecondary },
+                                                        h1: { fontSize: 18, fontWeight: 'bold', marginVertical: 8, color: colors.textPrimary },
+                                                        h2: { fontSize: 16, fontWeight: 'bold', marginVertical: 6, color: colors.textPrimary },
+                                                        h3: { fontSize: 15, fontWeight: '600', marginVertical: 4, color: colors.textPrimary },
+                                                        b: { fontWeight: 'bold', color: colors.textSecondary },
+                                                        strong: { fontWeight: 'bold', color: colors.textSecondary },
+                                                        i: { fontStyle: 'italic', color: colors.textSecondary },
+                                                        em: { fontStyle: 'italic', color: colors.textSecondary },
+                                                        a: { color: colors.primary, textDecorationLine: 'underline' },
+                                                        ul: { marginVertical: 4, paddingLeft: 16 },
+                                                        ol: { marginVertical: 4, paddingLeft: 16 },
+                                                        li: { marginVertical: 2, color: colors.textSecondary },
+                                                    }}
+                                                />
+                                            </View>
+                                        ) : (
+                                            <Text
+                                                style={[styles.noticeBody, { color: colors.textSecondary }]}
+                                                numberOfLines={4}
+                                            >
+                                                {stripHtml(n.body)}
+                                            </Text>
+                                        )
+                                    ) : null}
+
+                                    {n.body && stripHtml(n.body).length > 100 ? (
+                                        <View style={styles.expandHint}>
+                                            <Text style={[styles.expandHintText, { color: colors.primary }]}>
+                                                {isExpanded ? 'Show less' : 'Read more'}
+                                            </Text>
+                                            <Ionicons
+                                                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                                                size={14}
+                                                color={colors.primary}
                                             />
                                         </View>
-                                    ) : (
-                                        <Text
-                                            style={[styles.noticeBody, { color: colors.textSecondary }]}
-                                            numberOfLines={4}
-                                        >
-                                            {stripHtml(n.body)}
-                                        </Text>
-                                    )
-                                ) : null}
-
-                                {n.body && stripHtml(n.body).length > 100 ? (
-                                    <View style={styles.expandHint}>
-                                        <Text style={[styles.expandHintText, { color: colors.primary }]}>
-                                            {isExpanded ? 'Show less' : 'Read more'}
-                                        </Text>
-                                        <Ionicons
-                                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                                            size={14}
-                                            color={colors.primary}
-                                        />
-                                    </View>
-                                ) : null}
-                            </TouchableOpacity>
+                                    ) : null}
+                                </View>
+                            </Card>
                         );
                     })
                 )}
@@ -452,7 +448,7 @@ const styles = StyleSheet.create({
     greeting: { marginBottom: 20 },
     greetingName: { fontSize: 26, fontWeight: '700' },
     sectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-    emptyCard: { borderWidth: 1, borderRadius: 12, padding: 24, alignItems: 'center', gap: 6 },
+    emptyCard: { padding: 24, alignItems: 'center', gap: 6 },
     emptyCardTitle: { fontSize: 14, fontWeight: '600' },
     emptyCardText: { fontSize: 12, textAlign: 'center' },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
@@ -463,8 +459,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 12,
     },
     runningDot: {
@@ -475,17 +469,8 @@ const styles = StyleSheet.create({
     runningTimer: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
 
     // Notices
-    noticeCard: {
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 14,
-        gap: 8,
-    },
-    noticeHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
+    noticeBodyBlock: { gap: 8 },
+    noticeHeader: { gap: 10 },
     noticeAuthor: { fontSize: 13, fontWeight: '600' },
     noticeTime: { fontSize: 11, marginTop: 1 },
     chip: {
@@ -507,7 +492,7 @@ const styles = StyleSheet.create({
     expandHintText: { fontSize: 12, fontWeight: '600' },
 
     // Today counts box
-    todayBox: { borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 14 },
+    todayBox: { paddingVertical: 8, paddingHorizontal: 14 },
     todayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
     todayIcon: { width: 30 },
     todayCount: { fontSize: 18, fontWeight: '700', width: 34 },

@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
+import Card, { CardHeader } from './Card';
+import { iconColor } from '../utils/iconColors';
 
 // Header control for switching the active academic period. Shows the current
 // period as a tappable chip; when more than one period exists, tapping opens a
@@ -34,9 +36,9 @@ export default function PeriodPicker({ periods = [], selectedId, onChange }) {
             <TouchableOpacity
                 onPress={() => canChoose && setOpen(true)}
                 activeOpacity={canChoose ? 0.7 : 1}
-                style={[styles.chip, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                style={[styles.chip, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
             >
-                <Ionicons name="calendar-outline" size={15} color={colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={15} color={iconColor('calendar-outline', colors)} />
                 <Text style={[styles.chipText, { color: colors.textPrimary }]} numberOfLines={1}>
                     {label}
                 </Text>
@@ -53,13 +55,13 @@ export default function PeriodPicker({ periods = [], selectedId, onChange }) {
             >
                 <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
-                        <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            <View style={styles.header}>
+                        <Card>
+                            <CardHeader>
                                 <Text style={[styles.title, { color: colors.textPrimary }]}>Academic period</Text>
                                 <TouchableOpacity onPress={() => setOpen(false)} style={{ padding: 4 }}>
                                     <Ionicons name="close" size={20} color={colors.textSecondary} />
                                 </TouchableOpacity>
-                            </View>
+                            </CardHeader>
                             <ScrollView style={{ maxHeight: 420 }}>
                                 {list.map((p) => {
                                     const isSel = String(p.id) === String(selectedId);
@@ -81,13 +83,13 @@ export default function PeriodPicker({ periods = [], selectedId, onChange }) {
                                                 ) : null}
                                             </View>
                                             {isSel ? (
-                                                <Ionicons name="checkmark" size={20} color={colors.primary} />
+                                                <Ionicons name="checkmark" size={20} color={iconColor('checkmark', colors)} />
                                             ) : null}
                                         </TouchableOpacity>
                                     );
                                 })}
                             </ScrollView>
-                        </View>
+                        </Card>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
@@ -120,15 +122,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,
-    },
-    card: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: 14,
-        paddingBottom: 8,
     },
     title: { fontSize: 16, fontWeight: '700' },
     row: {

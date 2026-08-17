@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
+import Card from './Card';
+import { iconColor } from '../utils/iconColors';
 
 export default function PlaceholderScreen({
     icon = 'cube-outline',
@@ -18,9 +20,9 @@ export default function PlaceholderScreen({
             style={{ flex: 1, backgroundColor: colors.background }}
             contentContainerStyle={styles.container}
         >
-            <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.primary + '22' }]}>
-                    <Ionicons name={icon} size={28} color={colors.primary} />
+            <Card style={styles.card}>
+                <View style={[styles.iconWrap, { backgroundColor: iconColor(icon, colors) + '22' }]}>
+                    <Ionicons name={icon} size={28} color={iconColor(icon, colors)} />
                 </View>
                 <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
                 {description ? (
@@ -41,10 +43,10 @@ export default function PlaceholderScreen({
                 ) : null}
 
                 <View style={[styles.tagline, { borderColor: colors.border }]}>
-                    <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                    <Ionicons name="time-outline" size={14} color={iconColor('time-outline', colors)} />
                     <Text style={[styles.taglineText, { color: colors.textSecondary }]}>Coming soon</Text>
                 </View>
-            </View>
+            </Card>
         </ScrollView>
     );
 }
@@ -52,8 +54,6 @@ export default function PlaceholderScreen({
 const styles = StyleSheet.create({
     container: { padding: 20 },
     card: {
-        borderWidth: 1,
-        borderRadius: 16,
         padding: 24,
         alignItems: 'center',
     },

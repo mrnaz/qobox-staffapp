@@ -9,7 +9,9 @@ import {
     SafeAreaView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGoBack } from '../utils/nav';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { iconColor } from '../utils/iconColors';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import HomeTab from '../components/class/HomeTab';
@@ -38,6 +40,7 @@ export default function ClassProfileScreen() {
     const { colors } = theme;
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const goBack = useGoBack('/(main)/classes');
 
     const [activeTab, setActiveTab] = useState('home');
     const [classData, setClassData] = useState(null);
@@ -95,7 +98,7 @@ export default function ClassProfileScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+                <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
@@ -150,7 +153,7 @@ export default function ClassProfileScreen() {
                 </View>
             ) : error && !classData ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                     <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             ) : (

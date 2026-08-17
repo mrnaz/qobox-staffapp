@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
+import Card from '../Card';
 
 const fmtDate = (s) => {
     if (!s) return null;
@@ -62,7 +64,7 @@ export default function AssignmentsTab({ classId }) {
         const submittedCount = item.submitted_count ?? item.submissions?.length ?? null;
         const totalCount = item.student_count ?? null;
         return (
-            <TouchableOpacity
+            <Card
                 onPress={() =>
                     router.push({
                         pathname: `/class/${classId}/assignment/${item.id}`,
@@ -70,7 +72,7 @@ export default function AssignmentsTab({ classId }) {
                     })
                 }
                 activeOpacity={0.8}
-                style={[styles.row, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                style={styles.row}
             >
                 <View style={{ flex: 1, gap: 4 }}>
                     <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
@@ -88,7 +90,7 @@ export default function AssignmentsTab({ classId }) {
                     ) : null}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </Card>
         );
     };
 
@@ -98,7 +100,7 @@ export default function AssignmentsTab({ classId }) {
     if (error && assignments.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="alert-circle-outline" size={32} color={colors.textSecondary} />
+                <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                     <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -130,8 +132,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        borderWidth: 1,
-        borderRadius: 12,
         padding: 14,
     },
     title: { fontSize: 14, fontWeight: '600' },

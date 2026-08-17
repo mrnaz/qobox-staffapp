@@ -2,11 +2,13 @@ import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import Theme from '../context/ThemeContext';
 import { FontAwesome } from '@expo/vector-icons';
+import { iconColor } from '../utils/iconColors';
 
 export default function ThemeToggle() {
     const { useTheme } = Theme;
     const { mode, toggleMode, theme } = useTheme();
     const { colors } = theme;
+    const icon = mode === 'dark' ? 'sun-o' : 'moon-o';
 
     return (
         <TouchableOpacity
@@ -24,9 +26,9 @@ export default function ThemeToggle() {
             }}
         >
             <FontAwesome
-                name={mode === 'dark' ? 'sun-o' : 'moon-o'}
+                name={icon}
                 size={14}
-                color={colors.textSecondary}
+                color={iconColor(icon, colors)}
             />
             <Text style={{ color: colors.textPrimary, fontSize: 14 }}>
                 {mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
