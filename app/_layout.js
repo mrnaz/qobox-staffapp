@@ -4,6 +4,7 @@ import React from 'react';
 import Theme from './context/ThemeContext';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from './services/api';
 
 const { ThemeProvider } = Theme;
 
@@ -20,6 +21,11 @@ const useProtectedRoute = () => {
                 if (segments.length === 0) return;
                 const inAuthGroup = segments[0] === '(auth)';
                 const token = await AsyncStorage.getItem('accessToken');
+                // Restore the API token here rather than only on the index
+                // route: booting straight into any other route (a web refresh
+                // on a detail screen, a deep link) would otherwise leave the
+                // client unauthenticated and 401 every request.
+                if (token) api.setToken(token);
                 if (!token && !inAuthGroup) {
                     router.replace('/(auth)/login');
                 }
