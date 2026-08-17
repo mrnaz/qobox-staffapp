@@ -18,7 +18,7 @@ import { iconColor } from '../../../utils/iconColors';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
 import Avatar from '../../../components/Avatar';
-import { resolveRubricColor } from '../../../utils/colors';
+import { rubricColor } from '../../../utils/colors';
 
 // Student × report summary screen — same intent as the web's
 // StudentProgressReportSummaryDialog.vue but laid out as a vertical stack of
@@ -515,16 +515,20 @@ function OutcomeValue({ outcome, assessment, colors }) {
         }
     } else if (t === 'R') {
         if (outcome.rubric_selection) {
-            const rubric = (assessment.rubrics || []).find((rb) => rb.id === outcome.rubric_selection);
-            const bg = resolveRubricColor(rubric?.color);
+            const list = assessment.rubrics || [];
+            const idx = list.findIndex((rb) => rb.id === outcome.rubric_selection);
+            const rubric = idx >= 0 ? list[idx] : null;
+            const bg = rubricColor(rubric, Math.max(0, idx));
             items.push(
-                <View key="r" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: bg }} />
+                // Dot trails the label: this column is right-aligned, so the
+                // colour reads as the end of the value, not a stray bullet.
+                <View key="r" style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     {rubric?.label ? (
                         <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 12 }} numberOfLines={1}>
                             {rubric.label}
                         </Text>
                     ) : null}
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: bg }} />
                 </View>
             );
         } else {

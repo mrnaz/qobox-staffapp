@@ -15,10 +15,42 @@
 const pad2 = (n) => String(n).padStart(2, '0');
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+
+// Wall-clock offset of `timeZone` at a given instant, in ms.
+const zoneOffsetMs = (utcMs, timeZone) => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+    }).formatToParts(new Date(utcMs));
+    const get = (t) => Number(parts.find((p) => p.type === t)?.value);
+    const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'),
+        get('hour') % 24, get('minute'), get('second'));
+    return asUtc - utcMs;
+};
+
+// Reads "YYYY-MM-DDTHH:mm(:ss)" as wall clock in `timeZone`.
+const zonedToInstant = (isoish, timeZone) => {
+    const m = String(isoish).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    const [, Y, M, D, h, min, sec] = m;
+    const naiveUtc = Date.UTC(+Y, +M - 1, +D, +h, +min, +(sec || 0));
+    try {
+        // One correction pass, then a second so a DST boundary lands right.
+        let guess = naiveUtc - zoneOffsetMs(naiveUtc, timeZone);
+        guess = naiveUtc - zoneOffsetMs(guess, timeZone);
+        const d = new Date(guess);
+        return Number.isNaN(d.getTime()) ? null : d;
+    } catch {
+        return null;
+    }
+};
+
 // Absolute instant. Respects an explicit timezone offset in the string. When
 // the string carries no zone, `assumeUtc` decides whether to treat it as UTC
 // (true) or device-local (false). Use this for elapsed-time math.
-export const parseApiDate = (value, { assumeUtc = false } = {}) => {
+export const parseApiDate = (value, { assumeUtc = false, timeZone = null } = {}) => {
     if (!value) return null;
     if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
 
@@ -39,6 +71,14 @@ export const parseApiDate = (value, { assumeUtc = false } = {}) => {
             else if (/^[+-]\d{4}$/.test(off)) off = `${off.slice(0, 3)}:${off.slice(3)}`; // "+1030" → "+10:30"
             s = s.slice(0, s.length - raw.length) + off;
         }
+    } else if (timeZone) {
+        // No zone in the string, but we know which zone it was written in —
+        // read it there. The shift endpoints return site-local wall clock
+        // ("2026-08-17 21:45"); assuming UTC for a UTC+10 site puts the
+        // instant ten hours in the future, which froze the shift timer at
+        // zero because elapsed time is clamped at 0.
+        const inZone = zonedToInstant(s, timeZone);
+        return inZone;
     } else if (assumeUtc) {
         s = `${s}Z`;
     }

@@ -15,21 +15,30 @@ import { parseApiDate } from '../utils/datetime';
 // that a browser would accept, which is why parsing goes through parseApiDate.
 //
 // Mirrors the Vue web's ShiftTimer behavior (see resources/js/_staff/views/pages/staff/shift-log/components/ShiftTimer.vue).
-export default function ShiftTimer({ startTimeUtc, style }) {
+export default function ShiftTimer({ startTimeUtc, timezone, style }) {
     const [elapsedSec, setElapsedSec] = useState(0);
 
     useEffect(() => {
-        const start = parseApiDate(startTimeUtc, { assumeUtc: true });
+        // Zone-less values from the shift endpoints are the SITE's wall clock,
+        // not UTC. Reading them as UTC put the start hours into the future for
+        // an eastern site, and elapsed time is clamped at zero — which is why
+        // the timer sat still instead of counting.
+        const start = parseApiDate(startTimeUtc, { assumeUtc: !timezone, timeZone: timezone });
         if (!start) {
             setElapsedSec(0);
             return;
         }
-        const startMs = start.getTime();
+        let startMs = start.getTime();
+
+        // Belt and braces: if the server still hands us a start in the future,
+        // count from now rather than freezing at zero.
+        if (startMs > Date.now() + 60_000) startMs = Date.now();
+
         const compute = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
         compute();
         const id = setInterval(compute, 1000);
         return () => clearInterval(id);
-    }, [startTimeUtc]);
+    }, [startTimeUtc, timezone]);
 
     const days = Math.floor(elapsedSec / 86400);
     const hours = Math.floor((elapsedSec % 86400) / 3600);

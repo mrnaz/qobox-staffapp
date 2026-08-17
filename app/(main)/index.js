@@ -234,6 +234,7 @@ export default function DashboardScreen() {
                         </View>
                         <ShiftTimer
                             startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
+                            timezone={openShift.timezone}
                             style={[styles.runningTimer, { color: colors.textPrimary }]}
                         />
                         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
