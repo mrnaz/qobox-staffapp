@@ -601,41 +601,38 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
 
     return (
         <View style={styles.assessmentRow}>
-            <View style={{ flex: 1, gap: 4 }}>
-                <Text style={[styles.assessmentLabel, { color: colors.textPrimary }]}>
-                    {assessment.label}
-                    {assessment.required ? <Text style={{ color: colors.error || '#ef4444' }}> *</Text> : null}
-                </Text>
-                {assessment.description ? (
-                    <Text style={[styles.assessmentDesc, { color: colors.textSecondary }]} numberOfLines={2}>
-                        {assessment.description}
+            <View style={styles.assessmentTopRow}>
+                <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={[styles.assessmentLabel, { color: colors.textPrimary }]}>
+                        {assessment.label}
+                        {assessment.required ? <Text style={{ color: colors.error || '#ef4444' }}> *</Text> : null}
                     </Text>
-                ) : null}
-                {value.comment ? (
-                    // The bubble IS the comment control: shows the full text
-                    // and opens the editor on tap. No separate icon button —
-                    // that read as a duplicated comment indicator.
-                    <TouchableOpacity
-                        disabled={disabled}
-                        onPress={onOpenComment}
-                        activeOpacity={0.7}
-                        style={[styles.commentBubble, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '44' }]}
-                    >
-                        <Ionicons name="chatbubble-ellipses-outline" size={12} color={iconColor('chatbubble-ellipses-outline', colors)} />
-                        <Text style={{ color: colors.textSecondary, fontSize: 11, flex: 1 }}>
-                            {value.comment}
+                    {assessment.description ? (
+                        <Text style={[styles.assessmentDesc, { color: colors.textSecondary }]} numberOfLines={2}>
+                            {assessment.description}
                         </Text>
-                    </TouchableOpacity>
-                ) : null}
+                    ) : null}
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>{renderValue()}</View>
             </View>
-            <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                {renderValue()}
-                {!value.comment ? (
-                    <TouchableOpacity disabled={disabled} onPress={onOpenComment}>
-                        <Ionicons name="chatbubble-ellipses-outline" size={18} color={iconColor('chatbubble-ellipses-outline', colors)} />
-                    </TouchableOpacity>
-                ) : null}
-            </View>
+
+            {/* Reads exactly like the summary card: plain text under the score,
+                right-aligned. Still the control — tapping it opens the editor. */}
+            <TouchableOpacity
+                disabled={disabled}
+                onPress={onOpenComment}
+                activeOpacity={0.7}
+                style={styles.commentTouch}
+            >
+                <Text
+                    style={[
+                        styles.assessmentComment,
+                        !value.comment && { color: colors.textSecondary, fontStyle: 'italic' },
+                    ]}
+                >
+                    {value.comment || 'Add a comment'}
+                </Text>
+            </TouchableOpacity>
         </View>
     );
 }
@@ -921,8 +918,21 @@ const styles = StyleSheet.create({
     groupDesc: { fontSize: 12, marginTop: 2 },
     itemWrap: { borderTopWidth: 1 },
     assessmentRow: {
-        flexDirection: 'row', alignItems: 'flex-start', gap: 12,
         paddingVertical: 10,
+    },
+    assessmentTopRow: {
+        flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    },
+    commentTouch: { alignSelf: 'flex-end', maxWidth: '85%' },
+    // Same treatment as the summary card's itemComment.
+    assessmentComment: {
+        color: '#555',
+        fontSize: 11,
+        lineHeight: 15,
+        marginTop: 4,
+        paddingTop: 2,
+        paddingBottom: 1,
+        textAlign: 'right',
     },
     assessmentLabel: { fontSize: 13, fontWeight: '700' },
     assessmentDesc: { fontSize: 11 },
@@ -931,10 +941,6 @@ const styles = StyleSheet.create({
         borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center',
     },
     dot: { width: 10, height: 10, borderRadius: 5 },
-    commentBubble: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        borderWidth: 1, borderRadius: 8, padding: 6,
-    },
     saveBar: {
         padding: 12, borderTopWidth: 1,
         gap: 8,
