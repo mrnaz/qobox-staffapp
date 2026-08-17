@@ -251,6 +251,7 @@ export default function RosterScreen() {
                 <View style={{ flex: 1 }} />
                 <ShiftTimer
                     startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
+                    timezone={openShift.timezone}
                     style={[styles.runningTimer, { color: colors.textPrimary }]}
                 />
             </View>
