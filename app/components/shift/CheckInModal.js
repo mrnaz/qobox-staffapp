@@ -8,10 +8,9 @@ import {
     TextInput,
     Image,
     ActivityIndicator,
-    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import ShiftTimePicker from './ShiftTimePicker';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import { capturePhotoCompressed, appendPhotoToForm } from '../../utils/photo';
@@ -169,17 +168,12 @@ export default function CheckInModal({
                                                 </Text>
                                                 <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
                                             </TouchableOpacity>
-                                            {showTimePicker ? (
-                                                <DateTimePicker
-                                                    value={time}
-                                                    mode="datetime"
-                                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                                    onChange={(event, date) => {
-                                                        if (Platform.OS !== 'ios') setShowTimePicker(false);
-                                                        if (date) setTime(date);
-                                                    }}
-                                                />
-                                            ) : null}
+                                            <ShiftTimePicker
+                                                visible={showTimePicker}
+                                                value={time}
+                                                onChange={setTime}
+                                                onClose={() => setShowTimePicker(false)}
+                                            />
                                         </View>
 
                                         <View style={{ gap: 6 }}>

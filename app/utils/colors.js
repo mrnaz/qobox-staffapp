@@ -45,6 +45,18 @@ export function resolveRubricColor(value, mode = 'light') {
     return entry[mode]?.bg || entry.light.bg;
 }
 
+// Rubric dot colour. Rubrics created through the web get a colour assigned by
+// position (colorsPalette[index % length] in StoreUpdateProgressReportAssessment
+// Dialog.vue), but older rows have none and were all rendering grey. Fall back
+// to the same position-based colour so a scale reads as distinct steps.
+const PALETTE_NAMES = Object.keys(PALETTE);
+
+export function rubricColor(rubric, index = 0, mode = 'light') {
+    if (rubric?.color) return resolveRubricColor(rubric.color, mode);
+    const name = PALETTE_NAMES[index % PALETTE_NAMES.length];
+    return resolveRubricColor(name, mode);
+}
+
 // Avatar tint, matching the web app exactly: resources/js/components/avatar/
 // Avatar.vue picks colorsPalette[(id % 13) + 1], so the same person keeps the
 // same colour on both. Index 0 (Purple) and the last two are intentionally
