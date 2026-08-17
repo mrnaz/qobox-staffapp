@@ -3,7 +3,12 @@ import { ALL_AUTH_KEYS } from '../constants/storageKeys';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://ed.qobox.test';
+// Falls back to production, never to a developer's machine. A build or OTA
+// update published without EXPO_PUBLIC_API_URL used to point every install at
+// https://ed.qobox.test, which resolves on one laptop and nowhere else, so the
+// app failed every request with "Network request failed". Local work sets the
+// variable in .env, so this default only applies when it is missing.
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://app.qobox.com';
 const API_VERSION = 'v1';
 
 // Endpoints whose 401 should NOT auto-redirect to login (the user is already
