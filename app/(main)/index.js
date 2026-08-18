@@ -4,6 +4,7 @@ import {
     Text,
     StyleSheet,
     ScrollView,
+    TouchableOpacity,
     RefreshControl,
     Dimensions,
 } from 'react-native';
@@ -19,7 +20,7 @@ import ShiftTimer from '../components/ShiftTimer';
 import Toast from '../components/Toast';
 import CheckInModal from '../components/shift/CheckInModal';
 import CheckOutModal from '../components/shift/CheckOutModal';
-import { formatShiftStart, normalizeTimeLabel } from '../utils/datetime';
+import { formatShiftStart, normalizeTimeLabel, isToday } from '../utils/datetime';
 import { iconColor } from '../utils/iconColors';
 import useTodayAgenda from '../hooks/useTodayAgenda';
 
@@ -101,6 +102,14 @@ export default function DashboardScreen() {
             setProfileLoaded(true);
         })();
     }, []);
+
+    // A shift started on an earlier day is one the user forgot to close.
+    // The chip says so; the colour stays green in both states, matching the
+    // roster.
+    const openShiftIsStale = Boolean(
+        openShift && !isToday(openShift.actual_start || openShift.rostered_start)
+    );
+    const openAccent = colors.success || colors.primary;
 
     const loadToday = useCallback(
         async (opts = {}) => {
@@ -211,33 +220,42 @@ export default function DashboardScreen() {
                 {/* On-shift card — it's part of today, so it lives under this heading.
                     Tapping it opens the check-out sheet, which carries the kiosk QR. */}
                 {openShift ? (
-                    <Card
-                        onPress={() => setCheckOutTarget(openShift)}
-                        style={[styles.runningCard, {
-                            borderColor: colors.success || colors.primary,
-                            backgroundColor: (colors.success || colors.primary) + '18',
-                        }]}
-                    >
-                        <View style={[styles.runningDot, { backgroundColor: colors.success || colors.primary }]} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={[styles.runningLabel, { color: colors.success || colors.primary }]}>
-                                On shift
-                            </Text>
-                            <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
-                                Started {formatShiftStart(openShift.actual_start) || openShift.rostered_start_time || '—'}
-                            </Text>
-                            {openShift.rostered_end_time ? (
-                                <Text style={[styles.runningSub, { color: colors.textSecondary }]}>
-                                    Ends at {normalizeTimeLabel(openShift.rostered_end_time)}
-                                </Text>
+                    // Same card the roster pins above its list, so an open
+                    // shift looks and behaves the same in both places.
+                    <Card style={[styles.pinnedCard, {
+                        borderColor: openAccent,
+                        backgroundColor: openAccent + '18',
+                    }]}>
+                        <View style={styles.pinnedHeaderRow}>
+                            <View style={[styles.runningDot, { backgroundColor: openAccent }]} />
+                            <Text style={[styles.pinnedLabel, { color: openAccent }]}>On shift</Text>
+                            {openShiftIsStale ? (
+                                <View style={[styles.staleBadge, { borderColor: openAccent }]}>
+                                    <Text style={[styles.staleText, { color: openAccent }]}>Not checked out</Text>
+                                </View>
                             ) : null}
+                            <View style={{ flex: 1 }} />
+                            <ShiftTimer
+                                startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
+                                timezone={openShift.timezone}
+                                style={[styles.runningTimer, { color: colors.textPrimary }]}
+                            />
                         </View>
-                        <ShiftTimer
-                            startTimeUtc={openShift.actual_start_utc || openShift.actual_start}
-                            timezone={openShift.timezone}
-                            style={[styles.runningTimer, { color: colors.textPrimary }]}
-                        />
-                        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                        <Text style={[styles.pinnedSub, { color: colors.textSecondary }]}>
+                            Started {formatShiftStart(openShift.actual_start) || openShift.rostered_start_time || '—'}
+                        </Text>
+                        {openShift.rostered_end_time ? (
+                            <Text style={[styles.pinnedSub, { color: colors.textSecondary }]}>
+                                Ends at {normalizeTimeLabel(openShift.rostered_end_time)}
+                            </Text>
+                        ) : null}
+                        <TouchableOpacity
+                            onPress={() => setCheckOutTarget(openShift)}
+                            style={[styles.btn, { backgroundColor: openAccent, marginTop: 10 }]}
+                        >
+                            <Ionicons name="log-out-outline" size={16} color="#fff" />
+                            <Text style={styles.btnText}>Check Out</Text>
+                        </TouchableOpacity>
                     </Card>
                 ) : null}
 
@@ -465,6 +483,22 @@ const styles = StyleSheet.create({
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
 
     // Running shift banner
+    pinnedCard: { padding: 14, gap: 4 },
+    pinnedHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    pinnedLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+    pinnedSub: { fontSize: 12 },
+    staleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
+    staleText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+    btn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 8,
+    },
+    btnText: { color: '#fff', fontWeight: '700' },
     runningCard: {
         flexDirection: 'row',
         alignItems: 'center',
