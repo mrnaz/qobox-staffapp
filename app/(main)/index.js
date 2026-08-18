@@ -251,7 +251,7 @@ export default function DashboardScreen() {
                         ) : null}
                         <TouchableOpacity
                             onPress={() => setCheckOutTarget(openShift)}
-                            style={[styles.btn, { backgroundColor: openAccent, marginTop: 10 }]}
+                            style={[styles.btn, { backgroundColor: colors.warning || colors.primary, marginTop: 10 }]}
                         >
                             <Ionicons name="log-out-outline" size={16} color="#fff" />
                             <Text style={styles.btnText}>Check Out</Text>

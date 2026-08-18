@@ -238,6 +238,9 @@ export default function RosterScreen() {
     // Green whether or not the shift is stale; the "Not checked out" chip
     // carries that meaning without recolouring the whole card.
     const openAccent = colors.success || colors.primary;
+    // Check Out keeps its own tone: the card says "on shift" in green,
+    // the button is the one thing that ends it.
+    const checkOutColor = colors.warning || colors.primary;
     const openShiftHeader = openShift ? (
         <Card style={[styles.pinnedCard, { borderColor: openAccent, backgroundColor: openAccent + '18' }]}>
             <View style={styles.pinnedHeaderRow}>
@@ -266,7 +269,7 @@ export default function RosterScreen() {
             <TouchableOpacity
                 onPress={() => openCheckOutModal(openShift)}
                 disabled={openShiftBusy}
-                style={[styles.btn, { backgroundColor: openAccent, opacity: openShiftBusy ? 0.6 : 1, marginTop: 10 }]}
+                style={[styles.btn, { backgroundColor: checkOutColor, opacity: openShiftBusy ? 0.6 : 1, marginTop: 10 }]}
             >
                 {openShiftBusy ? (
                     <ActivityIndicator color="#fff" />
@@ -448,7 +451,7 @@ export default function RosterScreen() {
                                 <TouchableOpacity
                                     onPress={() => openCheckOutModal(item)}
                                     disabled={isBusy}
-                                    style={[styles.btn, { backgroundColor: colors.success || colors.primary, opacity: isBusy ? 0.6 : 1 }]}
+                                    style={[styles.btn, { backgroundColor: checkOutColor, opacity: isBusy ? 0.6 : 1 }]}
                                 >
                                     {isBusy ? (
                                         <ActivityIndicator color="#fff" />
