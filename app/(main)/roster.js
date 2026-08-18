@@ -235,9 +235,9 @@ export default function RosterScreen() {
     // Pinned active-shift card. Rendered above the list in BOTH modes (mirrors the
     // dashboard). Carries the Check Out action and, when stale, a clear flag.
     const openShiftBusy = actingOnId === openShift?.id;
-    const openAccent = openShiftIsStale
-        ? (colors.warning || colors.primary)
-        : (colors.success || colors.primary);
+    // Green whether or not the shift is stale; the "Not checked out" chip
+    // carries that meaning without recolouring the whole card.
+    const openAccent = colors.success || colors.primary;
     const openShiftHeader = openShift ? (
         <Card style={[styles.pinnedCard, { borderColor: openAccent, backgroundColor: openAccent + '18' }]}>
             <View style={styles.pinnedHeaderRow}>
@@ -266,7 +266,7 @@ export default function RosterScreen() {
             <TouchableOpacity
                 onPress={() => openCheckOutModal(openShift)}
                 disabled={openShiftBusy}
-                style={[styles.btn, { backgroundColor: colors.warning || colors.primary, opacity: openShiftBusy ? 0.6 : 1, marginTop: 10 }]}
+                style={[styles.btn, { backgroundColor: openAccent, opacity: openShiftBusy ? 0.6 : 1, marginTop: 10 }]}
             >
                 {openShiftBusy ? (
                     <ActivityIndicator color="#fff" />
@@ -448,7 +448,7 @@ export default function RosterScreen() {
                                 <TouchableOpacity
                                     onPress={() => openCheckOutModal(item)}
                                     disabled={isBusy}
-                                    style={[styles.btn, { backgroundColor: colors.warning || colors.primary, opacity: isBusy ? 0.6 : 1 }]}
+                                    style={[styles.btn, { backgroundColor: colors.success || colors.primary, opacity: isBusy ? 0.6 : 1 }]}
                                 >
                                     {isBusy ? (
                                         <ActivityIndicator color="#fff" />
