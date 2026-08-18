@@ -13,6 +13,7 @@ import {
     Alert,
     Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
@@ -29,6 +30,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
     const { useTheme } = Theme;
     const { theme } = useTheme();
     const { colors } = theme;
+    const insets = useSafeAreaInsets();
     const isEdit = !!existing;
 
     const [title, setTitle] = useState('');
@@ -158,7 +160,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={{ flex: 1, backgroundColor: colors.background }}
             >
-                <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+                <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.background, paddingTop: 12 + insets.top }]}>
                     <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
                         <Ionicons name="close" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
@@ -297,7 +299,7 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
 
                 {/* Pinned footer save — a real button at the bottom of the sheet
                     instead of the old text link tucked into the header. */}
-                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: 12 + insets.bottom }]}>
                     <TouchableOpacity
                         onPress={submit}
                         disabled={submitting}
