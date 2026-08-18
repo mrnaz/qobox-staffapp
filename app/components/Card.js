@@ -27,9 +27,17 @@ export default function Card({ style, onPress, activeOpacity = 0.85, children, .
     // the inner one does the clipping.
     const flat = StyleSheet.flatten(style) || {};
     const { margin, marginTop, marginBottom, marginLeft, marginRight,
-        marginHorizontal, marginVertical, ...innerStyle } = flat;
+        marginHorizontal, marginVertical, backgroundColor, ...innerStyle } = flat;
+
+    // The fill lives on the outer layer, with the shadow. Android draws
+    // `elevation` from the view's own background; on a view without one it
+    // renders as a grey rectangle, which showed straight through cards whose
+    // fill is translucent (the on-shift card tints at ~9% alpha).
     const outerStyle = [
-        { borderRadius: innerStyle.borderRadius ?? styles.card.borderRadius },
+        {
+            borderRadius: innerStyle.borderRadius ?? styles.card.borderRadius,
+            backgroundColor: backgroundColor ?? colors.cardBackground,
+        },
         cardShadow(colors),
         { margin, marginTop, marginBottom, marginLeft, marginRight, marginHorizontal, marginVertical },
     ];
@@ -37,7 +45,7 @@ export default function Card({ style, onPress, activeOpacity = 0.85, children, .
         styles.card,
         {
             borderColor: colors.borderStrong || colors.border,
-            backgroundColor: colors.cardBackground,
+            backgroundColor: 'transparent',
         },
         innerStyle,
     ];
