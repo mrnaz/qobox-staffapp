@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import Theme from '../context/ThemeContext';
 import { avatarColors } from '../utils/colors';
+import { avatarText } from '../utils/displayName';
 
 // Avatar with automatic fallback to initials if the photo URL fails to load
 // (404, broken media URL, network error, etc.). Reused across the app.
@@ -14,16 +15,11 @@ import { avatarColors } from '../utils/colors';
 //                             this person (see avatarColors)
 //   bgColor  string          — override the computed background
 //   textColor string         — override the computed initials color
-const initialsOf = (name) =>
-    String(name || '?')
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase() || '?';
+//   bordered bool            — hairline ring; used where the avatar sits on
+//                             the page rather than inside a card
 
-export default function Avatar({ uri, name, id, size = 36, bgColor, textColor }) {
+
+export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, bordered = false }) {
     const { useTheme } = Theme;
     const { theme, mode } = useTheme();
     const { colors } = theme;
@@ -36,13 +32,16 @@ export default function Avatar({ uri, name, id, size = 36, bgColor, textColor })
 
     const radius = size / 2;
     const showImage = uri && !failed;
+    const ring = bordered
+        ? { borderWidth: 2, borderColor: colors.borderStrong || colors.border }
+        : null;
 
     if (showImage) {
         return (
             <Image
                 source={{ uri }}
                 onError={() => setFailed(true)}
-                style={{ width: size, height: size, borderRadius: radius }}
+                style={[{ width: size, height: size, borderRadius: radius }, ring]}
             />
         );
     }
@@ -55,6 +54,7 @@ export default function Avatar({ uri, name, id, size = 36, bgColor, textColor })
                     width: size, height: size, borderRadius: radius,
                     backgroundColor: bgColor || tint.bg,
                 },
+                ring,
             ]}
         >
             <Text
@@ -63,7 +63,7 @@ export default function Avatar({ uri, name, id, size = 36, bgColor, textColor })
                     { color: textColor || tint.text, fontSize: Math.max(10, size * 0.38) },
                 ]}
             >
-                {initialsOf(name)}
+                {avatarText(name) || '?'}
             </Text>
         </View>
     );

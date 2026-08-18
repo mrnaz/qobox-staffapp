@@ -16,6 +16,7 @@ import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
+import { avatarName } from '../utils/displayName';
 import Card, { CardHeader } from '../components/Card';
 import TimetableWeekView from '../components/TimetableWeekView';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
@@ -78,7 +79,7 @@ export default function StudentDetailScreen() {
                 <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
-                <Avatar uri={student?.list_photo || student?.photo} name={fullName} id={student?.id} size={32} />
+                <Avatar uri={student?.list_photo || student?.photo} name={avatarName(student) || fullName} id={student?.id} size={32} />
                 <View style={{ flex: 1, marginLeft: 8 }}>
                     <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                         {fullName}
@@ -202,7 +203,7 @@ function InfoTab({ student, studentId, colors }) {
         <ScrollView contentContainerStyle={styles.tabBody}>
             {/* Large avatar hero */}
             <View style={styles.avatarHero}>
-                <Avatar uri={student.photo || student.list_photo} name={fullName} id={student.id} size={96} />
+                <Avatar uri={student.photo || student.list_photo} name={avatarName(student) || fullName} id={student.id} size={96} />
                 <Text style={[styles.heroName, { color: colors.textPrimary }]} numberOfLines={2}>
                     {fullName}
                 </Text>
