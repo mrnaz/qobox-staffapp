@@ -15,11 +15,9 @@ import { avatarText } from '../utils/displayName';
 //                             this person (see avatarColors)
 //   bgColor  string          — override the computed background
 //   textColor string         — override the computed initials color
-//   bordered bool            — hairline ring; used where the avatar sits on
-//                             the page rather than inside a card
 
 
-export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, bordered = false }) {
+export default function Avatar({ uri, name, id, size = 36, bgColor, textColor }) {
     const { useTheme } = Theme;
     const { theme, mode } = useTheme();
     const { colors } = theme;
@@ -32,16 +30,13 @@ export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, b
 
     const radius = size / 2;
     const showImage = uri && !failed;
-    const ring = bordered
-        ? { borderWidth: 2, borderColor: colors.borderStrong || colors.border }
-        : null;
 
     if (showImage) {
         return (
             <Image
                 source={{ uri }}
                 onError={() => setFailed(true)}
-                style={[{ width: size, height: size, borderRadius: radius }, ring]}
+                style={{ width: size, height: size, borderRadius: radius }}
             />
         );
     }
@@ -54,7 +49,6 @@ export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, b
                     width: size, height: size, borderRadius: radius,
                     backgroundColor: bgColor || tint.bg,
                 },
-                ring,
             ]}
         >
             <Text

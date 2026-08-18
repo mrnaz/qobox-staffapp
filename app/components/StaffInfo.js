@@ -127,7 +127,7 @@ export default function StaffInfo() {
             {/* Avatar — opens menu */}
             <TouchableOpacity onPress={() => setIsMenuVisible(true)} style={{ width: 36, height: 36 }}>
                 <View>
-                    <Avatar uri={staff?.photo} name={avatarName(staff) || fullName} id={staff?.id} size={36} bordered />
+                    <Avatar uri={staff?.photo} name={avatarName(staff) || fullName} id={staff?.id} size={36} />
                     {unreadCount > 0 && (
                         <View style={{
                             position: 'absolute', top: -4, right: -4,
@@ -253,7 +253,7 @@ export default function StaffInfo() {
                                 flexDirection: 'row', alignItems: 'center', padding: 20,
                                 borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12,
                             }}>
-                                <Avatar uri={staff?.photo} name={avatarName(staff) || fullName} id={staff?.id} size={44} bordered />
+                                <Avatar uri={staff?.photo} name={avatarName(staff) || fullName} id={staff?.id} size={44} />
                                 <View style={{ flex: 1 }}>
                                     <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 16 }}>
                                         {fullName || 'Staff'}
