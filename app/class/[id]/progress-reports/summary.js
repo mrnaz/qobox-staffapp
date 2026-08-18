@@ -448,7 +448,7 @@ function ResultCard({ result, rows, onPress, colors }) {
                                     {row.assessment.label}
                                 </Text>
                                 {inlineComment ? (
-                                    <Text style={[styles.itemComment, styles.itemCommentInline]}>
+                                    <Text style={[styles.itemComment, styles.itemCommentInline, { color: colors.commentText }]}>
                                         {outcome.comment}
                                     </Text>
                                 ) : (
@@ -462,7 +462,7 @@ function ResultCard({ result, rows, onPress, colors }) {
                                 it shares the label's line instead of costing a
                                 whole row of its own. */}
                             {outcome?.comment && !inlineComment ? (
-                                <Text style={styles.itemComment}>
+                                <Text style={[styles.itemComment, { color: colors.commentText }]}>
                                     {outcome.comment}
                                 </Text>
                             ) : null}
@@ -663,7 +663,6 @@ const styles = StyleSheet.create({
         paddingBottom: 0,
     },
     itemComment: {
-        color: '#555',
         fontSize: 11,
         lineHeight: 15,
         marginTop: 4,

@@ -627,6 +627,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                 <Text
                     style={[
                         styles.assessmentComment,
+                        { color: colors.commentText },
                         !value.comment && { color: colors.textSecondary, fontStyle: 'italic' },
                     ]}
                 >
@@ -926,7 +927,6 @@ const styles = StyleSheet.create({
     commentTouch: { alignSelf: 'flex-end', maxWidth: '85%' },
     // Same treatment as the summary card's itemComment.
     assessmentComment: {
-        color: '#555',
         fontSize: 11,
         lineHeight: 15,
         marginTop: 4,
