@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Image, Modal } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Theme from '../context/ThemeContext';
 import { iconColor } from '../utils/iconColors';
+import Avatar from './Avatar';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
 
@@ -74,11 +75,6 @@ export default function StaffInfo() {
         }
     };
 
-    const getInitials = () => {
-        if (!staff) return '?';
-        return ((staff.fname?.[0] || '') + (staff.sname?.[0] || '')).toUpperCase() || '?';
-    };
-
     const lastSegment = segments[segments.length - 1] || '';
     const currentRoute = KNOWN_ROUTES.includes(lastSegment) ? lastSegment : 'index';
 
@@ -130,17 +126,7 @@ export default function StaffInfo() {
             {/* Avatar — opens menu */}
             <TouchableOpacity onPress={() => setIsMenuVisible(true)} style={{ width: 36, height: 36 }}>
                 <View>
-                    {staff?.photo ? (
-                        <Image source={{ uri: staff.photo }} style={{ width: 36, height: 36, borderRadius: 18 }} />
-                    ) : (
-                        <View style={{
-                            width: 36, height: 36, borderRadius: 18,
-                            backgroundColor: colors.primary,
-                            justifyContent: 'center', alignItems: 'center',
-                        }}>
-                            <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: 'bold' }}>{getInitials()}</Text>
-                        </View>
-                    )}
+                    <Avatar uri={staff?.photo} name={fullName} id={staff?.id} size={36} />
                     {unreadCount > 0 && (
                         <View style={{
                             position: 'absolute', top: -4, right: -4,
@@ -266,17 +252,7 @@ export default function StaffInfo() {
                                 flexDirection: 'row', alignItems: 'center', padding: 20,
                                 borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12,
                             }}>
-                                {staff?.photo ? (
-                                    <Image source={{ uri: staff.photo }} style={{ width: 44, height: 44, borderRadius: 22 }} />
-                                ) : (
-                                    <View style={{
-                                        width: 44, height: 44, borderRadius: 22,
-                                        backgroundColor: colors.primary,
-                                        justifyContent: 'center', alignItems: 'center',
-                                    }}>
-                                        <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>{getInitials()}</Text>
-                                    </View>
-                                )}
+                                <Avatar uri={staff?.photo} name={fullName} id={staff?.id} size={44} />
                                 <View style={{ flex: 1 }}>
                                     <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 16 }}>
                                         {fullName || 'Staff'}
