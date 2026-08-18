@@ -35,6 +35,9 @@ export const lightColors = {
     inputBackground: '#ede8df',
     divider: '#e5ddd4',
 
+    // Assessment comments: quieter than body text, still comfortably readable.
+    commentText: '#555555',
+
     onPrimary: '#ffffff',
 
     purple: {
@@ -155,6 +158,9 @@ export const darkColors = {
 
     inputBackground: '#27273a',
     divider: '#35354a',
+
+    // The light value (#555) disappears on a dark card, so lift it.
+    commentText: '#a3a3bd',
 
     onPrimary: '#ffffff',
 
