@@ -52,6 +52,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@react-native-community/cli": "^18.0.0",
+    "babel-preset-expo": "~54.0.12",
     "http-proxy-middleware": "^3.0.5"
   },
   "expo": {
