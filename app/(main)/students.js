@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import Card from '../components/Card';
+import Card, { CardHeader } from '../components/Card';
 import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
 import PeriodPicker from '../components/PeriodPicker';
 import { iconColor } from '../utils/iconColors';
@@ -142,11 +142,16 @@ export default function MyStudentsScreen() {
         );
     }
 
-    const renderItem = ({ item }) => (
-        <Card
+    const renderItem = ({ item, index }) => (
+        <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => router.push(`/student/${item.id}`)}
-            style={styles.row}
+            style={[
+                styles.row,
+                // The header band closes the top, so only rows after the first
+                // draw a divider.
+                index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+            ]}
         >
             <Avatar uri={item.photo} name={item.name} id={item.id} size={40} />
             <View style={{ flex: 1, gap: 2 }}>
@@ -160,7 +165,7 @@ export default function MyStudentsScreen() {
                 </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-        </Card>
+        </TouchableOpacity>
     );
 
     return (
@@ -204,9 +209,16 @@ export default function MyStudentsScreen() {
                 </View>
             ) : (
                 <FlatList
-                    data={filtered}
-                    keyExtractor={(it) => String(it.id)}
-                    renderItem={renderItem}
+                    data={filtered.length ? [{ __card: true }] : []}
+                    keyExtractor={() => 'students-card'}
+                    renderItem={() => (
+                        <Card>
+                            <CardHeader title="Students" meta={filtered.length} />
+                            {filtered.map((item, index) => (
+                                <View key={String(item.id)}>{renderItem({ item, index })}</View>
+                            ))}
+                        </Card>
+                    )}
                     contentContainerStyle={styles.list}
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     ListEmptyComponent={
@@ -251,7 +263,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        padding: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
     title: { fontSize: 14, fontWeight: '700' },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

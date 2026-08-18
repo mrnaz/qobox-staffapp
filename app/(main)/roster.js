@@ -300,7 +300,15 @@ export default function RosterScreen() {
         });
     };
 
-    const openCheckInModal = (item) => setCheckInTarget(item);
+    const openCheckInModal = (item) => {
+        // The API rejects a second check-in; surface that before opening a
+        // form the user cannot submit.
+        if (openShift) {
+            setToast({ message: 'You are already on shift — check out first.', variant: 'error' });
+            return;
+        }
+        setCheckInTarget(item);
+    };
     const openCheckOutModal = (item) => setCheckOutTarget(item);
 
     // Both sheets hand back the freshly saved log. Splice it into the loaded page

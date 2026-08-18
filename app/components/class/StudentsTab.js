@@ -14,6 +14,7 @@ import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import Avatar from '../Avatar';
+import { avatarName } from '../../utils/displayName';
 import Card from '../Card';
 
 const fullName = (s) =>
@@ -77,7 +78,7 @@ export default function StudentsTab({ classId }) {
                 activeOpacity={0.8}
                 style={styles.row}
             >
-                <Avatar uri={item.list_photo || item.photo || null} name={name} id={id} size={40} />
+                <Avatar uri={item.list_photo || item.photo || null} name={avatarName(item) || name} id={id} size={40} />
                 <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
                     {name}
                 </Text>

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Theme from '../context/ThemeContext';
 import { iconColor } from '../utils/iconColors';
 import Avatar from './Avatar';
+import { avatarName } from '../utils/displayName';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
 
@@ -126,7 +127,7 @@ export default function StaffInfo() {
             {/* Avatar — opens menu */}
             <TouchableOpacity onPress={() => setIsMenuVisible(true)} style={{ width: 36, height: 36 }}>
                 <View>
-                    <Avatar uri={staff?.photo} name={fullName} id={staff?.id} size={36} />
+                    <Avatar uri={staff?.photo} name={avatarName(staff) || fullName} id={staff?.id} size={36} bordered />
                     {unreadCount > 0 && (
                         <View style={{
                             position: 'absolute', top: -4, right: -4,
@@ -252,7 +253,7 @@ export default function StaffInfo() {
                                 flexDirection: 'row', alignItems: 'center', padding: 20,
                                 borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12,
                             }}>
-                                <Avatar uri={staff?.photo} name={fullName} id={staff?.id} size={44} />
+                                <Avatar uri={staff?.photo} name={avatarName(staff) || fullName} id={staff?.id} size={44} bordered />
                                 <View style={{ flex: 1 }}>
                                     <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 16 }}>
                                         {fullName || 'Staff'}

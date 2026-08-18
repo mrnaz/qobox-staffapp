@@ -246,7 +246,16 @@ export default function DashboardScreen() {
                 {todayShifts.map((shift) => (
                     <Card
                         key={shift.id || `roster-${shift.staff_roster_id}`}
-                        onPress={() => setCheckInTarget(shift)}
+                        onPress={() => {
+                            if (openShift) {
+                                setToast({
+                                    message: 'You are already on shift — check out first.',
+                                    variant: 'error',
+                                });
+                                return;
+                            }
+                            setCheckInTarget(shift);
+                        }}
                         style={styles.runningCard}
                     >
                         <Ionicons name="time-outline" size={20} color={iconColor('time-outline', colors)} />
