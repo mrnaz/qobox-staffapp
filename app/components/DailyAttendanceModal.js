@@ -12,6 +12,7 @@ import {
     Alert,
     Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
@@ -68,6 +69,7 @@ export default function DailyAttendanceModal({
     const { useTheme } = Theme;
     const { theme } = useTheme();
     const { colors } = theme;
+    const insets = useSafeAreaInsets();
 
     const [students, setStudents] = useState([]);
     const [statusMap, setStatusMap] = useState({}); // clientId → 'present'|'absent'|...
@@ -289,7 +291,7 @@ export default function DailyAttendanceModal({
     return (
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <View style={[styles.container, { backgroundColor: colors.background }]}>
-                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: 12 + insets.top }]}>
                     <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
                         <Ionicons name="close" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
@@ -382,7 +384,7 @@ export default function DailyAttendanceModal({
                 )}
 
                 {/* Footer */}
-                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: 12 + insets.bottom }]}>
                     {canSubmit && canManageAttendance ? (
                         <TouchableOpacity
                             onPress={handleSubmit}

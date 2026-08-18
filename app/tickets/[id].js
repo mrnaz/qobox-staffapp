@@ -5,7 +5,6 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    SafeAreaView,
     ScrollView,
     KeyboardAvoidingView,
     Platform,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGoBack } from '../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
@@ -138,7 +138,7 @@ export default function TicketDetailScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
                 <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
             </SafeAreaView>
         );
@@ -146,7 +146,7 @@ export default function TicketDetailScreen() {
 
     if (error || !ticket) {
         return (
-            <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
                     <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
@@ -169,7 +169,7 @@ export default function TicketDetailScreen() {
     const isResolved = !!ticket.resolved;
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}

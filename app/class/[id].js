@@ -6,9 +6,9 @@ import {
     ActivityIndicator,
     TouchableOpacity,
     ScrollView,
-    SafeAreaView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGoBack } from '../utils/nav';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { iconColor } from '../utils/iconColors';
@@ -63,10 +63,16 @@ export default function ClassProfileScreen() {
         })();
     }, [id]);
 
+    // `courses` and `staff` come back as arrays of objects; joining them
+    // directly printed "[object Object]" in the header.
+    const nameOf = (v) => (typeof v === 'string' ? v : v?.title || v?.full_name || v?.name || '');
     const courseLabel = Array.isArray(classData?.courses)
-        ? classData.courses.join(', ')
-        : (classData?.course || classData?.course_title || '');
-    const subtitle = [courseLabel, classData?.teacher].filter(Boolean).join(' • ');
+        ? classData.courses.map(nameOf).filter(Boolean).join(', ')
+        : nameOf(classData?.course) || classData?.course_title || '';
+    const teacherLabel = Array.isArray(classData?.staff)
+        ? nameOf(classData.staff.find((m) => m?.role === 'teacher') || classData.staff[0])
+        : nameOf(classData?.teacher);
+    const subtitle = [courseLabel, teacherLabel].filter(Boolean).join(' • ');
 
     const renderTab = () => {
         switch (activeTab) {
@@ -95,7 +101,7 @@ export default function ClassProfileScreen() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>

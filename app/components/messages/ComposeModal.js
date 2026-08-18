@@ -11,6 +11,7 @@ import {
     Platform,
     KeyboardAvoidingView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../../services/api';
@@ -30,6 +31,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
     const { useTheme } = Theme;
     const { theme } = useTheme();
     const { colors } = theme;
+    const insets = useSafeAreaInsets();
 
     const [recipients, setRecipients] = useState([]);
     const [query, setQuery] = useState('');
@@ -243,7 +245,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 {/* Header */}
-                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: 10 + insets.top }]}>
                     <TouchableOpacity onPress={requestClose} style={styles.iconBtn}>
                         <Ionicons name="close" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
@@ -359,7 +361,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                 </ScrollView>
 
                 {/* Pinned footer */}
-                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background, paddingBottom: 12 + insets.bottom }]}>
                     <TouchableOpacity
                         onPress={saveDraft}
                         disabled={!!busy || uploading}
