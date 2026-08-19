@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Theme from '../context/ThemeContext';
+import { tintOver } from '../utils/colors';
 
 // The app's card, matching the client app's day card
 // (qobox-clientapp/app/components/Timetable.js): radius 16, the stronger
@@ -16,6 +17,18 @@ export const cardShadow = (colors) => (Platform.OS === 'web' ? null : {
     elevation: colors.cardElevation,
 });
 
+// `#RRGGBBAA` -> the same colour composited on what sits behind the card.
+// That is the screen, not the card fill: this is the outermost layer, so a
+// see-through colour here would show the page through. Anything else (an
+// opaque colour, rgba(), a named colour, undefined) is returned untouched,
+// falling back to the card background when nothing was given.
+function flattenFill(fill, colors) {
+    if (!fill) return colors.cardBackground;
+    const match = /^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/.exec(String(fill).trim());
+    if (!match) return fill;
+    return tintOver('#' + match[1], colors.background, parseInt(match[2], 16) / 255);
+}
+
 export default function Card({ style, onPress, activeOpacity = 0.85, children, ...rest }) {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -30,13 +43,17 @@ export default function Card({ style, onPress, activeOpacity = 0.85, children, .
         marginHorizontal, marginVertical, backgroundColor, ...innerStyle } = flat;
 
     // The fill lives on the outer layer, with the shadow. Android draws
-    // `elevation` from the view's own background; on a view without one it
-    // renders as a grey rectangle, which showed straight through cards whose
-    // fill is translucent (the on-shift card tints at ~9% alpha).
+    // `elevation` from the view's own background, so the layer that casts the
+    // shadow must be the one that is painted.
+    //
+    // It must also be opaque. A see-through fill (`accent + '18'`) lets that
+    // elevation shadow read through the card as a grey block on Android, so an
+    // alpha fill is flattened onto the card background first: same colour, but
+    // with nothing left to see through.
     const outerStyle = [
         {
             borderRadius: innerStyle.borderRadius ?? styles.card.borderRadius,
-            backgroundColor: backgroundColor ?? colors.cardBackground,
+            backgroundColor: flattenFill(backgroundColor, colors),
         },
         cardShadow(colors),
         { margin, marginTop, marginBottom, marginLeft, marginRight, marginHorizontal, marginVertical },

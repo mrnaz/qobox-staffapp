@@ -89,3 +89,25 @@ export function avatarColors(id, name, mode = 'light') {
     const entry = AVATAR_PALETTE[(Math.abs(n) % 13) + 1];
     return entry[mode === 'dark' ? 'dark' : 'light'];
 }
+
+// Flatten a tint onto a background so the result is fully opaque.
+//
+// Translucent fills (`accent + '18'`) look right everywhere except Android,
+// where a view that carries `elevation` and a see-through background lets the
+// elevation shadow show through as a grey block. Blending to a solid colour
+// gives the same appearance with nothing to see through.
+export function tintOver(tint, background, alpha = 0.09) {
+    const parse = (hex) => {
+        const h = String(hex || '').trim().replace(/^#/, '');
+        const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+        // Only 6-digit hex blends; anything else (rgba(), a named colour)
+        // falls through to the caller's original value.
+        if (!/^[0-9a-fA-F]{6}$/.test(full)) return null;
+        return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+    };
+    const fg = parse(tint);
+    const bg = parse(background);
+    if (!fg || !bg) return tint;
+    const channel = (i) => Math.round(fg[i] * alpha + bg[i] * (1 - alpha));
+    return '#' + [0, 1, 2].map((i) => channel(i).toString(16).padStart(2, '0')).join('');
+}
