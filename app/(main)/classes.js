@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import Card from '../components/Card';
+import Card, { cardGap } from '../components/Card';
 import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
 import PeriodPicker from '../components/PeriodPicker';
 import { iconColor } from '../utils/iconColors';
@@ -210,7 +210,7 @@ export default function ClassesScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingBottom: 32, gap: cardGap },
     card: {
         flexDirection: 'row',
         alignItems: 'center',

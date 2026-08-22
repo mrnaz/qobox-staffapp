@@ -20,7 +20,7 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import ShiftTimer from '../components/ShiftTimer';
 import Toast from '../components/Toast';
-import Card, { CardHeader, cardBodyPadding } from '../components/Card';
+import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 import CheckInModal from '../components/shift/CheckInModal';
 import CheckOutModal from '../components/shift/CheckOutModal';
 import ShiftQrModal from '../components/shift/ShiftQrModal';
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
     toolbar: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
     switchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     switchLabel: { fontSize: 13 },
-    list: { paddingHorizontal: 16, paddingVertical: 8, paddingBottom: 24, gap: 10 },
+    list: { paddingHorizontal: 16, paddingVertical: 8, paddingBottom: 24, gap: cardGap },
     cardBody: { gap: 8 },
     cardDate: { flex: 1, fontSize: 15, fontWeight: '600' },
     statusPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },

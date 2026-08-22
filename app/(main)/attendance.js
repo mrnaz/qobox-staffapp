@@ -16,7 +16,7 @@ import { ensureAcademicPeriod } from '../utils/academicPeriod';
 import { iconColor } from '../utils/iconColors';
 import DailyAttendanceModal from '../components/DailyAttendanceModal';
 import Toast from '../components/Toast';
-import Card, { CardHeader, cardBodyPadding } from '../components/Card';
+import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 
 const fmtDate = (s) => {
     if (!s) return '—';
@@ -258,7 +258,7 @@ function AttendanceLegend({ colors }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    list: { padding: 16, paddingTop: 4, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingTop: 4, paddingBottom: 32, gap: cardGap },
     cardBody: { ...cardBodyPadding, gap: 8 },
     date: { fontSize: 14, fontWeight: '700', flex: 1 },
     pill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },

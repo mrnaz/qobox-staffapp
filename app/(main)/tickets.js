@@ -14,7 +14,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import Card, { CardHeader, cardBodyPadding } from '../components/Card';
+import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 import TicketFormModal from '../components/TicketFormModal';
 import { iconColor } from '../utils/iconColors';
 import {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: 'transparent',
     },
-    list: { padding: 16, paddingTop: 8, paddingBottom: 100, gap: 10 },
+    list: { padding: 16, paddingTop: 8, paddingBottom: 100, gap: cardGap },
     cardBody: { gap: 6 },
     // The status pill pushes itself right with marginLeft:'auto', so the icon
     // and ref stay packed together on the left.

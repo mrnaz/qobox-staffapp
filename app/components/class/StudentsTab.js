@@ -3,7 +3,7 @@ import {
     View,
     Text,
     StyleSheet,
-    FlatList,
+    ScrollView,
     ActivityIndicator,
     RefreshControl,
     TouchableOpacity,
@@ -15,16 +15,15 @@ import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import Avatar from '../Avatar';
 import { avatarName } from '../../utils/displayName';
-import Card from '../Card';
+import Card, { CardHeader, cardGap } from '../Card';
 
 const fullName = (s) =>
     (s.fname || s.sname)
         ? `${s.fname || ''} ${s.sname || ''}`.trim()
         : (s.name || s.full_name || 'Unknown student');
 
-// "Students" tab — class roster. Mirrors the client app's StudentsTab, using the
-// staff Avatar component (real photo with initials fallback). Tapping a student
-// opens their profile, consistent with the rest of the staff app.
+// "Students" tab — class roster. Laid out exactly like the main Students page:
+// one card headed "Students" with a count, and a divided row per student.
 export default function StudentsTab({ classId }) {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -68,24 +67,32 @@ export default function StudentsTab({ classId }) {
         load({ refresh: true });
     };
 
-    const renderItem = ({ item }) => {
+    const renderRow = (item, index) => {
         const id = item.id ?? item.client_id;
         const name = fullName(item);
         return (
-            <Card
-                onPress={() => { if (id != null) router.push(`/student/${id}`); }}
+            <TouchableOpacity
+                key={String(id ?? index)}
+                activeOpacity={0.85}
                 disabled={id == null}
-                activeOpacity={0.8}
-                style={styles.row}
+                onPress={() => { if (id != null) router.push(`/student/${id}`); }}
+                style={[
+                    styles.row,
+                    // The header band closes the top, so only rows after the
+                    // first draw a divider.
+                    index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+                ]}
             >
                 <Avatar uri={item.list_photo || item.photo || null} name={avatarName(item) || name} id={id} size={40} />
-                <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {name}
-                </Text>
+                <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
+                        {name}
+                    </Text>
+                </View>
                 {id != null ? (
                     <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 ) : null}
-            </Card>
+            </TouchableOpacity>
         );
     };
 
@@ -105,39 +112,35 @@ export default function StudentsTab({ classId }) {
     }
 
     return (
-        <FlatList
-            data={students}
-            keyExtractor={(it, i) => String(it.id ?? it.client_id ?? i)}
-            renderItem={renderItem}
+        <ScrollView
             contentContainerStyle={styles.list}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-            ListHeaderComponent={
-                students.length > 0 ? (
-                    <Text style={[styles.count, { color: colors.textSecondary }]}>
-                        {students.length} student{students.length === 1 ? '' : 's'}
-                    </Text>
-                ) : null
-            }
-            ListEmptyComponent={
+        >
+            {students.length === 0 ? (
                 <View style={styles.center}>
                     <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No students in this class.</Text>
                 </View>
-            }
-        />
+            ) : (
+                <Card>
+                    <CardHeader title="Students" meta={students.length} />
+                    {students.map(renderRow)}
+                </Card>
+            )}
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
-    count: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
+    list: { flexGrow: 1, padding: 16, paddingBottom: 32, gap: cardGap },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        padding: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
-    name: { flex: 1, fontSize: 14, fontWeight: '600' },
+    title: { fontSize: 14, fontWeight: '700' },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },

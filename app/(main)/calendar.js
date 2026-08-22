@@ -15,7 +15,7 @@ import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { iconColor } from '../utils/iconColors';
-import Card, { CardHeader, cardBodyPadding } from '../components/Card';
+import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 
 const startOfMonth = (d) => {
     const x = new Date(d);
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     },
     gridBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
     list: { padding: 16, paddingBottom: 32 },
-    dayBlock: { marginBottom: 16 },
+    dayBlock: { marginBottom: cardGap },
     dayHeaderText: { fontSize: 14, fontWeight: '700' },
     todayPill: { paddingHorizontal: 8, paddingVertical: 1, borderRadius: 999, borderWidth: 1 },
     todayText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },

@@ -3,7 +3,7 @@ import {
     View,
     Text,
     StyleSheet,
-    FlatList,
+    ScrollView,
     ActivityIndicator,
     RefreshControl,
     TouchableOpacity,
@@ -13,14 +13,40 @@ import { Ionicons } from '@expo/vector-icons';
 import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
-import Card from '../Card';
+import Card, { CardHeader, cardGap } from '../Card';
+import { lessonDuration, lessonWhen } from '../../utils/lessons';
 
-const fmtDate = (s) => {
-    if (!s) return null;
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return s;
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-};
+
+// One divided row inside the list card — same shape as the Students list.
+function Row({ colors, index, onPress, disabled, title, titleStyle, lines, chevron }) {
+    return (
+        <TouchableOpacity
+            activeOpacity={0.85}
+            disabled={disabled}
+            onPress={onPress}
+            style={[
+                styles.row,
+                // The header band closes the top, so only rows after the first
+                // draw a divider.
+                index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+            ]}
+        >
+            <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.title, { color: colors.textPrimary }, titleStyle]} numberOfLines={2}>
+                    {title}
+                </Text>
+                {lines.filter(Boolean).map((line, i) => (
+                    <Text key={i} style={[styles.subtitle, { color: colors.textSecondary }]}>
+                        {line}
+                    </Text>
+                ))}
+            </View>
+            {chevron ? (
+                <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+            ) : null}
+        </TouchableOpacity>
+    );
+}
 
 export default function LessonsTab({ classId }) {
     const { useTheme } = Theme;
@@ -72,80 +98,58 @@ export default function LessonsTab({ classId }) {
             params: { lesson: JSON.stringify(lesson) },
         });
 
-    const renderItem = ({ item }) => (
-        <Card
+    const renderLesson = (item, index) => (
+        <Row
+            key={String(item.id ?? index)}
+            colors={colors}
+            index={index}
             onPress={() => openLesson(item)}
-            activeOpacity={0.8}
-            style={styles.row}
-        >
-            <View style={{ flex: 1, gap: 4 }}>
-                <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
-                    {item.title || `Lesson #${item.id}`}
-                </Text>
-                {item.lesson_date || item.date ? (
-                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                        {fmtDate(item.lesson_date || item.date)}
-                    </Text>
-                ) : null}
-                {item.duration_minutes ? (
-                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                        {item.duration_minutes} min
-                    </Text>
-                ) : null}
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </Card>
+            title={item.title || `Lesson #${item.id}`}
+            lines={[
+                lessonWhen(item),
+                lessonDuration(item) ? `${lessonDuration(item)} min` : null,
+            ]}
+            chevron
+        />
     );
 
     // Fallback row when no lessons are authored: one scheduled session, titled
     // by its linked lesson(s) when any exist. Tappable only when it can open a
     // linked lesson's detail page.
-    const renderSession = ({ item }) => {
+    const renderSession = (item, index) => {
         const linked = Array.isArray(item.lessons) ? item.lessons : [];
         const title = linked.length
             ? linked.map((l) => l.title).filter(Boolean).join(', ') || 'Lesson'
             : (item.label || 'No lesson planned');
-        const roomName = item.room?.name || item.room_name;
         return (
-            <Card
-                onPress={() => { if (linked[0]) openLesson(linked[0]); }}
+            <Row
+                key={String(item.id ?? index)}
+                colors={colors}
+                index={index}
                 disabled={!linked[0]}
-                activeOpacity={0.8}
-                style={styles.row}
-            >
-                <View style={{ flex: 1, gap: 4 }}>
-                    <Text
-                        style={[
-                            styles.title,
-                            { color: linked.length ? colors.textPrimary : colors.textSecondary },
-                            !linked.length && { fontStyle: 'italic', fontWeight: '400' },
-                        ]}
-                        numberOfLines={2}
-                    >
-                        {title}
-                    </Text>
-                    {item.session_start_formatted || item.session_start ? (
-                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                            {item.session_start_formatted || item.session_start}
-                        </Text>
-                    ) : null}
-                    {roomName ? (
-                        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{roomName}</Text>
-                    ) : null}
-                </View>
-                {linked[0] ? (
-                    <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-                ) : null}
-            </Card>
+                onPress={() => { if (linked[0]) openLesson(linked[0]); }}
+                title={title}
+                titleStyle={!linked.length && {
+                    color: colors.textSecondary,
+                    fontStyle: 'italic',
+                    fontWeight: '400',
+                }}
+                lines={[
+                    item.session_start_formatted || item.session_start,
+                    item.room?.name || item.room_name,
+                ]}
+                chevron={Boolean(linked[0])}
+            />
         );
     };
 
     const showingSessions = lessons.length === 0 && sessions.length > 0;
+    const rows = showingSessions ? sessions : lessons;
 
-    if (isLoading && lessons.length === 0 && sessions.length === 0) {
+    if (isLoading && rows.length === 0) {
         return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
     }
-    if (error && lessons.length === 0 && sessions.length === 0) {
+    if (error && rows.length === 0) {
         return (
             <View style={styles.center}>
                 <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
@@ -158,39 +162,38 @@ export default function LessonsTab({ classId }) {
     }
 
     return (
-        <FlatList
-            data={showingSessions ? sessions : lessons}
-            keyExtractor={(it, i) => String(it.id ?? i)}
-            renderItem={showingSessions ? renderSession : renderItem}
+        <ScrollView
             contentContainerStyle={styles.list}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-            ListHeaderComponent={
-                showingSessions ? (
-                    <Text style={[styles.listHeader, { color: colors.textSecondary }]}>
-                        {sessions.length} scheduled session{sessions.length === 1 ? '' : 's'}
-                    </Text>
-                ) : null
-            }
-            ListEmptyComponent={
+        >
+            {rows.length === 0 ? (
                 <View style={styles.center}>
                     <Ionicons name="book-outline" size={32} color={iconColor('book-outline', colors)} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No lessons yet.</Text>
                 </View>
-            }
-        />
+            ) : (
+                <Card>
+                    <CardHeader
+                        title={showingSessions ? 'Scheduled sessions' : 'Lessons'}
+                        meta={rows.length}
+                    />
+                    {rows.map(showingSessions ? renderSession : renderLesson)}
+                </Card>
+            )}
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
-    listHeader: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
+    list: { flexGrow: 1, padding: 16, paddingBottom: 32, gap: cardGap },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        padding: 14,
+        gap: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
     },
-    title: { fontSize: 14, fontWeight: '600' },
+    title: { fontSize: 14, fontWeight: '700' },
     subtitle: { fontSize: 12 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },

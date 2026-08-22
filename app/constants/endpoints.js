@@ -18,6 +18,8 @@ export const endpoints = {
 
     // Dashboard / staff noticeboard feed
     GET_DASHBOARD_NOTICEBOARD: 'dashboard',
+    // Translate one notice into a target language (POST { language }).
+    TRANSLATE_NOTICEBOARD: 'noticeboards/{id}/translate',
 
     // Reports
     GET_REPORT_CLASSES_COURSES: 'report-schedules/courses-classes',

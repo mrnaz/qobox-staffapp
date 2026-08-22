@@ -17,7 +17,7 @@ import * as Sharing from 'expo-sharing';
 import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
-import Card from '../Card';
+import Card, { cardGap } from '../Card';
 
 const getFileIcon = (fileName) => {
     if (!fileName) return 'file';
@@ -265,7 +265,7 @@ export default function ResourcesTab({ classId }) {
 }
 
 const styles = StyleSheet.create({
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingBottom: 32, gap: cardGap },
     folderHead: { flexDirection: 'row', alignItems: 'center', padding: 14 },
     folderTitle: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
     folderDesc: { fontSize: 12, marginBottom: 2 },

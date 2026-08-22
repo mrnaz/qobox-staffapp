@@ -8,7 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { iconColor } from '../../utils/iconColors';
 import Theme from '../../context/ThemeContext';
-import Card from '../Card';
+import Card, { cardGap } from '../Card';
 
 export default function TestsTab({ classId, onOpenProgressReports, onOpenSchedule }) {
     const { useTheme } = Theme;
@@ -60,7 +60,7 @@ export default function TestsTab({ classId, onOpenProgressReports, onOpenSchedul
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 16, gap: 10, paddingBottom: 32 },
+    container: { padding: 16, gap: cardGap, paddingBottom: 32 },
     card: {
         flexDirection: 'row',
         alignItems: 'center',
