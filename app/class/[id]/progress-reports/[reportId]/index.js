@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useGoBack } from '../../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +44,7 @@ export default function ReportStudentRosterScreen() {
     const router = useRouter();
     const { id: classId, reportId } = useLocalSearchParams();
     const goBack = useGoBack(`/class/${classId}/progress-reports`);
+    const insets = useSafeAreaInsets();
 
     const [template, setTemplate] = useState(null);
     const [students, setStudents] = useState([]);
@@ -256,7 +257,12 @@ export default function ReportStudentRosterScreen() {
                     </View>
 
                     <ScrollView
-                        contentContainerStyle={styles.list}
+                        // Edge-to-edge on Android: pad the content so the last
+                        // row scrolls clear of the control bar.
+                        contentContainerStyle={[
+                            styles.list,
+                            { paddingBottom: styles.list.paddingBottom + insets.bottom },
+                        ]}
                         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     >
                         {rows.length === 0 ? (

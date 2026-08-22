@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import Card, { CardHeader } from '../components/Card';
+import Card, { CardHeader, cardGap } from '../components/Card';
 import useTodayAgenda from '../hooks/useTodayAgenda';
 import { formatClock } from '../utils/datetime';
 import { iconColor } from '../utils/iconColors';
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '700' },
     container: { padding: 16, paddingBottom: 40 },
-    section: { marginBottom: 20 },
+    section: { marginBottom: cardGap },
     // No vertical padding: rows touch the card's bottom edge, so their content
     // relies on Card's overflow: hidden to clip to the rounded corners.
     cardBody: { paddingHorizontal: 16 },

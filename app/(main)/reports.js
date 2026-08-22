@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import Card from '../components/Card';
+import Card, { cardGap } from '../components/Card';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
 import { iconColor } from '../utils/iconColors';
 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     searchInput: { flex: 1, fontSize: 15, padding: 0 },
-    listContent: { paddingHorizontal: 16, paddingBottom: 24, gap: 10 },
+    listContent: { paddingHorizontal: 16, paddingBottom: 24, gap: cardGap },
     row: {
         padding: 14,
     },

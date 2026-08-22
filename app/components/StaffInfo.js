@@ -23,8 +23,6 @@ const JUMP_TABS = [
     { name: 'Tickets',    route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
 ];
 
-const KNOWN_ROUTES = JUMP_TABS.map(t => t.route).filter(r => r !== 'index');
-
 export default function StaffInfo() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -33,6 +31,12 @@ export default function StaffInfo() {
     const router = useRouter();
 
     const isMessagesTab = segments.includes('messages');
+
+    // Every tile in "Jump to" carries the same green — the tone the Students
+    // icon already used. The menu is navigation, not content, so the per-concept
+    // colours from iconColors would only add noise here. The current page is
+    // deliberately NOT highlighted: you open this menu to leave it.
+    const menuTint = colors.turquoise?.text || colors.success || colors.primary;
 
     const [staff, setStaff] = useState(null);
     const [currentSite, setCurrentSite] = useState(null);
@@ -75,9 +79,6 @@ export default function StaffInfo() {
             setLoading(false);
         }
     };
-
-    const lastSegment = segments[segments.length - 1] || '';
-    const currentRoute = KNOWN_ROUTES.includes(lastSegment) ? lastSegment : 'index';
 
     const handleTabPress = (tab) => {
         router.push(tab.path);
@@ -186,42 +187,38 @@ export default function StaffInfo() {
                                     justifyContent: 'center',
                                     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, gap: 12,
                                 }}>
-                                    {JUMP_TABS.map(tab => {
-                                        const isActive = currentRoute === tab.route;
-                                        const tint = iconColor(tab.icon, colors);
-                                        return (
-                                            <TouchableOpacity
-                                                key={tab.route}
-                                                onPress={() => { setIsJumpVisible(false); handleTabPress(tab); }}
-                                                style={{
-                                                    width: '30%',
-                                                    paddingVertical: 16,
-                                                    borderRadius: 16,
-                                                    backgroundColor: isActive ? colors.primary + '18' : colors.surface,
-                                                    borderWidth: 1,
-                                                    borderColor: isActive ? colors.primary : colors.border,
-                                                    alignItems: 'center',
-                                                }}
-                                            >
-                                                <View style={{
-                                                    width: 40, height: 40, borderRadius: 20,
-                                                    backgroundColor: isActive ? colors.primary : tint + '18',
-                                                    alignItems: 'center', justifyContent: 'center',
-                                                    marginBottom: 6,
-                                                }}>
-                                                    <FontAwesome name={tab.icon} size={18} color={isActive ? '#fff' : tint} />
-                                                </View>
-                                                <Text style={{
-                                                    color: isActive ? colors.primary : colors.textPrimary,
-                                                    fontSize: 12,
-                                                    fontWeight: isActive ? '700' : '500',
-                                                    textAlign: 'center',
-                                                }}>
-                                                    {tab.name}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        );
-                                    })}
+                                    {JUMP_TABS.map(tab => (
+                                        <TouchableOpacity
+                                            key={tab.route}
+                                            onPress={() => { setIsJumpVisible(false); handleTabPress(tab); }}
+                                            style={{
+                                                width: '30%',
+                                                paddingVertical: 16,
+                                                borderRadius: 16,
+                                                backgroundColor: colors.surface,
+                                                borderWidth: 1,
+                                                borderColor: colors.border,
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            <View style={{
+                                                width: 40, height: 40, borderRadius: 20,
+                                                backgroundColor: menuTint + '18',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                marginBottom: 6,
+                                            }}>
+                                                <FontAwesome name={tab.icon} size={18} color={menuTint} />
+                                            </View>
+                                            <Text style={{
+                                                color: colors.textPrimary,
+                                                fontSize: 12,
+                                                fontWeight: '500',
+                                                textAlign: 'center',
+                                            }}>
+                                                {tab.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
                             </View>
                         </SafeAreaView>

@@ -17,7 +17,7 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
 import { avatarName } from '../utils/displayName';
-import Card, { CardHeader } from '../components/Card';
+import Card, { CardHeader, cardGap } from '../components/Card';
 import TimetableWeekView from '../components/TimetableWeekView';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
 import { iconColor } from '../utils/iconColors';
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     avatarHero: { alignItems: 'center', paddingTop: 8, paddingBottom: 20, gap: 10 },
     heroName: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
     heroSub: { fontSize: 13 },
-    familyCard: { marginBottom: 10 },
+    familyCard: { marginBottom: cardGap },
     // flex: 1 so the title fills the header band instead of being pushed to
     // its right edge by the header's space-between layout.
     familyTitle: { fontSize: 13, fontWeight: '700', flex: 1 },
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase', letterSpacing: 0.6,
         marginBottom: 6, paddingHorizontal: 4,
     },
-    section: { marginBottom: 16 },
+    section: { marginBottom: cardGap },
     fieldRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     },
     fieldLabel: { fontSize: 12, fontWeight: '500', flex: 1 },
     fieldValue: { fontSize: 13, fontWeight: '600', flex: 1.4, textAlign: 'right' },
-    card: { padding: 12, marginBottom: 8 },
+    card: { padding: 12, marginBottom: cardGap },
     cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     cardTitle: { fontSize: 14, fontWeight: '700' },
     cardSub: { fontSize: 12, marginTop: 2 },

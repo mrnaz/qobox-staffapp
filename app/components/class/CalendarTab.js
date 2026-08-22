@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
-import Card from '../Card';
+import Card, { CardHeader, cardBodyPadding, cardGap } from '../Card';
 
 const startOfMonth = (d) => {
     const x = new Date(d);
@@ -168,8 +168,8 @@ export default function CalendarTab({ classId }) {
                     {grouped.map(({ day, items }) => {
                         const isToday = isSameDay(day, today);
                         return (
-                            <View key={day.toISOString()} style={styles.dayBlock}>
-                                <View style={styles.dayHeader}>
+                            <Card key={day.toISOString()} style={styles.dayBlock}>
+                                <CardHeader>
                                     <Text style={[styles.dayHeaderText, { color: isToday ? colors.primary : colors.textPrimary }]}>
                                         {dateHeader(day)}
                                     </Text>
@@ -178,13 +178,16 @@ export default function CalendarTab({ classId }) {
                                             <Text style={[styles.todayText, { color: colors.primary }]}>Today</Text>
                                         </View>
                                     ) : null}
-                                </View>
+                                </CardHeader>
                                 {items.map((ev, i) => {
                                     const accent = eventColor(ev.color, colors);
                                     return (
-                                        <Card
+                                        <View
                                             key={`${ev.id ?? i}-${day.toISOString()}`}
-                                            style={styles.eventRow}
+                                            style={[
+                                                styles.eventRow,
+                                                i < items.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                                            ]}
                                         >
                                             <View style={[styles.accent, { backgroundColor: accent }]} />
                                             <View style={{ flex: 1, gap: 3 }}>
@@ -205,10 +208,10 @@ export default function CalendarTab({ classId }) {
                                                     </Text>
                                                 ) : null}
                                             </View>
-                                        </Card>
+                                        </View>
                                     );
                                 })}
-                            </View>
+                            </Card>
                         );
                     })}
                 </ScrollView>
@@ -230,16 +233,14 @@ const styles = StyleSheet.create({
     navBtn: { padding: 6 },
     label: { fontSize: 14, fontWeight: '600' },
     list: { padding: 16, paddingBottom: 32 },
-    dayBlock: { marginBottom: 16 },
-    dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+    dayBlock: { marginBottom: cardGap },
     dayHeaderText: { fontSize: 14, fontWeight: '700' },
     todayPill: { paddingHorizontal: 8, paddingVertical: 1, borderRadius: 999, borderWidth: 1 },
     todayText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
     eventRow: {
         flexDirection: 'row',
         gap: 10,
-        padding: 12,
-        marginTop: 6,
+        ...cardBodyPadding,
     },
     accent: { width: 4, borderRadius: 2 },
     eventTitle: { fontSize: 14, fontWeight: '600' },

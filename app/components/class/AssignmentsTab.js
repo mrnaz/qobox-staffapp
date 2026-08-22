@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
-import Card from '../Card';
+import Card, { cardGap } from '../Card';
 
 const fmtDate = (s) => {
     if (!s) return null;
@@ -127,7 +127,7 @@ export default function AssignmentsTab({ classId }) {
 }
 
 const styles = StyleSheet.create({
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingBottom: 32, gap: cardGap },
     row: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -20,7 +20,7 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 import TicketFormModal from '../components/TicketFormModal';
-import Card, { CardHeader, cardBodyPadding } from '../components/Card';
+import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 import {
     PRIORITY_META,
     STATUS_META,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     descBlock: { borderTopWidth: 1, paddingTop: 12, gap: 4 },
     descLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
     descText: { fontSize: 14, lineHeight: 20 },
-    commentList: { gap: 10 },
+    commentList: { gap: cardGap },
     emptyComments: {
         borderWidth: 1, borderStyle: 'dashed', borderRadius: 12,
         padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

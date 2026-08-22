@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import Card from '../components/Card';
+import Card, { cardGap } from '../components/Card';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
 import { iconColor } from '../utils/iconColors';
 
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         paddingVertical: 8,
     },
-    list: { padding: 16, paddingTop: 8, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingTop: 8, paddingBottom: 32, gap: cardGap },
     card: {
         flexDirection: 'row',
         alignItems: 'center',

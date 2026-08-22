@@ -123,6 +123,12 @@ export function CardHeader({ title, meta, style, numberOfLines = 2, children }) 
 // Body padding for a card whose header reaches the edges.
 export const cardBodyPadding = { paddingHorizontal: 16, paddingVertical: 12 };
 
+// The one gap between stacked cards. Taken from the student profile, where the
+// spacing between the "Personal" and "Contact" cards is the reference the rest
+// of the app is matched to — use it for list `gap` and for a card's own
+// `marginBottom` so every screen breathes the same way.
+export const cardGap = 16;
+
 const styles = StyleSheet.create({
     card: {
         borderWidth: 1,

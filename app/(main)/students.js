@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import Card, { CardHeader } from '../components/Card';
+import Card, { CardHeader, cardGap } from '../components/Card';
 import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
 import PeriodPicker from '../components/PeriodPicker';
 import { iconColor } from '../utils/iconColors';
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
         marginTop: 12,
     },
     searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
+    list: { padding: 16, paddingBottom: 32, gap: cardGap },
     row: {
         flexDirection: 'row',
         alignItems: 'center',

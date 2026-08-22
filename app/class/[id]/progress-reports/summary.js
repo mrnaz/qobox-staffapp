@@ -10,7 +10,7 @@ import {
     useWindowDimensions,
     Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +46,7 @@ export default function ProgressReportSummaryScreen() {
     const router = useRouter();
     const { id: classId, reportId, studentId } = useLocalSearchParams();
     const goBack = useGoBack(`/class/${classId}/progress-reports`);
+    const insets = useSafeAreaInsets();
 
     const [template, setTemplate] = useState(null);
     const [details, setDetails] = useState([]); // full results with outcomes (newest first)
@@ -328,7 +329,14 @@ export default function ProgressReportSummaryScreen() {
                         renderItem={({ item }) => (
                             <ScrollView
                                 style={{ width: pageWidth }}
-                                contentContainerStyle={styles.page}
+                                // The screen is edge-to-edge, so the last card
+                                // would sit under Android's control bar. Padding
+                                // the scroll content (rather than the container)
+                                // lets it scroll clear without cropping the page.
+                                contentContainerStyle={[
+                                    styles.page,
+                                    { paddingBottom: styles.page.paddingBottom + insets.bottom },
+                                ]}
                                 showsVerticalScrollIndicator={false}
                             >
                                 <ResultCard

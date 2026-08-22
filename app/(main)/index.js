@@ -6,16 +6,14 @@ import {
     ScrollView,
     TouchableOpacity,
     RefreshControl,
-    Dimensions,
 } from 'react-native';
-import RenderHtml from 'react-native-render-html';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import Avatar from '../components/Avatar';
-import Card, { CardHeader, cardBodyPadding } from '../components/Card';
+import Card, { cardGap } from '../components/Card';
+import NoticeCard from '../components/NoticeCard';
 import ShiftTimer from '../components/ShiftTimer';
 import Toast from '../components/Toast';
 import CheckInModal from '../components/shift/CheckInModal';
@@ -23,43 +21,6 @@ import CheckOutModal from '../components/shift/CheckOutModal';
 import { formatShiftStart, normalizeTimeLabel, isToday } from '../utils/datetime';
 import { iconColor } from '../utils/iconColors';
 import useTodayAgenda from '../hooks/useTodayAgenda';
-
-// Map post_scope → theme color group (matching client app's NoticeboardList)
-const SCOPE_PALETTE = {
-    classes:      'azure',
-    client_clubs: 'turquoise',
-    staff_teams:  'emerald',
-    global:       'purple',
-    courses:      'teal',
-};
-
-const stripHtml = (html = '') =>
-    html
-        .replace(/<\/(p|div|li|br|h[1-6])>/gi, '\n')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .replace(/\s+\n/g, '\n')
-        .replace(/\n+/g, '\n')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .trim();
-
-const relativeTime = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
-    if (diffMin < 1) return 'just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffH = Math.round(diffMin / 60);
-    if (diffH < 24) return `${diffH}h ago`;
-    const diffD = Math.round(diffH / 24);
-    if (diffD < 30) return `${diffD}d ago`;
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-};
 
 export default function DashboardScreen() {
     const { useTheme } = Theme;
@@ -85,7 +46,6 @@ export default function DashboardScreen() {
     const [checkInTarget, setCheckInTarget] = useState(null);
     const [checkOutTarget, setCheckOutTarget] = useState(null);
     const [toast, setToast] = useState(null);
-    const [expandedNoticeId, setExpandedNoticeId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -332,100 +292,7 @@ export default function DashboardScreen() {
                         </Text>
                     </Card>
                 ) : (
-                    notices.map((n) => {
-                        const paletteKey = SCOPE_PALETTE[n.post_scope] || 'indigo';
-                        const palette = colors[paletteKey];
-                        const isExpanded = expandedNoticeId === n.id;
-                        return (
-                            <Card
-                                key={n.id}
-                                onPress={() => setExpandedNoticeId(isExpanded ? null : n.id)}
-                                activeOpacity={0.8}
-                            >
-                                <CardHeader style={styles.noticeHeader}>
-                                    <Avatar uri={n.photo} name={n.author_name} id={n.author_id} size={36} />
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={[styles.noticeAuthor, { color: colors.textPrimary }]} numberOfLines={1}>
-                                            {n.author_name || 'Unknown'}
-                                        </Text>
-                                        <Text style={[styles.noticeTime, { color: colors.textSecondary }]}>
-                                            {relativeTime(n.scheduled || n.created_at)}
-                                        </Text>
-                                    </View>
-                                    {n.chip_label ? (
-                                        <View style={[styles.chip, {
-                                            backgroundColor: palette?.background || colors.primary + '22',
-                                            borderColor: palette?.border || colors.primary,
-                                        }]}>
-                                            <Text style={[styles.chipText, { color: palette?.text || colors.primary }]} numberOfLines={1}>
-                                                {n.chip_label}
-                                            </Text>
-                                        </View>
-                                    ) : null}
-                                </CardHeader>
-                                <View style={[cardBodyPadding, styles.noticeBodyBlock]}>
-                                    {n.title ? (
-                                        <Text
-                                            style={[styles.noticeTitle, { color: colors.textPrimary }]}
-                                            numberOfLines={isExpanded ? undefined : 2}
-                                        >
-                                            {n.title}
-                                        </Text>
-                                    ) : null}
-
-                                    {n.body ? (
-                                        isExpanded ? (
-                                            <View style={{ marginTop: 4 }}>
-                                                <RenderHtml
-                                                    contentWidth={Dimensions.get('window').width - 64}
-                                                    source={{ html: n.body }}
-                                                    baseStyle={{
-                                                        fontSize: 13,
-                                                        color: colors.textSecondary,
-                                                        lineHeight: 19,
-                                                    }}
-                                                    tagsStyles={{
-                                                        p:  { marginVertical: 4, color: colors.textSecondary },
-                                                        h1: { fontSize: 18, fontWeight: 'bold', marginVertical: 8, color: colors.textPrimary },
-                                                        h2: { fontSize: 16, fontWeight: 'bold', marginVertical: 6, color: colors.textPrimary },
-                                                        h3: { fontSize: 15, fontWeight: '600', marginVertical: 4, color: colors.textPrimary },
-                                                        b: { fontWeight: 'bold', color: colors.textSecondary },
-                                                        strong: { fontWeight: 'bold', color: colors.textSecondary },
-                                                        i: { fontStyle: 'italic', color: colors.textSecondary },
-                                                        em: { fontStyle: 'italic', color: colors.textSecondary },
-                                                        a: { color: colors.primary, textDecorationLine: 'underline' },
-                                                        ul: { marginVertical: 4, paddingLeft: 16 },
-                                                        ol: { marginVertical: 4, paddingLeft: 16 },
-                                                        li: { marginVertical: 2, color: colors.textSecondary },
-                                                    }}
-                                                />
-                                            </View>
-                                        ) : (
-                                            <Text
-                                                style={[styles.noticeBody, { color: colors.textSecondary }]}
-                                                numberOfLines={4}
-                                            >
-                                                {stripHtml(n.body)}
-                                            </Text>
-                                        )
-                                    ) : null}
-
-                                    {n.body && stripHtml(n.body).length > 100 ? (
-                                        <View style={styles.expandHint}>
-                                            <Text style={[styles.expandHintText, { color: colors.primary }]}>
-                                                {isExpanded ? 'Show less' : 'Read more'}
-                                            </Text>
-                                            <Ionicons
-                                                name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                                                size={14}
-                                                color={colors.primary}
-                                            />
-                                        </View>
-                                    ) : null}
-                                </View>
-                            </Card>
-                        );
-                    })
+                    notices.map((n) => <NoticeCard key={n.id} notice={n} />)
                 )}
             </Section>
         </ScrollView>
@@ -464,9 +331,9 @@ export default function DashboardScreen() {
 
 function Section({ title, children, colors }) {
     return (
-        <View style={{ marginBottom: 18 }}>
+        <View style={{ marginBottom: cardGap + 8 }}>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
-            <View style={{ gap: 8 }}>{children}</View>
+            <View style={{ gap: cardGap }}>{children}</View>
         </View>
     );
 }
@@ -511,29 +378,6 @@ const styles = StyleSheet.create({
     runningLabel: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
     runningSub: { fontSize: 11, marginTop: 2 },
     runningTimer: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
-
-    // Notices
-    noticeBodyBlock: { gap: 8 },
-    noticeHeader: { gap: 10 },
-    noticeAuthor: { fontSize: 13, fontWeight: '600' },
-    noticeTime: { fontSize: 11, marginTop: 1 },
-    chip: {
-        borderWidth: 1,
-        borderRadius: 999,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        maxWidth: 140,
-    },
-    chipText: { fontSize: 11, fontWeight: '600' },
-    noticeTitle: { fontSize: 14, fontWeight: '600' },
-    noticeBody: { fontSize: 13, lineHeight: 19 },
-    expandHint: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginTop: 6,
-    },
-    expandHintText: { fontSize: 12, fontWeight: '600' },
 
     // Today counts box
     todayBox: { paddingVertical: 8, paddingHorizontal: 14 },

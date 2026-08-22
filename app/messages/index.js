@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
-import Card from '../components/Card';
+import Card, { cardGap } from '../components/Card';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ComposeModal from '../components/messages/ComposeModal';
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     searchInput: { flex: 1, paddingVertical: 8, fontSize: 14 },
-    list: { padding: 16, paddingBottom: 96, gap: 10 },
+    list: { padding: 16, paddingBottom: 96, gap: cardGap },
     row: {
         flexDirection: 'row',
         alignItems: 'center',

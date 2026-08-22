@@ -8,14 +8,14 @@ import {
     RefreshControl,
     TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useGoBack } from '../../../utils/nav';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { iconColor } from '../../../utils/iconColors';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
-import Card from '../../../components/Card';
+import Card, { cardGap } from '../../../components/Card';
 
 // Per-class report list. Each row is one progress-report template linked to
 // the class; tapping it drills into the student roster for that report.
@@ -27,6 +27,7 @@ export default function ProgressReportsListScreen() {
     const { id: classId } = useLocalSearchParams();
     const router = useRouter();
     const goBack = useGoBack(`/class/${classId}`);
+    const insets = useSafeAreaInsets();
 
     const [templates, setTemplates] = useState([]);
     const [results, setResults] = useState([]); // class-wide filled results, used for per-report counts
@@ -174,7 +175,10 @@ export default function ProgressReportsListScreen() {
                     data={reports}
                     keyExtractor={(it) => String(it.id)}
                     renderItem={renderReport}
-                    contentContainerStyle={styles.list}
+                    contentContainerStyle={[
+                        styles.list,
+                        { paddingBottom: styles.list.paddingBottom + insets.bottom },
+                    ]}
                     refreshControl={
                         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />
                     }
@@ -211,7 +215,7 @@ const styles = StyleSheet.create({
     },
     iconButton: { padding: 8, borderRadius: 999 },
     headerTitle: { fontSize: 16, fontWeight: '700' },
-    list: { padding: 16, gap: 10, paddingBottom: 32 },
+    list: { padding: 16, gap: cardGap, paddingBottom: 32 },
     card: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -12,33 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
-import Card, { CardHeader, cardBodyPadding } from '../Card';
+import NoticeCard from '../NoticeCard';
+import { cardGap } from '../Card';
 import { ensureAcademicPeriod } from '../../utils/academicPeriod';
 
-const stripHtml = (html = '') =>
-    String(html)
-        .replace(/<\/(p|div|li|br|h[1-6])>/gi, '\n')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .replace(/\s+\n/g, '\n')
-        .replace(/\n+/g, '\n')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .trim();
-
-const fmtDate = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime())
-        ? ''
-        : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-// "Home" tab — class noticeboard. Mirrors the client app's HomeTab (class notices),
-// rendered in the staff app's card style.
+// "Home" tab — class noticeboard. Renders the same NoticeCard the dashboard
+// does, so a notice looks and expands identically wherever it appears.
 export default function HomeTab({ classId }) {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -82,27 +61,6 @@ export default function HomeTab({ classId }) {
         load({ refresh: true });
     };
 
-    const renderItem = ({ item }) => {
-        const body = stripHtml(item.body || item.content || '');
-        return (
-            <Card>
-                <CardHeader title={item.title || 'Untitled notice'} />
-                <View style={styles.cardBody}>
-                    {body ? (
-                        <Text style={[styles.body, { color: colors.textSecondary }]} numberOfLines={6}>
-                            {body}
-                        </Text>
-                    ) : null}
-                    {(item.scheduled || item.created_at) ? (
-                        <Text style={[styles.date, { color: colors.textDisabled }]}>
-                            {fmtDate(item.scheduled || item.created_at)}
-                        </Text>
-                    ) : null}
-                </View>
-            </Card>
-        );
-    };
-
     if (isLoading && notices.length === 0) {
         return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
     }
@@ -119,7 +77,7 @@ export default function HomeTab({ classId }) {
         <FlatList
             data={notices}
             keyExtractor={(it, i) => String(it.id ?? i)}
-            renderItem={renderItem}
+            renderItem={({ item }) => <NoticeCard notice={item} />}
             contentContainerStyle={styles.list}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
@@ -136,10 +94,7 @@ export default function HomeTab({ classId }) {
 }
 
 const styles = StyleSheet.create({
-    list: { padding: 16, paddingBottom: 32, gap: 10 },
-    cardBody: { ...cardBodyPadding, gap: 8 },
-    body: { fontSize: 13, lineHeight: 19 },
-    date: { fontSize: 11 },
+    list: { padding: 16, paddingBottom: 32, gap: cardGap },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
     empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
     emptySub: { fontSize: 12, textAlign: 'center', paddingHorizontal: 32 },
