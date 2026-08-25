@@ -173,6 +173,11 @@ export default function DailyAttendanceModal({
             setStatusMap(map);
         } catch (err) {
             console.error('Daily attendance modal load error', err);
+            // Clear the roster and its derived counts too — otherwise the summary
+            // bar keeps showing the previous (possibly differently-scoped) numbers
+            // right above an error message that contradicts them.
+            setStudents([]);
+            setStatusMap({});
             setError(err.body?.message || err.message || 'Failed to load students.');
         } finally {
             setIsLoading(false);
@@ -185,6 +190,12 @@ export default function DailyAttendanceModal({
             setSearch('');
             setFilterStatus(null);
             setIsScopePickerOpen(false);
+            // Unlike search/filterStatus this isn't just view state: a stuck scope
+            // silently narrows both the roster and the summary counts on the next
+            // day's report, and Submit finalises the whole day, not just what's
+            // visible. This component stays mounted across opens, so it must be
+            // reset explicitly on close rather than freshly initialized each time.
+            setSelectedScope(null);
         }
     }, [visible, loadData]);
 
@@ -371,8 +382,9 @@ export default function DailyAttendanceModal({
                     </Card>
                 </View>
 
-                {/* Scope selector — only shown when there's an actual choice to make */}
-                {scopeOptions.length > 0 ? (
+                {/* Scope selector — shown when there's a choice to make, or a stale
+                    selection to clear even if a later scopes reload failed. */}
+                {(scopeOptions.length > 0 || selectedScope) ? (
                     <View style={styles.scopeWrap}>
                         <TouchableOpacity
                             onPress={() => setIsScopePickerOpen(true)}
@@ -444,7 +456,7 @@ export default function DailyAttendanceModal({
                                 <View style={styles.center}>
                                     <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
                                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                        Couldn&apos;t load your courses and classes. Please try again.
+                                        {scopesError}
                                     </Text>
                                     <TouchableOpacity onPress={loadData} style={[styles.retry, { borderColor: colors.primary }]}>
                                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
