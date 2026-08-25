@@ -240,6 +240,10 @@ class ApiService {
         return this.get(endpoints.GET_DAILY_ATTENDANCE_CLIENTS.replace('{id}', id));
     }
 
+    async getDailyAttendanceScopes(params = {}) { return this.get(endpoints.GET_DAILY_ATTENDANCE_SCOPES, params); }
+
+    async getDailyAttendanceStudents(params = {}) { return this.get(endpoints.GET_DAILY_ATTENDANCE_STUDENTS, params); }
+
     async getClients(params = {}) {
         return this.get(endpoints.GET_CLIENTS, params);
     }

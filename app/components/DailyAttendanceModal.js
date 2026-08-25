@@ -22,9 +22,11 @@ import Card from './Card';
 import { iconColor } from '../utils/iconColors';
 
 // Daily attendance marking modal — mobile counterpart of the staff web
-// DailyAttendanceMarkingDialog.vue. The scope/course filter and per-student
-// advanced editor (notes/arrived/departed) on the web are not ported yet;
-// users can mark statuses, search, see counts, and submit.
+// DailyAttendanceMarkingDialog.vue. The scope/course selector is ported —
+// students are scoped server-side to the courses/classes the staff member
+// teaches or assists. The per-student advanced editor (notes/arrived/departed)
+// on the web is not ported yet; users can mark statuses, search, see counts,
+// and submit.
 
 const STATUS_META = {
     present: { label: 'Present',  menuLabel: 'Present',      icon: 'checkbox' },
@@ -83,6 +85,11 @@ export default function DailyAttendanceModal({
     const [filterStatus, setFilterStatus] = useState(null); // 'present'|'absent'|'late'|'left'|'notset'|null
     const [selectorStudent, setSelectorStudent] = useState(null); // student whose status picker is open
     const [anchor, setAnchor] = useState(null); // { top, left, width } screen position of the popup
+    const [scopeOptions, setScopeOptions] = useState([]); // [{ label, value, id, type }]
+    const [selectedScope, setSelectedScope] = useState(null); // one entry from scopeOptions, or null (all)
+    const [isGlobalAttendance, setIsGlobalAttendance] = useState(false);
+    const [scopesError, setScopesError] = useState('');
+    const [isScopePickerOpen, setIsScopePickerOpen] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -111,27 +118,58 @@ export default function DailyAttendanceModal({
         if (!visible) return;
         setIsLoading(true);
         setError('');
+
+        // Scopes failing must never block or blank the student list — it only
+        // means the selector can't be shown, so it gets its own try/catch and
+        // never rejects out of loadData.
         try {
-            const studentsRes = await api.getClients({
+            const scopesRes = await api.getDailyAttendanceScopes({
                 period_id: academicPeriodId,
-                filter: 'active',
-                all: true,
-                limit: 200,
+                site_id: siteId,
             });
-            const studentList = studentsRes?.students || studentsRes?.data || [];
-            setStudents(Array.isArray(studentList) ? studentList : []);
+            const courseOptions = (scopesRes?.courses || []).map((c) => ({
+                label: c.title,
+                value: `course_${c.id}`,
+                id: c.id,
+                type: 'course',
+            }));
+            const classOptions = (scopesRes?.classes || []).map((c) => ({
+                label: c.title,
+                value: `class_${c.id}`,
+                id: c.id,
+                type: 'class',
+            }));
+            courseOptions.sort((a, b) => a.label.localeCompare(b.label));
+            classOptions.sort((a, b) => a.label.localeCompare(b.label));
+            setScopeOptions([...courseOptions, ...classOptions]);
+            setIsGlobalAttendance(!!scopesRes?.is_global);
+            setScopesError('');
+        } catch (err) {
+            console.error('Daily attendance scopes load error', err);
+            setScopeOptions([]);
+            setIsGlobalAttendance(false);
+            setScopesError(err.body?.message || err.message || 'Could not load your courses and classes.');
+        }
+
+        try {
+            const params = {
+                period_id: academicPeriodId,
+                site_id: siteId,
+                limit: 2000,
+            };
+            if (attendanceId) params.report_id = attendanceId;
+            if (selectedScope?.type === 'course') params.course_id = selectedScope.id;
+            else if (selectedScope?.type === 'class') params.class_id = selectedScope.id;
+
+            const studentsRes = await api.getDailyAttendanceStudents(params);
+            const studentList = Array.isArray(studentsRes?.students) ? studentsRes.students : [];
+            setStudents(studentList);
 
             const map = {};
-            if (attendanceId) {
-                try {
-                    const res = await api.getDailyAttendanceClients(attendanceId);
-                    (res?.clients || []).forEach((c) => {
-                        if (c?.client_id && c?.status) map[String(c.client_id)] = c.status;
-                    });
-                } catch (innerErr) {
-                    console.error('Daily attendance clients load error', innerErr);
-                }
-            }
+            studentList.forEach((s) => {
+                const clientId = s.id || s.client_id;
+                if (clientId && s.status) map[String(clientId)] = s.status;
+            });
             setStatusMap(map);
         } catch (err) {
             console.error('Daily attendance modal load error', err);
@@ -139,13 +177,14 @@ export default function DailyAttendanceModal({
         } finally {
             setIsLoading(false);
         }
-    }, [visible, academicPeriodId, attendanceId]);
+    }, [visible, academicPeriodId, siteId, attendanceId, selectedScope]);
 
     useEffect(() => {
         if (visible) loadData();
         if (!visible) {
             setSearch('');
             setFilterStatus(null);
+            setIsScopePickerOpen(false);
         }
     }, [visible, loadData]);
 
@@ -332,6 +371,34 @@ export default function DailyAttendanceModal({
                     </Card>
                 </View>
 
+                {/* Scope selector — only shown when there's an actual choice to make */}
+                {scopeOptions.length > 0 ? (
+                    <View style={styles.scopeWrap}>
+                        <TouchableOpacity
+                            onPress={() => setIsScopePickerOpen(true)}
+                            style={[styles.scopeTrigger, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}
+                        >
+                            <Ionicons name="funnel-outline" size={16} color={colors.textSecondary} />
+                            <Text
+                                style={[styles.scopeTriggerLabel, { color: selectedScope ? colors.textPrimary : colors.textSecondary }]}
+                                numberOfLines={1}
+                            >
+                                {selectedScope ? selectedScope.label : 'All my courses and classes'}
+                            </Text>
+                            {selectedScope ? (
+                                <TouchableOpacity
+                                    onPress={() => setSelectedScope(null)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            ) : (
+                                <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
+
                 {/* Search */}
                 <View style={styles.searchWrap}>
                     <View style={[styles.searchBox, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}>
@@ -373,12 +440,31 @@ export default function DailyAttendanceModal({
                         renderItem={renderItem}
                         contentContainerStyle={styles.list}
                         ListEmptyComponent={
-                            <View style={styles.center}>
-                                <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
-                                <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                                    {search || filterStatus ? 'No students match your filter.' : 'No students found.'}
-                                </Text>
-                            </View>
+                            scopesError ? (
+                                <View style={styles.center}>
+                                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                                    <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                                        Couldn&apos;t load your courses and classes. Please try again.
+                                    </Text>
+                                    <TouchableOpacity onPress={loadData} style={[styles.retry, { borderColor: colors.primary }]}>
+                                        <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : scopeOptions.length === 0 && !isGlobalAttendance ? (
+                                <View style={styles.center}>
+                                    <Ionicons name="school-outline" size={32} color={iconColor('school-outline', colors)} />
+                                    <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                                        You are not assigned as a teacher or assistant to any course or class.
+                                    </Text>
+                                </View>
+                            ) : (
+                                <View style={styles.center}>
+                                    <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
+                                    <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                                        {search || filterStatus ? 'No students match your filter.' : 'No students found.'}
+                                    </Text>
+                                </View>
+                            )
                         }
                     />
                 )}
@@ -455,6 +541,86 @@ export default function DailyAttendanceModal({
                                 })}
                             </TouchableOpacity>
                         ) : null}
+                    </Pressable>
+                </Modal>
+
+                {/* Scope picker — "All my courses and classes" plus every course/class option */}
+                <Modal
+                    visible={isScopePickerOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setIsScopePickerOpen(false)}
+                >
+                    <Pressable style={styles.scopeOverlay} onPress={() => setIsScopePickerOpen(false)}>
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            onPress={() => {}}
+                            style={[styles.scopeSheet, {
+                                backgroundColor: colors.cardBackground,
+                                borderColor: colors.border,
+                                paddingBottom: 12 + insets.bottom,
+                            }]}
+                        >
+                            <View style={styles.scopeSheetHeader}>
+                                <Text style={[styles.scopeSheetTitle, { color: colors.textPrimary }]}>
+                                    Courses &amp; classes
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => setIsScopePickerOpen(false)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <Ionicons name="close" size={20} color={colors.textPrimary} />
+                                </TouchableOpacity>
+                            </View>
+                            <FlatList
+                                data={scopeOptions}
+                                keyExtractor={(it) => it.value}
+                                style={styles.scopeList}
+                                ListHeaderComponent={
+                                    <TouchableOpacity
+                                        onPress={() => { setSelectedScope(null); setIsScopePickerOpen(false); }}
+                                        style={[styles.scopeOption, !selectedScope && { backgroundColor: colors.primary + '14' }]}
+                                    >
+                                        <View style={{ flex: 1 }}>
+                                            <Text
+                                                style={[styles.scopeOptionLabel, {
+                                                    color: colors.textPrimary,
+                                                    fontWeight: !selectedScope ? '700' : '500',
+                                                }]}
+                                            >
+                                                All my courses and classes
+                                            </Text>
+                                        </View>
+                                        {!selectedScope ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+                                    </TouchableOpacity>
+                                }
+                                renderItem={({ item }) => {
+                                    const isSel = selectedScope?.value === item.value;
+                                    return (
+                                        <TouchableOpacity
+                                            onPress={() => { setSelectedScope(item); setIsScopePickerOpen(false); }}
+                                            style={[styles.scopeOption, isSel && { backgroundColor: colors.primary + '14' }]}
+                                        >
+                                            <View style={{ flex: 1 }}>
+                                                <Text
+                                                    style={[styles.scopeOptionLabel, {
+                                                        color: colors.textPrimary,
+                                                        fontWeight: isSel ? '700' : '500',
+                                                    }]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {item.label}
+                                                </Text>
+                                                <Text style={[styles.scopeOptionTag, { color: colors.textSecondary }]}>
+                                                    {item.type === 'course' ? 'Course' : 'Class'}
+                                                </Text>
+                                            </View>
+                                            {isSel ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+                                        </TouchableOpacity>
+                                    );
+                                }}
+                            />
+                        </TouchableOpacity>
                     </Pressable>
                 </Modal>
             </View>
@@ -572,4 +738,48 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     popupLabel: { fontSize: 14 },
+    scopeWrap: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+    scopeTrigger: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    scopeTriggerLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
+    scopeOverlay: { flex: 1, justifyContent: 'flex-end' },
+    scopeSheet: {
+        borderTopWidth: 1,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        paddingHorizontal: 8,
+        paddingTop: 8,
+        maxHeight: '70%',
+        shadowColor: '#000',
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: -4 },
+        elevation: 8,
+    },
+    scopeSheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+    },
+    scopeSheetTitle: { fontSize: 15, fontWeight: '700' },
+    scopeList: { paddingHorizontal: 4 },
+    scopeOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+    },
+    scopeOptionLabel: { fontSize: 14 },
+    scopeOptionTag: { fontSize: 11, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.3 },
 });
