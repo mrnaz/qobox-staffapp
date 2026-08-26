@@ -426,6 +426,27 @@ class ApiService {
     async getMaintenanceCategories() {
         return this.get(endpoints.GET_MAINTENANCE_CATEGORIES);
     }
+
+    // Photo Albums
+    //
+    // The list endpoint takes no parameters: the backend already filters to the
+    // albums this staff member may see (public across the org, private ones
+    // granted to them, and restricted ones matching their classes, courses,
+    // teams, student groups or clubs), so there is nothing to scope client-side.
+    async getPhotoAlbums() {
+        return this.get(endpoints.GET_PHOTO_ALBUMS);
+    }
+    async getPhotoAlbum(id) {
+        return this.get(endpoints.GET_PHOTO_ALBUM.replace('{album}', id));
+    }
+    async createPhotoAlbum(data) {
+        return this.post(endpoints.CREATE_PHOTO_ALBUM, data);
+    }
+    // `formData` carries model=PhotoAlbum, model_id, imageType=background and
+    // photos[]. Twenty files per request is the server's cap.
+    async uploadAlbumPhotos(formData) {
+        return this.requestForm(endpoints.UPLOAD_MEDIA_MULTIPLE, 'POST', formData);
+    }
 }
 
 const api = new ApiService();

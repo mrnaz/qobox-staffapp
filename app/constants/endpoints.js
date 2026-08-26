@@ -127,6 +127,15 @@ export const endpoints = {
     GET_MAINTENANCE_REPORT_NOTES: 'maintenance-reports/{id}/notes',
     STORE_MAINTENANCE_REPORT_NOTE: 'maintenance-reports/{id}/notes',
     GET_MAINTENANCE_CATEGORIES: 'maintenance-categories',
+
+    // Photo Albums
+    GET_PHOTO_ALBUMS: 'photo-gallery/albums',
+    GET_PHOTO_ALBUM: 'photo-gallery/albums/{album}',
+    CREATE_PHOTO_ALBUM: 'photo-gallery/albums/create',
+    // Album photos have no upload route of their own — they ride the generic
+    // media endpoint, which resolves PhotoAlbum + 'background' to the
+    // photo-album-background collection the album transformer reads back.
+    UPLOAD_MEDIA_MULTIPLE: 'media/upload-multiple',
 };
 
 export default endpoints;

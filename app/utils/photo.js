@@ -60,6 +60,35 @@ export const appendPhotoToForm = async (form, fieldName, photo, fileName) => {
     }
 };
 
+// Multi-select from the library. The album upload endpoint takes at most 20
+// files per request, so the picker is capped at the same number rather than
+// letting someone choose 60 and lose 40 of them at the server.
+export const pickPhotosCompressed = async (limit = 20) => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+        const err = new Error('Photo library permission was denied.');
+        err.code = 'LIBRARY_PERMISSION_DENIED';
+        throw err;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        selectionLimit: limit,
+    });
+    if (result.canceled) return [];
+    const assets = Array.isArray(result.assets) ? result.assets : [];
+    // Compressed one at a time on purpose: ImageManipulator holds the decoded
+    // bitmap in memory, and a parallel map over twenty full-resolution photos
+    // is a good way to get killed by the OS on an older device.
+    const out = [];
+    for (const asset of assets.slice(0, limit)) {
+        out.push(await compress(asset));
+    }
+    return out;
+};
+
 export const pickPhotoCompressed = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {

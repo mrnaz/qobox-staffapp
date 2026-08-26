@@ -21,6 +21,7 @@ const JUMP_TABS = [
     { name: 'Students',   route: 'students',   path: '/(main)/students',   icon: 'users' },
     { name: 'Reports',    route: 'progress-reports', path: '/(main)/progress-reports', icon: 'file-text-o' },
     { name: 'Tickets',    route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
+    { name: 'Albums',     route: 'albums',     path: '/(main)/albums',     icon: 'photo' },
 ];
 
 export default function StaffInfo() {

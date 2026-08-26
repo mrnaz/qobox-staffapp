@@ -76,6 +76,13 @@ const CONCEPT = {
     home: 'emerald',
     'home-outline': 'emerald',
 
+    // media — albums are the only place photos are the content rather than an
+    // attachment, so the gallery icons get their own hue. The camera/image
+    // glyphs on attach buttons stay out of this map: those are controls.
+    photo: 'magenta',
+    images: 'magenta',
+    'images-outline': 'magenta',
+
     'folder-outline': 'choco',
     folder: 'choco',
     'book-outline': 'lime',

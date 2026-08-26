@@ -15,7 +15,7 @@ import RenderHtml from 'react-native-render-html';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
 import Avatar from './Avatar';
-import Card, { CardHeader, cardBodyPadding } from './Card';
+import Card from './Card';
 import api from '../services/api';
 import endpoints from '../constants/endpoints';
 
@@ -212,9 +212,20 @@ export default function NoticeCard({ notice }) {
 
     return (
         <Card onPress={() => setIsExpanded((v) => !v)} activeOpacity={0.8}>
-            <CardHeader style={styles.header}>
-                <Avatar uri={notice.photo} name={notice.author_name} id={notice.author_id} size={36} />
-                <View style={{ flex: 1 }}>
+            {/* Heading matched to the client app's notice card: a plain row on
+                the card rather than a tinted band, avatar 38, author 14/700
+                over a 12pt timestamp. The overflow menu stays — the client has
+                one too — and the avatar takes a ring, which is the one place
+                this deliberately differs from the client. */}
+            <View style={styles.header}>
+                <Avatar
+                    uri={notice.photo}
+                    name={notice.author_name}
+                    id={notice.author_id}
+                    size={38}
+                    borderColor={colors.borderStrong || colors.border}
+                />
+                <View style={styles.headerText}>
                     <Text style={[styles.author, { color: colors.textPrimary }]} numberOfLines={1}>
                         {notice.author_name || 'Unknown'}
                     </Text>
@@ -239,9 +250,9 @@ export default function NoticeCard({ notice }) {
                 >
                     <Ionicons name="ellipsis-vertical" size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
-            </CardHeader>
+            </View>
 
-            <View style={[cardBodyPadding, styles.body]}>
+            <View style={styles.body}>
                 {title ? (
                     <Text
                         style={[styles.title, { color: colors.textPrimary }]}
@@ -389,19 +400,28 @@ export default function NoticeCard({ notice }) {
 }
 
 const styles = StyleSheet.create({
-    header: { gap: 10 },
-    author: { fontSize: 13, fontWeight: '600' },
-    time: { fontSize: 11, marginTop: 1 },
-    menuBtn: { padding: 4 },
+    header: {
+        flexDirection: 'row',
+        // Top-aligned, so a two-line chip or a long name does not drag the
+        // avatar down the card.
+        alignItems: 'flex-start',
+        paddingHorizontal: 14,
+        paddingTop: 14,
+    },
+    headerText: { flex: 1, marginLeft: 10 },
+    author: { fontSize: 14, fontWeight: '700' },
+    time: { fontSize: 12, marginTop: 1 },
+    menuBtn: { marginLeft: 8, padding: 4 },
     chip: {
         borderWidth: 1,
         borderRadius: 999,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        maxWidth: 140,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        marginLeft: 8,
+        maxWidth: 150,
     },
     chipText: { fontSize: 11, fontWeight: '600' },
-    body: { gap: 8 },
+    body: { gap: 8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
     title: { fontSize: 14, fontWeight: '600' },
     bodyText: { fontSize: 13, lineHeight: 19 },
     statusPill: {
