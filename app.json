@@ -4,7 +4,7 @@
     "slug": "qobox-staffapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon_light.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -26,11 +26,15 @@
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
       },
-      "bundleIdentifier": "com.qobox.staffapp"
+      "bundleIdentifier": "com.qobox.staffapp",
+      "icon": {
+        "light": "./assets/icon_light.png",
+        "dark": "./assets/icon_dark.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/q_dark_640.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Image, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
@@ -26,7 +26,7 @@ const JUMP_TABS = [
 
 export default function StaffInfo() {
     const { useTheme } = Theme;
-    const { theme } = useTheme();
+    const { theme, mode } = useTheme();
     const { colors } = theme;
     const segments = useSegments();
     const router = useRouter();
@@ -123,17 +123,9 @@ export default function StaffInfo() {
             {/* Jump to button */}
             <TouchableOpacity
                 onPress={() => setIsJumpVisible(true)}
-                style={{
-                    // Filled with the page background, not the surface: the
-                    // header band is now surface-coloured, so a surface fill
-                    // would leave the button invisible on it.
-                    width: 36, height: 36, borderRadius: 18,
-                    backgroundColor: colors.background,
-                    borderWidth: 1, borderColor: colors.border,
-                    alignItems: 'center', justifyContent: 'center',
-                }}
+                style={{ width: 36, height: 36, borderRadius: 18 }}
             >
-                <FontAwesome name="th" size={15} color={colors.textSecondary} />
+                <Image source={mode === 'dark' ? require('../../assets/q_light_button.png') : require('../../assets/q_dark_button.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
             </TouchableOpacity>
 
             {/* Avatar — opens menu */}
