@@ -4,20 +4,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
 import StaffInfo from '../components/StaffInfo';
+import { iconColor } from '../utils/iconColors';
 
+// Title + icon per route. The icons are the same ones the "Jump to" grid uses
+// for each tab, so the glyph at the top of a page matches the one you tapped
+// to get there, and iconColor gives each its concept colour.
 const PAGE_TITLES = {
-    index: 'Dashboard',
-    attendance: 'Attendance',
-    roster: 'Roster',
-    timetable: 'Timetable',
-    calendar: 'Calendar',
-    classes: 'Classes',
-    students: 'Students',
-    'progress-reports': 'Reports',
-    tickets: 'Tickets',
-    reports: 'Reports',
+    index: { label: 'Dashboard', icon: 'home' },
+    attendance: { label: 'Attendance', icon: 'check-square-o' },
+    roster: { label: 'Roster', icon: 'calendar-check-o' },
+    timetable: { label: 'Timetable', icon: 'clock-o' },
+    calendar: { label: 'Calendar', icon: 'calendar' },
+    classes: { label: 'Classes', icon: 'graduation-cap' },
+    students: { label: 'Students', icon: 'users' },
+    'progress-reports': { label: 'Reports', icon: 'file-text-o' },
+    tickets: { label: 'Tickets', icon: 'ticket' },
+    reports: { label: 'Reports', icon: 'file-text-o' },
 };
 
 function PageTitle() {
@@ -41,7 +46,8 @@ function PageTitle() {
         })();
     }, [route]);
 
-    let title = PAGE_TITLES[route];
+    const { label, icon } = PAGE_TITLES[route];
+    let title = label;
     if (route === 'index') {
         const h = new Date().getHours();
         const greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
@@ -49,8 +55,20 @@ function PageTitle() {
     }
 
     return (
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, backgroundColor: colors.background }}>
-            <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: '700' }} numberOfLines={1}>
+        <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingHorizontal: 20,
+            paddingTop: 14,
+            paddingBottom: 8,
+            backgroundColor: colors.background,
+        }}>
+            <FontAwesome name={icon} size={18} color={iconColor(icon, colors)} />
+            <Text
+                style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '700', flex: 1 }}
+                numberOfLines={1}
+            >
                 {title}
             </Text>
         </View>
@@ -64,8 +82,11 @@ function Header() {
     return (
         <>
             <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
+            {/* The status-bar strip belongs to the white header band below it,
+                so it takes the surface colour rather than the page background —
+                matching the client app's header. */}
             <SafeAreaView
-                style={{ backgroundColor: colors.background }}
+                style={{ backgroundColor: colors.surface }}
                 edges={['top']}
             >
                 <StaffInfo />

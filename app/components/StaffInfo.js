@@ -89,7 +89,9 @@ export default function StaffInfo() {
     if (loading) {
         return (
             <View style={{
-                backgroundColor: colors.background,
+                backgroundColor: colors.surface,
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
                 paddingHorizontal: 16,
                 paddingVertical: 10,
                 flexDirection: 'row',
@@ -103,8 +105,13 @@ export default function StaffInfo() {
     const fullName = staff ? `${staff.fname || ''} ${staff.sname || ''}`.trim() : '';
 
     return (
+        // A white band with a hairline under it, the same header treatment the
+        // client app uses — it separates the app chrome from the page content
+        // instead of dissolving into it.
         <View style={{
-            backgroundColor: colors.background,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
             flexDirection: 'row',
             alignItems: 'center',
             paddingHorizontal: 12,
@@ -116,8 +123,11 @@ export default function StaffInfo() {
             <TouchableOpacity
                 onPress={() => setIsJumpVisible(true)}
                 style={{
+                    // Filled with the page background, not the surface: the
+                    // header band is now surface-coloured, so a surface fill
+                    // would leave the button invisible on it.
                     width: 36, height: 36, borderRadius: 18,
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.background,
                     borderWidth: 1, borderColor: colors.border,
                     alignItems: 'center', justifyContent: 'center',
                 }}

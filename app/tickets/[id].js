@@ -10,6 +10,8 @@ import {
     Platform,
     ActivityIndicator,
     Alert,
+    Image,
+    Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,16 +29,34 @@ import {
     deriveStatus,
 } from '../utils/tickets';
 import { iconColor } from '../utils/iconColors';
+import { parseApiDate } from '../utils/datetime';
+import { capturePhotoCompressed, pickPhotoCompressed, appendPhotoToForm } from '../utils/photo';
 
+// Postgres hands these back as "2026-08-15 11:14:39.172909+02" — a space
+// separator, microseconds and a colon-less offset, all three of which Hermes
+// rejects outright. parseApiDate normalizes them; `new Date()` on its own
+// returned Invalid Date here, which is why comments showed no timestamp.
 const fmtDateTime = (iso) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime())
-        ? ''
-        : d.toLocaleString(undefined, {
+    const d = parseApiDate(iso);
+    return d
+        ? d.toLocaleString(undefined, {
               day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
-          });
+          })
+        : '';
 };
+
+// Newest first. Notes come back in insertion order, and a ticket thread reads
+// better with the latest reply at the top — you open a ticket to see what just
+// happened, not to re-read the first comment.
+const sortNewestFirst = (notes) =>
+    [...notes].sort((a, b) => {
+        const ta = parseApiDate(a.created_at || a.submitted_at)?.getTime() ?? 0;
+        const tb = parseApiDate(b.created_at || b.submitted_at)?.getTime() ?? 0;
+        if (tb !== ta) return tb - ta;
+        // Same timestamp (or both missing): fall back to id, which still grows
+        // monotonically, so the ordering never flickers between renders.
+        return (b.id ?? 0) - (a.id ?? 0);
+    });
 
 export default function TicketDetailScreen() {
     const { useTheme } = Theme;
@@ -51,6 +71,8 @@ export default function TicketDetailScreen() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [commentText, setCommentText] = useState('');
+    const [commentPhotos, setCommentPhotos] = useState([]); // [{ uri, width, height, mimeType }]
+    const [viewerPhoto, setViewerPhoto] = useState(null);
     const [posting, setPosting] = useState(false);
     const [busy, setBusy] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -77,18 +99,71 @@ export default function TicketDetailScreen() {
 
     useEffect(() => { load(); }, [load]);
 
+    const addCommentPhoto = async (take) => {
+        try {
+            const photo = take ? await capturePhotoCompressed() : await pickPhotoCompressed();
+            if (photo) setCommentPhotos((prev) => [...prev, photo]);
+        } catch (err) {
+            console.error(take ? 'Camera error' : 'Image picker error', err);
+            Alert.alert(
+                take ? 'Camera' : 'Photo library',
+                err.message || 'Could not attach the photo.'
+            );
+        }
+    };
+
+    const removeCommentPhoto = (i) => {
+        setCommentPhotos((prev) => prev.filter((_, idx) => idx !== i));
+    };
+
     const submitComment = async () => {
         const text = commentText.trim();
-        if (!text || !staff?.id) return;
+        // A photo on its own is a valid comment — staff often just want to show
+        // the thing rather than describe it.
+        if ((!text && commentPhotos.length === 0) || !staff?.id) return;
+        const photos = commentPhotos;
         try {
             setPosting(true);
-            await api.addMaintenanceReportNote(id, {
+            const res = await api.addMaintenanceReportNote(id, {
                 note: text,
                 staff_id: staff.id,
                 created_by: staff.id,
-                ready: true,
+                // `ready` is the backend's DRAFT flag, not a "send it" flag: a
+                // note with `ready` set is filtered out for everyone except its
+                // author. Comments posted here are public, so it stays false.
+                ready: false,
             });
+            const noteId = res?.maintenanceReportNote?.id ?? res?.data?.id ?? res?.id;
+
+            // Photos hang off the saved note, so they need a second call with
+            // its id. The comment itself is already posted at this point — a
+            // failure here loses the photos, not the text, so say so rather
+            // than failing the whole action.
+            if (photos.length > 0) {
+                try {
+                    if (!noteId) throw new Error('The server did not return the new comment id.');
+                    const form = new FormData();
+                    form.append('id', String(noteId));
+                    for (let i = 0; i < photos.length; i++) {
+                        await appendPhotoToForm(
+                            form,
+                            `files[${i}]`,
+                            photos[i],
+                            `comment_${noteId}_${i + 1}.jpg`,
+                        );
+                    }
+                    await api.requestForm(`maintenance-reports/${id}/notes/files`, 'POST', form);
+                } catch (uploadErr) {
+                    console.error('Comment photo upload error', uploadErr);
+                    Alert.alert(
+                        'Photos not attached',
+                        'The comment was posted, but its photos failed to upload.'
+                    );
+                }
+            }
+
             setCommentText('');
+            setCommentPhotos([]);
             // Re-fetch the ticket to get the new comment in the thread
             await load();
         } catch (err) {
@@ -165,8 +240,9 @@ export default function TicketDetailScreen() {
     const p = PRIORITY_META[ticket.priority] || PRIORITY_META.N;
     const status = deriveStatus(ticket);
     const s = STATUS_META[status];
-    const notes = Array.isArray(ticket.notes) ? ticket.notes : [];
+    const notes = sortNewestFirst(Array.isArray(ticket.notes) ? ticket.notes : []);
     const isResolved = !!ticket.resolved;
+    const canSendComment = !!commentText.trim() || commentPhotos.length > 0;
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
@@ -306,6 +382,8 @@ export default function TicketDetailScreen() {
                             ) : (
                                 notes.map((c) => {
                                     const mine = c.staff?.id === staff?.id;
+                                    const when = fmtDateTime(c.created_at || c.submitted_at);
+                                    const photos = Array.isArray(c.photos) ? c.photos : [];
                                     return (
                                         <View
                                             key={c.id}
@@ -317,12 +395,33 @@ export default function TicketDetailScreen() {
                                         >
                                             <Text style={[styles.commentAuthor, { color: mine ? colors.primary : colors.textSecondary }]}>
                                                 {mine ? 'You' : (c.staff?.name || 'Unknown')}
-                                                {' · '}
-                                                {fmtDateTime(c.created_at || c.submitted_at)}
                                             </Text>
-                                            <Text style={[styles.commentText, { color: colors.textPrimary }]}>
-                                                {c.note}
-                                            </Text>
+                                            {c.note ? (
+                                                <Text style={[styles.commentText, { color: colors.textPrimary }]}>
+                                                    {c.note}
+                                                </Text>
+                                            ) : null}
+                                            {photos.length > 0 ? (
+                                                <View style={styles.commentPhotos}>
+                                                    {photos.map((ph, i) => (
+                                                        <TouchableOpacity
+                                                            key={ph.mediaId ?? `${c.id}-${i}`}
+                                                            onPress={() => setViewerPhoto(ph.url)}
+                                                            activeOpacity={0.85}
+                                                        >
+                                                            <Image
+                                                                source={{ uri: ph.url }}
+                                                                style={[styles.commentPhoto, { borderColor: colors.border }]}
+                                                            />
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            ) : null}
+                                            {when ? (
+                                                <Text style={[styles.commentTime, { color: colors.textDisabled || colors.textSecondary }]}>
+                                                    {when}
+                                                </Text>
+                                            ) : null}
                                         </View>
                                     );
                                 })
@@ -331,33 +430,67 @@ export default function TicketDetailScreen() {
                     </Card>
                 </ScrollView>
 
-                <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
-                    <TextInput
-                        style={[styles.composerInput, {
-                            color: colors.textPrimary,
-                            backgroundColor: colors.cardBackground,
-                            borderColor: colors.border,
-                        }]}
-                        placeholder="Write a comment…"
-                        placeholderTextColor={colors.textSecondary}
-                        value={commentText}
-                        onChangeText={setCommentText}
-                        multiline
-                    />
-                    <TouchableOpacity
-                        onPress={submitComment}
-                        disabled={posting || !commentText.trim()}
-                        style={[styles.sendBtn, {
-                            backgroundColor: colors.primary,
-                            opacity: posting || !commentText.trim() ? 0.5 : 1,
-                        }]}
-                    >
-                        {posting ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Ionicons name="send" size={18} color="#fff" />
-                        )}
-                    </TouchableOpacity>
+                <View style={[styles.composerWrap, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                    {/* Staged attachments sit above the input so the row itself
+                        keeps its height whether or not anything is attached. */}
+                    {commentPhotos.length > 0 ? (
+                        <View style={styles.pendingRow}>
+                            {commentPhotos.map((ph, i) => (
+                                <View key={ph.uri} style={styles.pendingWrap}>
+                                    <Image source={{ uri: ph.uri }} style={styles.pendingThumb} />
+                                    <TouchableOpacity
+                                        onPress={() => removeCommentPhoto(i)}
+                                        style={[styles.pendingRemove, { backgroundColor: colors.error || '#ff3300' }]}
+                                    >
+                                        <Ionicons name="close" size={12} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </View>
+                    ) : null}
+
+                    <View style={styles.composer}>
+                        <TouchableOpacity
+                            onPress={() => addCommentPhoto(true)}
+                            disabled={posting}
+                            style={[styles.attachBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                        >
+                            <Ionicons name="camera-outline" size={18} color={iconColor('camera-outline', colors)} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => addCommentPhoto(false)}
+                            disabled={posting}
+                            style={[styles.attachBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
+                        >
+                            <Ionicons name="image-outline" size={18} color={iconColor('image-outline', colors)} />
+                        </TouchableOpacity>
+                        <TextInput
+                            style={[styles.composerInput, {
+                                color: colors.textPrimary,
+                                backgroundColor: colors.cardBackground,
+                                borderColor: colors.border,
+                            }]}
+                            placeholder="Write a comment…"
+                            placeholderTextColor={colors.textSecondary}
+                            value={commentText}
+                            onChangeText={setCommentText}
+                            multiline
+                        />
+                        <TouchableOpacity
+                            onPress={submitComment}
+                            disabled={posting || !canSendComment}
+                            style={[styles.sendBtn, {
+                                backgroundColor: colors.primary,
+                                opacity: posting || !canSendComment ? 0.5 : 1,
+                            }]}
+                        >
+                            {posting ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Ionicons name="send" size={18} color="#fff" />
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </KeyboardAvoidingView>
 
@@ -379,6 +512,23 @@ export default function TicketDetailScreen() {
                 staff={staff}
                 existing={ticket}
             />
+
+            {/* Full-screen look at a comment photo. Thumbnails in a chat bubble
+                are too small to judge "is that the crack you mean?" by. */}
+            <Modal visible={!!viewerPhoto} transparent animationType="fade" onRequestClose={() => setViewerPhoto(null)}>
+                <TouchableOpacity
+                    style={styles.viewerBackdrop}
+                    activeOpacity={1}
+                    onPress={() => setViewerPhoto(null)}
+                >
+                    {viewerPhoto ? (
+                        <Image source={{ uri: viewerPhoto }} style={styles.viewerImage} resizeMode="contain" />
+                    ) : null}
+                    <View style={styles.viewerClose}>
+                        <Ionicons name="close" size={28} color="#fff" />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -433,14 +583,43 @@ const styles = StyleSheet.create({
     },
     commentAuthor: { fontSize: 11, fontWeight: '600' },
     commentText: { fontSize: 14, lineHeight: 20 },
+    // The timestamp closes the bubble rather than sharing the author line: it
+    // is the quietest thing in there and reads as a footer.
+    commentTime: { fontSize: 10, marginTop: 2 },
+    commentPhotos: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+    commentPhoto: { width: 96, height: 96, borderRadius: 8, borderWidth: 1 },
+    composerWrap: { borderTopWidth: 1 },
     composer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        gap: 8,
+        gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 10,
-        borderTopWidth: 1,
     },
+    attachBtn: {
+        width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+        alignItems: 'center', justifyContent: 'center',
+        // Nudged up so the two attach buttons sit centred against the 40pt send
+        // button when the input is a single line.
+        marginBottom: 2,
+    },
+    pendingRow: {
+        flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+        paddingHorizontal: 12, paddingTop: 10, paddingBottom: 2,
+    },
+    pendingWrap: { position: 'relative' },
+    pendingThumb: { width: 60, height: 60, borderRadius: 8 },
+    pendingRemove: {
+        position: 'absolute', top: -5, right: -5,
+        width: 20, height: 20, borderRadius: 10,
+        alignItems: 'center', justifyContent: 'center',
+    },
+    viewerBackdrop: {
+        flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
+        alignItems: 'center', justifyContent: 'center',
+    },
+    viewerImage: { width: '100%', height: '80%' },
+    viewerClose: { position: 'absolute', top: 48, right: 20 },
     composerInput: {
         flex: 1,
         borderWidth: 1,

@@ -252,8 +252,8 @@ function InfoTab({ student, studentId, colors }) {
                 </Section>
             ) : null}
 
-            {/* Family — guardians + siblings (formerly a separate tab) */}
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Family</Text>
+            {/* Family — guardians + siblings (formerly a separate tab). The
+                card carries the "Family" heading itself, so no label above it. */}
             <FamilyBoxes student={student} studentId={studentId} colors={colors} />
         </ScrollView>
     );
@@ -407,8 +407,10 @@ function FamilyPersonRow({ name, sub, icon, colors }) {
     );
 }
 
-// Guardians + Siblings boxes, embedded in the Info tab. (Previously the standalone
-// "Family" tab; the tab was removed and these boxes moved onto Info.)
+// One Family box, embedded in the Info tab, holding guardians and siblings
+// together. (Previously the standalone "Family" tab, then two separate cards;
+// they read as one household, so they share a card and the subtitle says which
+// is which.)
 function FamilyBoxes({ student, studentId, colors }) {
     const guardians = Array.isArray(student?.guardians) ? student.guardians : [];
     const [siblings, setSiblings] = useState([]);
@@ -440,57 +442,46 @@ function FamilyBoxes({ student, studentId, colors }) {
     }, [studentId]);
 
     const siblingName = (s) => `${s.fname || ''} ${s.sname || ''}`.trim() || 'Unnamed';
-    const siblingSub = (s) => {
-        const age = s.age ?? (s.dob ? calcAge(s.dob) : null);
-        return age != null ? `${age} y/o` : (s.dob_formatted || '');
-    };
+
+    const isEmpty = guardians.length === 0 && siblings.length === 0;
 
     return (
-        <>
-            {/* Guardians card */}
-            <Card style={styles.familyCard}>
-                <CardHeader>
-                    <FontAwesome name="users" size={14} color={iconColor('users', colors)} />
-                    <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Guardians</Text>
-                </CardHeader>
-                {guardians.length === 0 ? (
-                    <Text style={[styles.familyEmpty, { color: colors.textSecondary }]}>No guardians on record.</Text>
-                ) : (
-                    guardians.map((g, idx) => (
-                        <FamilyPersonRow
-                            key={g.id ?? `${g.name}-${idx}`}
-                            name={g.name || 'Unnamed'}
-                            sub={g.type}
-                            icon="user"
-                            colors={colors}
-                        />
-                    ))
-                )}
-            </Card>
+        <Card style={styles.familyCard}>
+            <CardHeader>
+                <FontAwesome name="users" size={14} color={iconColor('users', colors)} />
+                <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Family</Text>
+            </CardHeader>
 
-            {/* Siblings card */}
-            <Card style={styles.familyCard}>
-                <CardHeader>
-                    <FontAwesome name="child" size={14} color={colors.textSecondary} />
-                    <Text style={[styles.familyTitle, { color: colors.textPrimary }]}>Siblings</Text>
-                </CardHeader>
-                {sibLoading ? (
-                    <ActivityIndicator color={colors.primary} style={{ paddingVertical: 16 }} />
-                ) : siblings.length === 0 ? (
-                    <Text style={[styles.familyEmpty, { color: colors.textSecondary }]}>No siblings on record.</Text>
-                ) : (
-                    siblings.map((s, idx) => (
-                        <FamilyPersonRow
-                            key={s.id ?? idx}
-                            name={siblingName(s)}
-                            sub={siblingSub(s)}
-                            icon="child"
-                            colors={colors}
-                        />
-                    ))
-                )}
-            </Card>
-        </>
+            {guardians.map((g, idx) => (
+                <FamilyPersonRow
+                    key={g.id ?? `${g.name}-${idx}`}
+                    name={g.name || 'Unnamed'}
+                    sub={g.type}
+                    icon="user"
+                    colors={colors}
+                />
+            ))}
+
+            {/* Siblings arrive on a second request, so they land under the
+                guardians once loaded rather than holding up the whole card. */}
+            {siblings.map((s, idx) => (
+                <FamilyPersonRow
+                    key={s.id ?? `sibling-${idx}`}
+                    name={siblingName(s)}
+                    sub="Sibling"
+                    icon="child"
+                    colors={colors}
+                />
+            ))}
+
+            {sibLoading ? (
+                <ActivityIndicator color={colors.primary} style={{ paddingVertical: 16 }} />
+            ) : isEmpty ? (
+                <Text style={[styles.familyEmpty, { color: colors.textSecondary }]}>
+                    No family on record.
+                </Text>
+            ) : null}
+        </Card>
     );
 }
 
@@ -627,11 +618,6 @@ const styles = StyleSheet.create({
         alignItems: 'center', justifyContent: 'center',
     },
     familyEmpty: { fontSize: 13, paddingHorizontal: 12, paddingBottom: 14 },
-    sectionTitle: {
-        fontSize: 11, fontWeight: '700',
-        textTransform: 'uppercase', letterSpacing: 0.6,
-        marginBottom: 6, paddingHorizontal: 4,
-    },
     section: { marginBottom: cardGap },
     fieldRow: {
         flexDirection: 'row',
