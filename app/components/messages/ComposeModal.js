@@ -356,7 +356,7 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                     ))}
 
                     {formError ? (
-                        <Text style={{ color: colors.error || '#ef4444', fontSize: 13, marginTop: 8 }}>{formError}</Text>
+                        <Text style={{ color: colors.error, fontSize: 13, marginTop: 8 }}>{formError}</Text>
                     ) : null}
                 </ScrollView>
 
@@ -379,11 +379,11 @@ export default function ComposeModal({ visible, staff, initial = null, onClose, 
                         style={[styles.footerBtn, styles.sendBtn, { backgroundColor: colors.primary }, (!!busy || uploading) && { opacity: 0.6 }]}
                     >
                         {busy === 'send' ? (
-                            <ActivityIndicator size="small" color="#fff" />
+                            <ActivityIndicator size="small" color={colors.onPrimary} />
                         ) : (
                             <>
-                                <Ionicons name="send" size={15} color="#fff" />
-                                <Text style={{ color: '#fff', fontWeight: '700' }}>Send</Text>
+                                <Ionicons name="send" size={15} color={colors.onPrimary} />
+                                <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Send</Text>
                             </>
                         )}
                     </TouchableOpacity>

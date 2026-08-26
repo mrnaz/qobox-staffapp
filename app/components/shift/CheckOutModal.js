@@ -125,7 +125,7 @@ export default function CheckOutModal({
                 animationType="fade"
                 onRequestClose={onClose}
             >
-                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+                <TouchableOpacity style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} activeOpacity={1} onPress={onClose}>
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
                         <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <View style={styles.modalHeader}>
@@ -236,11 +236,11 @@ export default function CheckOutModal({
                                         }]}
                                     >
                                         {submitting ? (
-                                            <ActivityIndicator color="#fff" />
+                                            <ActivityIndicator color={colors.onPrimary} />
                                         ) : (
                                             <>
-                                                <Ionicons name="log-out-outline" size={16} color="#fff" />
-                                                <Text style={styles.btnText}>Check Out</Text>
+                                                <Ionicons name="log-out-outline" size={16} color={colors.onPrimary} />
+                                                <Text style={[styles.btnText, { color: colors.onPrimary }]}>Check Out</Text>
                                             </>
                                         )}
                                     </TouchableOpacity>

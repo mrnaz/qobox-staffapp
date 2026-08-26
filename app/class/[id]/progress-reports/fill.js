@@ -289,7 +289,7 @@ export default function FillProgressReportScreen() {
                     </View>
                     {isEditMode && !isReadonly ? (
                         <TouchableOpacity onPress={onDelete} style={styles.iconBtn} disabled={isSaving}>
-                            <Ionicons name="trash-outline" size={20} color={colors.error || '#ef4444'} />
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
                         </TouchableOpacity>
                     ) : null}
                 </View>
@@ -464,9 +464,9 @@ export default function FillProgressReportScreen() {
                                 ]}
                             >
                                 {isSaving ? (
-                                    <ActivityIndicator color="#fff" />
+                                    <ActivityIndicator color={colors.onPrimary} />
                                 ) : (
-                                    <Text style={{ color: '#fff', fontWeight: '700' }}>Save & complete</Text>
+                                    <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Save & complete</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -548,7 +548,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                         { v: false, label: 'Fail', good: false },
                     ].map((opt) => {
                         const selected = value.passed === opt.v;
-                        const accent = opt.good ? (colors.success || colors.primary) : (colors.error || '#ef4444');
+                        const accent = opt.good ? colors.success : colors.error;
                         return (
                             <TouchableOpacity
                                 key={opt.label}
@@ -605,7 +605,7 @@ function AssessmentItem({ assessment, value, disabled, onChange, onOpenComment, 
                 <View style={{ flex: 1, gap: 4 }}>
                     <Text style={[styles.assessmentLabel, { color: colors.textPrimary }]}>
                         {assessment.label}
-                        {assessment.required ? <Text style={{ color: colors.error || '#ef4444' }}> *</Text> : null}
+                        {assessment.required ? <Text style={{ color: colors.error }}> *</Text> : null}
                     </Text>
                     {assessment.description ? (
                         <Text style={[styles.assessmentDesc, { color: colors.textSecondary }]} numberOfLines={2}>
@@ -651,7 +651,7 @@ function PickerModal({ visible, onClose, children, colors }) {
         >
             {/* Outer wrapper paints the entire screen with the scrim and aligns
                 the sheet to the bottom edge. */}
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
                 <TouchableOpacity
                     activeOpacity={1}
                     onPress={onClose}
@@ -787,7 +787,7 @@ function RubricPicker({ assessment, value, onSave, colors }) {
                 onPress={() => onSave({ rubric_selection: selected, comment })}
                 style={[styles.modalSave, { backgroundColor: colors.primary }]}
             >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text>
+                <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Save</Text>
             </TouchableOpacity>
         </View>
     );
@@ -854,7 +854,7 @@ function ScorePicker({ assessment, value, onSave, colors }) {
                 onPress={onSavePress}
                 style={[styles.modalSave, { backgroundColor: colors.primary }]}
             >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text>
+                <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Save</Text>
             </TouchableOpacity>
         </View>
     );
@@ -878,7 +878,7 @@ function CommentPicker({ assessment, value, onSave, colors }) {
                 onPress={() => onSave({ comment })}
                 style={[styles.modalSave, { backgroundColor: colors.primary }]}
             >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Save</Text>
+                <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Save</Text>
             </TouchableOpacity>
         </View>
     );

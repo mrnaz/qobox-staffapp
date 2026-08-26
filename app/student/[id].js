@@ -94,13 +94,13 @@ export default function StudentDetailScreen() {
                     header; mirroring them so staff see medical / legal context
                     immediately. */}
                 {student?.flag_medical ? (
-                    <View style={[styles.flagPill, { backgroundColor: (colors.error || '#ef4444') + '22' }]}>
-                        <FontAwesome name="medkit" size={12} color={colors.error || '#ef4444'} />
+                    <View style={[styles.flagPill, { backgroundColor: colors.error + '22' }]}>
+                        <FontAwesome name="medkit" size={12} color={colors.error} />
                     </View>
                 ) : null}
                 {student?.flag_legal ? (
-                    <View style={[styles.flagPill, { backgroundColor: (colors.warning || '#f59e0b') + '22' }]}>
-                        <FontAwesome name="exclamation-triangle" size={12} color={colors.warning || '#f59e0b'} />
+                    <View style={[styles.flagPill, { backgroundColor: colors.warning + '22' }]}>
+                        <FontAwesome name="exclamation-triangle" size={12} color={colors.warning} />
                     </View>
                 ) : null}
             </View>

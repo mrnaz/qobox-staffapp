@@ -5,7 +5,6 @@ import { StyleSheet } from 'react-native';
 export default StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,
@@ -57,7 +56,7 @@ export default StyleSheet.create({
         borderRadius: 8,
         flex: 1,
     },
-    btnText: { color: '#fff', fontWeight: '700' },
+    btnText: { fontWeight: '700' },
     btnOutline: {
         flexDirection: 'row',
         alignItems: 'center',

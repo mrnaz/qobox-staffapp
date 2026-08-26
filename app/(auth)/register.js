@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import { authTheme } from '../constants/authTheme';
 
 export default function RegisterScreen() {
     const { useTheme } = Theme;
@@ -113,45 +114,45 @@ export default function RegisterScreen() {
                                 source={require('../../assets/logo_light.png')}
                                 style={styles.logo}
                             />
-                            <Text style={{ color: '#ffffff' }} className="text-center mt-2">
+                            <Text style={{ color: authTheme.text }} className="text-center mt-2">
                                 Create your staff account
                             </Text>
                         </View>
 
                         <View className="mb-4">
-                            <Text style={{ color: '#ffffff' }} className="mb-1">First Name</Text>
+                            <Text style={{ color: authTheme.text }} className="mb-1">First Name</Text>
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     style={styles.textInput}
                                     className="text-lg"
                                     placeholder="John"
-                                    placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                                    placeholderTextColor={authTheme.textMuted60}
                                     value={fname}
                                     onChangeText={setFname}
                                     autoCapitalize="words"
                                 />
                             </View>
 
-                            <Text style={{ color: '#ffffff' }} className="mb-1">Last Name</Text>
+                            <Text style={{ color: authTheme.text }} className="mb-1">Last Name</Text>
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     style={styles.textInput}
                                     className="text-lg"
                                     placeholder="Doe"
-                                    placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                                    placeholderTextColor={authTheme.textMuted60}
                                     value={sname}
                                     onChangeText={setSname}
                                     autoCapitalize="words"
                                 />
                             </View>
 
-                            <Text style={{ color: '#ffffff' }} className="mb-1">Email</Text>
+                            <Text style={{ color: authTheme.text }} className="mb-1">Email</Text>
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     style={styles.textInput}
                                     className="text-lg"
                                     placeholder="staff@email.com"
-                                    placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                                    placeholderTextColor={authTheme.textMuted60}
                                     value={email}
                                     onChangeText={setEmail}
                                     keyboardType="email-address"
@@ -159,14 +160,14 @@ export default function RegisterScreen() {
                                 />
                             </View>
 
-                            <Text style={{ color: '#ffffff' }} className="mb-1">Password</Text>
+                            <Text style={{ color: authTheme.text }} className="mb-1">Password</Text>
                             <View style={styles.inputContainer}>
                                 <View style={styles.passwordInputWrapper}>
                                     <TextInput
                                         style={styles.passwordInput}
                                         className="text-lg"
                                         placeholder="At least 8 characters"
-                                        placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                                        placeholderTextColor={authTheme.textMuted60}
                                         value={password}
                                         onChangeText={setPassword}
                                         secureTextEntry={!showPassword}
@@ -178,20 +179,20 @@ export default function RegisterScreen() {
                                         <Ionicons
                                             name={showPassword ? 'eye-off' : 'eye'}
                                             size={20}
-                                            color="rgba(255, 255, 255, 0.7)"
+                                            color={authTheme.textMuted70}
                                         />
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
-                            <Text style={{ color: '#ffffff' }} className="mb-1">Confirm Password</Text>
+                            <Text style={{ color: authTheme.text }} className="mb-1">Confirm Password</Text>
                             <View style={styles.inputContainer}>
                                 <View style={styles.passwordInputWrapper}>
                                     <TextInput
                                         style={styles.passwordInput}
                                         className="text-lg"
                                         placeholder="Repeat password"
-                                        placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                                        placeholderTextColor={authTheme.textMuted60}
                                         value={confirmPassword}
                                         onChangeText={setConfirmPassword}
                                         secureTextEntry={!showConfirmPassword}
@@ -203,7 +204,7 @@ export default function RegisterScreen() {
                                         <Ionicons
                                             name={showConfirmPassword ? 'eye-off' : 'eye'}
                                             size={20}
-                                            color="rgba(255, 255, 255, 0.7)"
+                                            color={authTheme.textMuted70}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -216,9 +217,9 @@ export default function RegisterScreen() {
                                 className="py-4 rounded-lg items-center mt-2"
                             >
                                 {isLoading ? (
-                                    <ActivityIndicator color="#ffffff" />
+                                    <ActivityIndicator color={authTheme.text} />
                                 ) : (
-                                    <Text style={{ color: '#ffffff' }} className="font-bold text-lg">Create Account</Text>
+                                    <Text style={{ color: authTheme.text }} className="font-bold text-lg">Create Account</Text>
                                 )}
                             </TouchableOpacity>
 
@@ -245,7 +246,7 @@ const styles = StyleSheet.create({
     overlay: {
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: authTheme.overlay,
     },
     authCard: {
         width: '100%',
@@ -253,8 +254,8 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: 'rgba(20, 20, 20, 0.6)',
+        borderColor: authTheme.cardBorder,
+        backgroundColor: authTheme.cardBackground,
         overflow: 'hidden',
     },
     logo: {
@@ -263,15 +264,15 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
     },
     inputContainer: {
-        backgroundColor: '#42454C',
+        backgroundColor: authTheme.inputBackground,
         borderRadius: 8,
         padding: 8,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: authTheme.cardBorder,
     },
     textInput: {
-        color: '#ffffff',
+        color: authTheme.text,
         minHeight: 24,
         paddingVertical: 8,
         textAlignVertical: 'center',
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     passwordInput: {
-        color: '#ffffff',
+        color: authTheme.text,
         minHeight: 24,
         paddingVertical: 8,
         textAlignVertical: 'center',

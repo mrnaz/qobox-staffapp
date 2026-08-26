@@ -40,6 +40,13 @@ export const lightColors = {
 
     onPrimary: '#ffffff',
 
+    // Modal/dialog backdrops. Absolute black works the same in both palettes.
+    overlay: 'rgba(0, 0, 0, 0.5)',
+    overlayLight: 'rgba(0, 0, 0, 0.2)',
+    // Row press/hover tint over `surface`. Inverted in dark mode below — a
+    // black tint is invisible on a dark surface.
+    pressedOverlay: 'rgba(0, 0, 0, 0.05)',
+
     purple: {
         border: '#D7C0F9',
         background: '#EBDEF7',
@@ -163,6 +170,10 @@ export const darkColors = {
     commentText: '#a3a3bd',
 
     onPrimary: '#ffffff',
+
+    overlay: 'rgba(0, 0, 0, 0.5)',
+    overlayLight: 'rgba(0, 0, 0, 0.2)',
+    pressedOverlay: 'rgba(255, 255, 255, 0.06)',
 
     purple: {
         border: '#5B3E8F',

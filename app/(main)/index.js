@@ -213,8 +213,8 @@ export default function DashboardScreen() {
                             onPress={() => setCheckOutTarget(openShift)}
                             style={[styles.btn, { backgroundColor: colors.warning || colors.primary, marginTop: 10 }]}
                         >
-                            <Ionicons name="log-out-outline" size={16} color="#fff" />
-                            <Text style={styles.btnText}>Check Out</Text>
+                            <Ionicons name="log-out-outline" size={16} color={colors.onPrimary} />
+                            <Text style={[styles.btnText, { color: colors.onPrimary }]}>Check Out</Text>
                         </TouchableOpacity>
                     </Card>
                 ) : null}
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         borderRadius: 8,
     },
-    btnText: { color: '#fff', fontWeight: '700' },
+    btnText: { fontWeight: '700' },
     runningCard: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import { authTheme } from '../constants/authTheme';
 import {
     persistAuth,
     startMfa,
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
     overlay: {
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: authTheme.overlay,
     },
     scroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
     card: {
@@ -149,26 +150,26 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: 'rgba(20, 20, 20, 0.6)',
+        borderColor: authTheme.cardBorder,
+        backgroundColor: authTheme.cardBackground,
     },
     header: { alignItems: 'center', marginBottom: 20 },
     logo: { width: 160, height: 40, resizeMode: 'contain', marginBottom: 12 },
-    title: { color: '#ffffff', fontSize: 18, fontWeight: '600' },
-    subtitle: { color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 4, fontSize: 13 },
-    empty: { color: '#ffffff', textAlign: 'center', paddingVertical: 16 },
+    title: { color: authTheme.text, fontSize: 18, fontWeight: '600' },
+    subtitle: { color: authTheme.textMuted70, textAlign: 'center', marginTop: 4, fontSize: 13 },
+    empty: { color: authTheme.text, textAlign: 'center', paddingVertical: 16 },
     siteRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#42454C',
+        backgroundColor: authTheme.inputBackground,
         borderRadius: 8,
         borderWidth: 1,
         padding: 14,
         marginBottom: 10,
     },
-    siteName: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
-    orgName: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 },
-    roleName: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
+    siteName: { color: authTheme.text, fontSize: 16, fontWeight: '600' },
+    orgName: { color: authTheme.textMuted70, fontSize: 13, marginTop: 2 },
+    roleName: { color: authTheme.textMuted50, fontSize: 12, marginTop: 2 },
     chevron: { fontSize: 24, fontWeight: '300', marginLeft: 8 },
     cancelButton: { alignSelf: 'center', marginTop: 16 },
     cancelText: { fontWeight: '600' },

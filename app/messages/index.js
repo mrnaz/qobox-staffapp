@@ -307,7 +307,7 @@ export default function MessagesScreen() {
                             </Text>
                             {f.key === 'inbox' && unreadCount > 0 ? (
                                 <View style={[styles.countPill, { backgroundColor: colors.error }]}>
-                                    <Text style={styles.countPillText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                    <Text style={[styles.countPillText, { color: colors.onPrimary }]}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
                                 </View>
                             ) : null}
                         </TouchableOpacity>
@@ -389,19 +389,19 @@ export default function MessagesScreen() {
                     </Text>
                     <TouchableOpacity
                         onPress={() => setConfirmDelete(true)}
-                        style={[styles.deleteBtn, { backgroundColor: (colors.error || '#ef4444') + '22' }]}
+                        style={[styles.deleteBtn, { backgroundColor: colors.error + '22' }]}
                     >
-                        <Ionicons name="trash-outline" size={16} color={colors.error || '#ef4444'} />
-                        <Text style={{ color: colors.error || '#ef4444', fontWeight: '700', fontSize: 13 }}>Delete</Text>
+                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                        <Text style={{ color: colors.error, fontWeight: '700', fontSize: 13 }}>Delete</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
                 <TouchableOpacity
                     onPress={() => { setComposeInitial(null); setComposeVisible(true); }}
                     activeOpacity={0.85}
-                    style={[styles.fab, { backgroundColor: colors.primary }]}
+                    style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.cardShadow }]}
                 >
-                    <Ionicons name="create-outline" size={26} color="#fff" />
+                    <Ionicons name="create-outline" size={26} color={colors.onPrimary} />
                 </TouchableOpacity>
             )}
 
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: 4,
     },
-    countPillText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+    countPillText: { fontSize: 10, fontWeight: '800' },
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -519,7 +519,6 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
         shadowOpacity: 0.3,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 3 },

@@ -224,11 +224,11 @@ export default function TicketsScreen() {
             )}
 
             <TouchableOpacity
-                style={[styles.fab, { backgroundColor: colors.primary }]}
+                style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.cardShadow }]}
                 onPress={() => setCreateOpen(true)}
                 activeOpacity={0.8}
             >
-                <Ionicons name="add" size={28} color="#fff" />
+                <Ionicons name="add" size={28} color={colors.onPrimary} />
             </TouchableOpacity>
 
             <TicketFormModal
@@ -284,7 +284,6 @@ const styles = StyleSheet.create({
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
         shadowOpacity: 0.2,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 3 },

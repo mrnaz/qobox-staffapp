@@ -494,9 +494,9 @@ export default function DailyAttendanceModal({
                             }]}
                         >
                             {isSubmitting ? (
-                                <ActivityIndicator color="#fff" />
+                                <ActivityIndicator color={colors.onPrimary} />
                             ) : (
-                                <Text style={styles.btnText}>Submit attendance</Text>
+                                <Text style={[styles.btnText, { color: colors.onPrimary }]}>Submit attendance</Text>
                             )}
                         </TouchableOpacity>
                     ) : null}
@@ -527,6 +527,7 @@ export default function DailyAttendanceModal({
                                     width: anchor.width,
                                     backgroundColor: colors.cardBackground,
                                     borderColor: colors.border,
+                                    shadowColor: colors.cardShadow,
                                 }]}
                             >
                                 {SELECTOR_ORDER.map((key) => {
@@ -717,7 +718,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 8,
     },
-    btnText: { color: '#fff', fontWeight: '700' },
+    btnText: { fontWeight: '700' },
     btnOutline: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -735,7 +736,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         paddingVertical: 6,
         paddingHorizontal: 6,
-        shadowColor: '#000',
         shadowOpacity: 0.18,
         shadowRadius: 16,
         shadowOffset: { width: 0, height: 8 },

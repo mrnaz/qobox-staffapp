@@ -53,7 +53,7 @@ export default function PeriodPicker({ periods = [], selectedId, onChange }) {
                 animationType="fade"
                 onRequestClose={() => setOpen(false)}
             >
-                <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
+                <TouchableOpacity style={[styles.overlay, { backgroundColor: colors.overlay }]} activeOpacity={1} onPress={() => setOpen(false)}>
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
                         <Card>
                             <CardHeader>
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
     chipText: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,

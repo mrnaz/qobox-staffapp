@@ -344,24 +344,24 @@ export default function TicketDetailScreen() {
                                     {
                                         backgroundColor: isResolved
                                             ? 'transparent'
-                                            : (colors.success || colors.primary),
-                                        borderColor: colors.success || colors.primary,
+                                            : (colors.success),
+                                        borderColor: colors.success,
                                         opacity: busy ? 0.6 : 1,
                                     },
                                 ]}
                             >
                                 {busy ? (
-                                    <ActivityIndicator color={isResolved ? (colors.success || colors.primary) : '#fff'} />
+                                    <ActivityIndicator color={isResolved ? colors.success : colors.onPrimary} />
                                 ) : (
                                     <>
                                         <Ionicons
                                             name={isResolved ? 'refresh-outline' : 'checkmark-circle-outline'}
                                             size={16}
-                                            color={isResolved ? (colors.success || colors.primary) : '#fff'}
+                                            color={isResolved ? colors.success : colors.onPrimary}
                                         />
                                         <Text style={[
                                             styles.resolveBtnText,
-                                            { color: isResolved ? (colors.success || colors.primary) : '#fff' },
+                                            { color: isResolved ? colors.success : colors.onPrimary },
                                         ]}>
                                             {isResolved ? 'Reopen ticket' : 'Mark resolved'}
                                         </Text>
@@ -430,67 +430,33 @@ export default function TicketDetailScreen() {
                     </Card>
                 </ScrollView>
 
-                <View style={[styles.composerWrap, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
-                    {/* Staged attachments sit above the input so the row itself
-                        keeps its height whether or not anything is attached. */}
-                    {commentPhotos.length > 0 ? (
-                        <View style={styles.pendingRow}>
-                            {commentPhotos.map((ph, i) => (
-                                <View key={ph.uri} style={styles.pendingWrap}>
-                                    <Image source={{ uri: ph.uri }} style={styles.pendingThumb} />
-                                    <TouchableOpacity
-                                        onPress={() => removeCommentPhoto(i)}
-                                        style={[styles.pendingRemove, { backgroundColor: colors.error || '#ff3300' }]}
-                                    >
-                                        <Ionicons name="close" size={12} color="#fff" />
-                                    </TouchableOpacity>
-                                </View>
-                            ))}
-                        </View>
-                    ) : null}
-
-                    <View style={styles.composer}>
-                        <TouchableOpacity
-                            onPress={() => addCommentPhoto(true)}
-                            disabled={posting}
-                            style={[styles.attachBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                        >
-                            <Ionicons name="camera-outline" size={18} color={iconColor('camera-outline', colors)} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => addCommentPhoto(false)}
-                            disabled={posting}
-                            style={[styles.attachBtn, { borderColor: colors.border, backgroundColor: colors.cardBackground }]}
-                        >
-                            <Ionicons name="image-outline" size={18} color={iconColor('image-outline', colors)} />
-                        </TouchableOpacity>
-                        <TextInput
-                            style={[styles.composerInput, {
-                                color: colors.textPrimary,
-                                backgroundColor: colors.cardBackground,
-                                borderColor: colors.border,
-                            }]}
-                            placeholder="Write a comment…"
-                            placeholderTextColor={colors.textSecondary}
-                            value={commentText}
-                            onChangeText={setCommentText}
-                            multiline
-                        />
-                        <TouchableOpacity
-                            onPress={submitComment}
-                            disabled={posting || !canSendComment}
-                            style={[styles.sendBtn, {
-                                backgroundColor: colors.primary,
-                                opacity: posting || !canSendComment ? 0.5 : 1,
-                            }]}
-                        >
-                            {posting ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Ionicons name="send" size={18} color="#fff" />
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+                    <TextInput
+                        style={[styles.composerInput, {
+                            color: colors.textPrimary,
+                            backgroundColor: colors.cardBackground,
+                            borderColor: colors.border,
+                        }]}
+                        placeholder="Write a comment…"
+                        placeholderTextColor={colors.textSecondary}
+                        value={commentText}
+                        onChangeText={setCommentText}
+                        multiline
+                    />
+                    <TouchableOpacity
+                        onPress={submitComment}
+                        disabled={posting || !commentText.trim()}
+                        style={[styles.sendBtn, {
+                            backgroundColor: colors.primary,
+                            opacity: posting || !commentText.trim() ? 0.5 : 1,
+                        }]}
+                    >
+                        {posting ? (
+                            <ActivityIndicator color={colors.onPrimary} />
+                        ) : (
+                            <Ionicons name="send" size={18} color={colors.onPrimary} />
+                        )}
+                    </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
 

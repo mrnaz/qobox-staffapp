@@ -286,9 +286,9 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                                         <Image source={{ uri: p.uri }} style={styles.thumbnail} />
                                         <TouchableOpacity
                                             onPress={() => removePhoto(i)}
-                                            style={[styles.thumbnailRemove, { backgroundColor: colors.error || '#ff3300' }]}
+                                            style={[styles.thumbnailRemove, { backgroundColor: colors.error }]}
                                         >
-                                            <Ionicons name="close" size={14} color="#fff" />
+                                            <Ionicons name="close" size={14} color={colors.onPrimary} />
                                         </TouchableOpacity>
                                     </View>
                                 ))}
@@ -307,11 +307,11 @@ export default function TicketFormModal({ visible, onClose, onSaved, staff, exis
                         style={[styles.saveBtn, { backgroundColor: colors.primary, opacity: submitting ? 0.6 : 1 }]}
                     >
                         {submitting ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={colors.onPrimary} />
                         ) : (
                             <>
-                                <Ionicons name="checkmark" size={18} color="#fff" />
-                                <Text style={styles.saveBtnText}>
+                                <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
+                                <Text style={[styles.saveBtnText, { color: colors.onPrimary }]}>
                                     {isEdit ? 'Save changes' : 'Save ticket'}
                                 </Text>
                             </>
@@ -389,5 +389,5 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingVertical: 14,
     },
-    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    saveBtnText: { fontSize: 15, fontWeight: '700' },
 });

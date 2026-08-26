@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import { authTheme } from '../constants/authTheme';
 
 export default function ForgotPasswordScreen() {
     const { useTheme } = Theme;
@@ -83,7 +84,7 @@ export default function ForgotPasswordScreen() {
                                 source={require('../../assets/logo_light.png')}
                                 style={styles.logo}
                             />
-                            <Text style={{ color: '#ffffff' }} className="text-center mt-2">
+                            <Text style={{ color: authTheme.text }} className="text-center mt-2">
                                 Reset your password
                             </Text>
                         </View>
@@ -91,25 +92,25 @@ export default function ForgotPasswordScreen() {
                         {success && (
                             <View
                                 style={{
-                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                    borderColor: 'rgba(16, 185, 129, 0.2)',
+                                    backgroundColor: authTheme.successBg,
+                                    borderColor: authTheme.successBorder,
                                 }}
                                 className="border rounded-md py-2 px-3 mb-4"
                             >
-                                <Text style={{ color: '#10b981' }} className="text-xs font-medium text-center">
+                                <Text style={{ color: authTheme.success }} className="text-xs font-medium text-center">
                                     Password reset link is sent to your email.
                                 </Text>
                             </View>
                         )}
 
                         <View className="mb-4">
-                            <Text style={{ color: '#ffffff' }} className="mb-1">Email or Staff ID</Text>
+                            <Text style={{ color: authTheme.text }} className="mb-1">Email or Staff ID</Text>
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     style={styles.textInput}
                                     className="text-lg"
                                     placeholder="staff@email.com or Staff ID"
-                                    placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                                    placeholderTextColor={authTheme.textMuted60}
                                     value={email}
                                     onChangeText={setEmail}
                                     keyboardType="email-address"
@@ -124,9 +125,9 @@ export default function ForgotPasswordScreen() {
                                 className="py-4 rounded-lg items-center mt-2"
                             >
                                 {isLoading ? (
-                                    <ActivityIndicator color="#ffffff" />
+                                    <ActivityIndicator color={authTheme.text} />
                                 ) : (
-                                    <Text style={{ color: '#ffffff' }} className="font-bold text-lg">Reset Password</Text>
+                                    <Text style={{ color: authTheme.text }} className="font-bold text-lg">Reset Password</Text>
                                 )}
                             </TouchableOpacity>
 
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: authTheme.overlay,
     },
     authCard: {
         width: '100%',
@@ -164,25 +165,25 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: 'rgba(20, 20, 20, 0.6)',
+        borderColor: authTheme.cardBorder,
+        backgroundColor: authTheme.cardBackground,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: authTheme.cardShadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 12,
     },
     inputContainer: {
-        backgroundColor: '#42454C',
+        backgroundColor: authTheme.inputBackground,
         borderRadius: 8,
         padding: 8,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: authTheme.cardBorder,
     },
     textInput: {
-        color: '#ffffff',
+        color: authTheme.text,
         minHeight: 24,
         paddingVertical: 8,
         textAlignVertical: 'center',

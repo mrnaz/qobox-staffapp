@@ -25,7 +25,7 @@ export default function ShiftQrModal({ visible, onClose, token, loading, error, 
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+            <TouchableOpacity style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} activeOpacity={1} onPress={onClose}>
                 <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 360 }}>
                     <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                         <View style={styles.modalHeader}>

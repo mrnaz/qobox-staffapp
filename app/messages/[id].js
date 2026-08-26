@@ -239,7 +239,7 @@ export default function MessageDetailScreen() {
                             <Ionicons name="arrow-redo-outline" size={20} color={colors.textPrimary} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setConfirmDelete(true)} style={styles.iconBtn}>
-                            <Ionicons name="trash-outline" size={20} color={colors.error || '#ef4444'} />
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
                         </TouchableOpacity>
                     </View>
                 ) : (
@@ -320,9 +320,9 @@ export default function MessageDetailScreen() {
                             ]}
                         >
                             {sendingReply ? (
-                                <ActivityIndicator size="small" color="#fff" />
+                                <ActivityIndicator size="small" color={colors.onPrimary} />
                             ) : (
-                                <Ionicons name="send" size={18} color="#fff" />
+                                <Ionicons name="send" size={18} color={colors.onPrimary} />
                             )}
                         </TouchableOpacity>
                     </View>

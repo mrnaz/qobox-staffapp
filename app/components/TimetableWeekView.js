@@ -258,7 +258,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                             <Text style={[
                                 styles.dayChipDow,
                                 {
-                                    color: active ? '#fff' : (isToday ? colors.primary : colors.textSecondary),
+                                    color: active ? colors.onPrimary : (isToday ? colors.primary : colors.textSecondary),
                                     fontWeight: isToday || active ? '700' : '500',
                                 },
                             ]}>
@@ -266,7 +266,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                             </Text>
                             <Text style={[
                                 styles.dayChipNum,
-                                { color: active ? '#fff' : colors.textPrimary },
+                                { color: active ? colors.onPrimary : colors.textPrimary },
                             ]}>
                                 {d.getDate()}
                             </Text>
@@ -394,7 +394,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                 onRequestClose={() => setPicked(null)}
             >
                 <TouchableOpacity
-                    style={styles.modalOverlay}
+                    style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
                     activeOpacity={1}
                     onPress={() => setPicked(null)}
                 >
@@ -569,7 +569,6 @@ const styles = StyleSheet.create({
     retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,

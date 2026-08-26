@@ -322,7 +322,7 @@ export default function NoticeCard({ notice }) {
 
             {/* Options menu */}
             <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={closeMenu}>
-                <TouchableOpacity activeOpacity={1} onPress={closeMenu} style={styles.backdrop}>
+                <TouchableOpacity activeOpacity={1} onPress={closeMenu} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 340 }}>
                         <View style={[styles.sheet, {
                             backgroundColor: colors.cardBackground,
@@ -439,7 +439,6 @@ const styles = StyleSheet.create({
 
     backdrop: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 24,

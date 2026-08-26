@@ -272,11 +272,11 @@ export default function RosterScreen() {
                 style={[styles.btn, { backgroundColor: checkOutColor, opacity: openShiftBusy ? 0.6 : 1, marginTop: 10 }]}
             >
                 {openShiftBusy ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colors.onPrimary} />
                 ) : (
                     <>
-                        <Ionicons name="log-out-outline" size={16} color="#fff" />
-                        <Text style={styles.btnText}>Check Out</Text>
+                        <Ionicons name="log-out-outline" size={16} color={colors.onPrimary} />
+                        <Text style={[styles.btnText, { color: colors.onPrimary }]}>Check Out</Text>
                     </>
                 )}
             </TouchableOpacity>
@@ -439,11 +439,11 @@ export default function RosterScreen() {
                                     style={[styles.btn, { backgroundColor: colors.primary, opacity: isBusy ? 0.6 : 1 }]}
                                 >
                                     {isBusy && actingOnId === (item.id || item.staff_roster_id) ? (
-                                        <ActivityIndicator color="#fff" />
+                                        <ActivityIndicator color={colors.onPrimary} />
                                     ) : (
                                         <>
-                                            <Ionicons name="log-in-outline" size={16} color="#fff" />
-                                            <Text style={styles.btnText}>Check In</Text>
+                                            <Ionicons name="log-in-outline" size={16} color={colors.onPrimary} />
+                                            <Text style={[styles.btnText, { color: colors.onPrimary }]}>Check In</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -454,11 +454,11 @@ export default function RosterScreen() {
                                     style={[styles.btn, { backgroundColor: checkOutColor, opacity: isBusy ? 0.6 : 1 }]}
                                 >
                                     {isBusy ? (
-                                        <ActivityIndicator color="#fff" />
+                                        <ActivityIndicator color={colors.onPrimary} />
                                     ) : (
                                         <>
-                                            <Ionicons name="log-out-outline" size={16} color="#fff" />
-                                            <Text style={styles.btnText}>Check Out</Text>
+                                            <Ionicons name="log-out-outline" size={16} color={colors.onPrimary} />
+                                            <Text style={[styles.btnText, { color: colors.onPrimary }]}>Check Out</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -491,7 +491,7 @@ export default function RosterScreen() {
                         value={showPast}
                         onValueChange={setShowPast}
                         trackColor={{ false: colors.divider, true: colors.primary }}
-                        thumbColor="#fff"
+                        thumbColor={colors.onPrimary}
                     />
                     <Text style={[styles.switchLabel, { color: colors.textPrimary }]}>Show past shifts</Text>
                 </View>
@@ -567,7 +567,7 @@ export default function RosterScreen() {
                 onRequestClose={() => setSelectedShift(null)}
             >
                 <TouchableOpacity
-                    style={styles.modalOverlay}
+                    style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
                     activeOpacity={1}
                     onPress={() => setSelectedShift(null)}
                 >
@@ -598,8 +598,8 @@ export default function RosterScreen() {
                                                 onPress={() => detailQr.open(selectedShift)}
                                                 style={[styles.btn, { backgroundColor: colors.primary }]}
                                             >
-                                                <Ionicons name="qr-code-outline" size={16} color="#fff" />
-                                                <Text style={styles.btnText}>
+                                                <Ionicons name="qr-code-outline" size={16} color={colors.onPrimary} />
+                                                <Text style={[styles.btnText, { color: colors.onPrimary }]}>
                                                     {shiftStatus(selectedShift) === 'in_progress' ? 'Clock-out QR' : 'Clock-in QR'}
                                                 </Text>
                                             </TouchableOpacity>
@@ -640,7 +640,7 @@ export default function RosterScreen() {
                                                         value={markAbsence}
                                                         onValueChange={setMarkAbsence}
                                                         trackColor={{ false: colors.divider, true: colors.error || colors.warning }}
-                                                        thumbColor="#fff"
+                                                        thumbColor={colors.onPrimary}
                                                     />
                                                 </View>
                                                 {markAbsence ? (
@@ -668,9 +668,9 @@ export default function RosterScreen() {
                                                             }]}
                                                         >
                                                             {actingOnId === selectedShift.staff_roster_id ? (
-                                                                <ActivityIndicator color="#fff" />
+                                                                <ActivityIndicator color={colors.onPrimary} />
                                                             ) : (
-                                                                <Text style={styles.btnText}>Submit Absence</Text>
+                                                                <Text style={[styles.btnText, { color: colors.onPrimary }]}>Submit Absence</Text>
                                                             )}
                                                         </TouchableOpacity>
                                                     </>
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         flex: 1,
     },
-    btnText: { color: '#fff', fontWeight: '700' },
+    btnText: { fontWeight: '700' },
     btnOutline: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -821,7 +821,6 @@ const styles = StyleSheet.create({
     endText: { textAlign: 'center', paddingVertical: 16, fontSize: 12 },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,

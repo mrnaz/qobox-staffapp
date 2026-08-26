@@ -140,7 +140,7 @@ export default function CheckInModal({
                 animationType="fade"
                 onRequestClose={onClose}
             >
-                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+                <TouchableOpacity style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} activeOpacity={1} onPress={onClose}>
                     <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
                         <View style={[styles.modalCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                             <View style={styles.modalHeader}>
@@ -247,11 +247,11 @@ export default function CheckInModal({
                                         style={[styles.btn, { backgroundColor: colors.primary, opacity: submitting ? 0.6 : 1, marginTop: 4 }]}
                                     >
                                         {submitting ? (
-                                            <ActivityIndicator color="#fff" />
+                                            <ActivityIndicator color={colors.onPrimary} />
                                         ) : (
                                             <>
-                                                <Ionicons name="log-in-outline" size={16} color="#fff" />
-                                                <Text style={styles.btnText}>Check In</Text>
+                                                <Ionicons name="log-in-outline" size={16} color={colors.onPrimary} />
+                                                <Text style={[styles.btnText, { color: colors.onPrimary }]}>Check In</Text>
                                             </>
                                         )}
                                     </TouchableOpacity>

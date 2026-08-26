@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { persistAuth, routePostAuth, clearAuthStorage } from '../utils/authFlow';
+import { authTheme } from '../constants/authTheme';
 
 export default function OtpScreen() {
     const { useTheme } = Theme;
@@ -155,7 +156,7 @@ export default function OtpScreen() {
                                 value={otp}
                                 onChangeText={onChangeOtp}
                                 placeholder="123456"
-                                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                placeholderTextColor={authTheme.textMuted40}
                                 keyboardType="number-pad"
                                 maxLength={6}
                                 editable={!isLoading}
@@ -173,8 +174,8 @@ export default function OtpScreen() {
                                 value={rememberDevice}
                                 onValueChange={setRememberDevice}
                                 disabled={isLoading}
-                                trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.primary }}
-                                thumbColor="#ffffff"
+                                trackColor={{ false: authTheme.trackOff, true: colors.primary }}
+                                thumbColor={authTheme.text}
                             />
                             <Text style={styles.rememberText}>
                                 Remember this device for 3 weeks
@@ -193,7 +194,7 @@ export default function OtpScreen() {
                             ]}
                         >
                             {isLoading ? (
-                                <ActivityIndicator color="#ffffff" />
+                                <ActivityIndicator color={authTheme.text} />
                             ) : (
                                 <Text style={styles.submitText}>Verify</Text>
                             )}
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     overlay: {
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: authTheme.overlay,
     },
     scroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
     card: {
@@ -225,44 +226,44 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: 'rgba(20, 20, 20, 0.6)',
+        borderColor: authTheme.cardBorder,
+        backgroundColor: authTheme.cardBackground,
     },
     header: { alignItems: 'center', marginBottom: 20 },
     logo: { width: 160, height: 40, resizeMode: 'contain', marginBottom: 12 },
-    title: { color: '#ffffff', fontSize: 18, fontWeight: '600' },
-    subtitle: { color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 6, fontSize: 13 },
-    hint: { color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 4, fontSize: 12 },
-    label: { color: '#ffffff', marginBottom: 6 },
+    title: { color: authTheme.text, fontSize: 18, fontWeight: '600' },
+    subtitle: { color: authTheme.textMuted85, textAlign: 'center', marginTop: 6, fontSize: 13 },
+    hint: { color: authTheme.textMuted55, textAlign: 'center', marginTop: 4, fontSize: 12 },
+    label: { color: authTheme.text, marginBottom: 6 },
     inputContainer: {
-        backgroundColor: '#42454C',
+        backgroundColor: authTheme.inputBackground,
         borderRadius: 8,
         padding: 8,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: authTheme.cardBorder,
     },
     input: {
-        color: '#ffffff',
+        color: authTheme.text,
         fontSize: 22,
         letterSpacing: 6,
         textAlign: 'center',
         paddingVertical: 8,
     },
-    errorText: { color: '#ff6b6b', marginTop: 8, fontSize: 13 },
+    errorText: { color: authTheme.error, marginTop: 8, fontSize: 13 },
     rememberRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
         marginTop: 16,
     },
-    rememberText: { color: '#ffffff', fontSize: 13, flexShrink: 1 },
+    rememberText: { color: authTheme.text, fontSize: 13, flexShrink: 1 },
     submitButton: {
         marginTop: 20,
         paddingVertical: 14,
         borderRadius: 10,
         alignItems: 'center',
     },
-    submitText: { color: '#ffffff', fontWeight: '700', fontSize: 16 },
+    submitText: { color: authTheme.text, fontWeight: '700', fontSize: 16 },
     cancelButton: { alignSelf: 'center', marginTop: 14 },
     cancelText: { fontWeight: '600' },
 });

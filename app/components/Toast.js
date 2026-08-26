@@ -50,9 +50,9 @@ export default function Toast({ toast, onHide, duration = 2500 }) {
 
     const variant = toast.variant || 'info';
     const palette = {
-        success: { bg: (colors.success || '#22c55e') + 'EE', icon: 'checkmark-circle' },
-        error:   { bg: (colors.error   || '#ef4444') + 'EE', icon: 'alert-circle' },
-        info:    { bg: (colors.primary || '#3b82f6') + 'EE', icon: 'information-circle' },
+        success: { bg: colors.success + 'EE', icon: 'checkmark-circle' },
+        error:   { bg: colors.error + 'EE', icon: 'alert-circle' },
+        info:    { bg: colors.primary + 'EE', icon: 'information-circle' },
     }[variant];
 
     return (
@@ -60,11 +60,11 @@ export default function Toast({ toast, onHide, duration = 2500 }) {
             <Animated.View
                 style={[
                     styles.toast,
-                    { backgroundColor: palette.bg, opacity, transform: [{ translateY }] },
+                    { backgroundColor: palette.bg, shadowColor: colors.cardShadow, opacity, transform: [{ translateY }] },
                 ]}
             >
-                <Ionicons name={palette.icon} size={18} color="#fff" />
-                <Text style={styles.text} numberOfLines={3}>{toast.message}</Text>
+                <Ionicons name={palette.icon} size={18} color={colors.onPrimary} />
+                <Text style={[styles.text, { color: colors.onPrimary }]} numberOfLines={3}>{toast.message}</Text>
             </Animated.View>
         </View>
     );
@@ -87,11 +87,10 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 999,
         maxWidth: '92%',
-        shadowColor: '#000',
         shadowOpacity: 0.25,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },
         elevation: 6,
     },
-    text: { color: '#fff', fontSize: 13, fontWeight: '600', flexShrink: 1 },
+    text: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
 });

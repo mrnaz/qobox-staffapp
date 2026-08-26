@@ -309,7 +309,7 @@ export default function CalendarScreen() {
                             </Text>
                             {inMonth && dayEvents.length > 0 ? (
                                 <View style={[styles.gridBadge, { backgroundColor: colors.primary }]}>
-                                    <Text style={styles.gridBadgeText}>{dayEvents.length}</Text>
+                                    <Text style={[styles.gridBadgeText, { color: colors.onPrimary }]}>{dayEvents.length}</Text>
                                 </View>
                             ) : null}
                         </TouchableOpacity>
@@ -339,7 +339,7 @@ export default function CalendarScreen() {
                         style={[styles.iconBtn, { backgroundColor: isCurrentMonth ? colors.primary : colors.surface }]}
                         accessibilityLabel="Go to current month"
                     >
-                        <Ionicons name="home" size={18} color={isCurrentMonth ? '#fff' : colors.textSecondary} />
+                        <Ionicons name="home" size={18} color={isCurrentMonth ? colors.onPrimary : colors.textSecondary} />
                     </TouchableOpacity>
 
                     <View style={[styles.viewToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -348,7 +348,7 @@ export default function CalendarScreen() {
                             onPress={() => setView('day')}
                             accessibilityLabel="Agenda view"
                         >
-                            <FontAwesome name="list" size={16} color={view === 'day' ? '#fff' : colors.textSecondary} />
+                            <FontAwesome name="list" size={16} color={view === 'day' ? colors.onPrimary : colors.textSecondary} />
                         </TouchableOpacity>
                         <View style={[styles.viewToggleDivider, { backgroundColor: colors.border }]} />
                         <TouchableOpacity
@@ -356,7 +356,7 @@ export default function CalendarScreen() {
                             onPress={() => setView('month')}
                             accessibilityLabel="Month view"
                         >
-                            <FontAwesome name="calendar" size={16} color={view === 'month' ? '#fff' : colors.textSecondary} />
+                            <FontAwesome name="calendar" size={16} color={view === 'month' ? colors.onPrimary : colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
 
@@ -463,7 +463,7 @@ export default function CalendarScreen() {
                 onRequestClose={() => setFilterVisible(false)}
             >
                 <TouchableOpacity
-                    style={styles.modalOverlay}
+                    style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
                     activeOpacity={1}
                     onPress={() => setFilterVisible(false)}
                 >
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    gridBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+    gridBadgeText: { fontSize: 11, fontWeight: '700' },
     list: { padding: 16, paddingBottom: 32 },
     dayBlock: { marginBottom: cardGap },
     dayHeaderText: { fontSize: 14, fontWeight: '700' },
@@ -623,7 +623,6 @@ const styles = StyleSheet.create({
     // Event-type filter modal
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,

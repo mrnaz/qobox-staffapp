@@ -254,8 +254,8 @@ export default function ProgressReportSummaryScreen() {
                         activeOpacity={0.85}
                         style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
                     >
-                        <Ionicons name="add" size={18} color="#fff" />
-                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                        <Ionicons name="add" size={18} color={colors.onPrimary} />
+                        <Text style={{ color: colors.onPrimary, fontWeight: '700', fontSize: 14 }}>
                             Start first assessment
                         </Text>
                     </TouchableOpacity>
@@ -502,11 +502,11 @@ function OutcomeValue({ outcome, assessment, colors }) {
     if (t === 'P') {
         if (outcome.passed === true) {
             items.push(
-                <Text key="p" style={{ color: colors.success || colors.primary, fontWeight: '700', fontSize: 13 }}>Pass</Text>
+                <Text key="p" style={{ color: colors.success, fontWeight: '700', fontSize: 13 }}>Pass</Text>
             );
         } else if (outcome.passed === false) {
             items.push(
-                <Text key="f" style={{ color: colors.error || '#ef4444', fontWeight: '700', fontSize: 13 }}>Fail</Text>
+                <Text key="f" style={{ color: colors.error, fontWeight: '700', fontSize: 13 }}>Fail</Text>
             );
         } else {
             items.push(<Unspecified key="u" colors={colors} />);

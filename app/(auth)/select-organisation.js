@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import { authTheme } from '../constants/authTheme';
 import {
     persistAuth,
     startMfa,
@@ -160,7 +161,7 @@ export default function SelectOrganisationScreen() {
                             value={query}
                             onChangeText={setQuery}
                             placeholder="Search organisations…"
-                            placeholderTextColor="rgba(255,255,255,0.45)"
+                            placeholderTextColor={authTheme.textMuted45}
                             style={styles.searchInput}
                             autoCorrect={false}
                         />
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     overlay: {
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: authTheme.overlay,
     },
     scroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
     card: {
@@ -272,51 +273,51 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        backgroundColor: 'rgba(20, 20, 20, 0.6)',
+        borderColor: authTheme.cardBorder,
+        backgroundColor: authTheme.cardBackground,
     },
     header: { alignItems: 'center', marginBottom: 16 },
     logo: { width: 160, height: 40, resizeMode: 'contain', marginBottom: 12 },
-    title: { color: '#ffffff', fontSize: 18, fontWeight: '600' },
-    subtitle: { color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 4, fontSize: 13 },
+    title: { color: authTheme.text, fontSize: 18, fontWeight: '600' },
+    subtitle: { color: authTheme.textMuted70, textAlign: 'center', marginTop: 4, fontSize: 13 },
     searchWrap: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        backgroundColor: '#42454C',
+        backgroundColor: authTheme.inputBackground,
         borderRadius: 8,
         paddingHorizontal: 12,
         marginBottom: 12,
     },
-    searchInput: { flex: 1, color: '#ffffff', paddingVertical: 10, fontSize: 14 },
-    clear: { color: 'rgba(255,255,255,0.6)', fontSize: 14, paddingHorizontal: 4 },
-    empty: { color: '#ffffff', textAlign: 'center', paddingVertical: 16 },
+    searchInput: { flex: 1, color: authTheme.text, paddingVertical: 10, fontSize: 14 },
+    clear: { color: authTheme.textMuted60, fontSize: 14, paddingHorizontal: 4 },
+    empty: { color: authTheme.text, textAlign: 'center', paddingVertical: 16 },
     retry: { alignSelf: 'center', paddingVertical: 8 },
     retryText: { fontWeight: '600' },
     orgBlock: { marginBottom: 10 },
     orgRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#42454C',
+        backgroundColor: authTheme.inputBackground,
         borderRadius: 8,
         borderWidth: 1,
         padding: 14,
     },
-    orgName: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
-    orgMeta: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
+    orgName: { color: authTheme.text, fontSize: 16, fontWeight: '600' },
+    orgMeta: { color: authTheme.textMuted70, fontSize: 12, marginTop: 2 },
     siteList: { paddingLeft: 12, paddingTop: 8, gap: 8 },
     siteRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(66, 69, 76, 0.65)',
+        backgroundColor: authTheme.cardBackgroundSecondary,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
+        borderColor: authTheme.siteRowBorder,
         paddingVertical: 12,
         paddingHorizontal: 14,
     },
-    siteName: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
-    siteMeta: { color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 2 },
+    siteName: { color: authTheme.text, fontSize: 14, fontWeight: '600' },
+    siteMeta: { color: authTheme.textMuted55, fontSize: 12, marginTop: 2 },
     chevron: { fontSize: 22, fontWeight: '300', marginLeft: 8 },
     cancelButton: { alignSelf: 'center', marginTop: 12 },
     cancelText: { fontWeight: '600' },

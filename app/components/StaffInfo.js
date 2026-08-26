@@ -149,7 +149,7 @@ export default function StaffInfo() {
                             justifyContent: 'center', alignItems: 'center',
                             paddingHorizontal: 3,
                         }}>
-                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>
+                            <Text style={{ color: colors.onPrimary, fontSize: 9, fontWeight: 'bold' }}>
                                 {unreadCount > 99 ? '99+' : unreadCount}
                             </Text>
                         </View>
@@ -172,7 +172,7 @@ export default function StaffInfo() {
             {/* Jump To modal — slides down from the top */}
             <Modal visible={isJumpVisible} transparent animationType="fade" onRequestClose={() => setIsJumpVisible(false)}>
                 <TouchableOpacity
-                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-start' }}
+                    style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-start' }}
                     activeOpacity={1}
                     onPress={() => setIsJumpVisible(false)}
                 >
@@ -241,7 +241,7 @@ export default function StaffInfo() {
             <Modal visible={isMenuVisible} transparent animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
                 <TouchableOpacity
                     style={{
-                        flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+                        flex: 1, backgroundColor: colors.overlay,
                         justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24,
                     }}
                     activeOpacity={1}
@@ -316,7 +316,7 @@ export default function StaffInfo() {
                                         justifyContent: 'center', alignItems: 'center',
                                         paddingHorizontal: 5, marginLeft: 6,
                                     }}>
-                                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+                                        <Text style={{ color: colors.onPrimary, fontSize: 11, fontWeight: 'bold' }}>
                                             {unreadCount > 99 ? '99+' : unreadCount}
                                         </Text>
                                     </View>

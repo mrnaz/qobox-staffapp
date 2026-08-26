@@ -41,9 +41,7 @@ export default function ConfirmDialog({
     const [value, setValue] = useState('');
     useEffect(() => { if (!visible) setValue(''); }, [visible]);
 
-    const confirmColor = destructive
-        ? (colors.error || colors.warning)
-        : colors.primary;
+    const confirmColor = destructive ? colors.error : colors.primary;
 
     const hasInput = !!inputPlaceholder || !!inputLabel;
     const canConfirm = !inputRequired || value.trim().length > 0;
@@ -62,7 +60,7 @@ export default function ConfirmDialog({
                 <TouchableOpacity
                     activeOpacity={1}
                     onPress={busy ? undefined : onCancel}
-                    style={styles.overlay}
+                    style={[styles.overlay, { backgroundColor: colors.overlay }]}
                 >
                     <TouchableOpacity
                         activeOpacity={1}
@@ -123,9 +121,9 @@ export default function ConfirmDialog({
                                 ]}
                             >
                                 {busy ? (
-                                    <ActivityIndicator color="#fff" />
+                                    <ActivityIndicator color={colors.onPrimary} />
                                 ) : (
-                                    <Text style={{ color: '#fff', fontWeight: '700' }}>
+                                    <Text style={{ color: colors.onPrimary, fontWeight: '700' }}>
                                         {confirmLabel}
                                     </Text>
                                 )}
@@ -141,7 +139,6 @@ export default function ConfirmDialog({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 20,
