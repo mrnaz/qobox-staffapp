@@ -145,7 +145,7 @@ export default function StudentDetailScreen() {
                 </View>
             ) : error && !student ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={load} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -308,7 +308,7 @@ function ClassesTab({ studentId, colors }) {
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
             ) : classes.length === 0 ? (
                 <View style={styles.emptyBlock}>
-                    <Ionicons name="school-outline" size={28} color={iconColor('school-outline', colors)} />
+                    <Ionicons name="school-outline" size={28} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No classes enrolled.
                     </Text>

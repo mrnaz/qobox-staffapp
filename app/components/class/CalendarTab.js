@@ -9,7 +9,6 @@ import {
     RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import Card, { CardHeader, cardBodyPadding, cardGap } from '../Card';
@@ -146,7 +145,7 @@ export default function CalendarTab({ classId }) {
                 </View>
             ) : error && events.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -157,7 +156,7 @@ export default function CalendarTab({ classId }) {
                     contentContainerStyle={styles.center}
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 >
-                    <Ionicons name="calendar-outline" size={32} color={iconColor('calendar-outline', colors)} />
+                    <Ionicons name="calendar-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No sessions this month.</Text>
                 </ScrollView>
             ) : (

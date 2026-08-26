@@ -159,7 +159,7 @@ export default function DashboardScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
+                    <Ionicons name="person-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -283,7 +283,7 @@ export default function DashboardScreen() {
             <Section title="Notices" colors={colors}>
                 {notices.length === 0 && !isLoading ? (
                     <Card style={styles.emptyCard}>
-                        <Ionicons name="megaphone-outline" size={28} color={iconColor('megaphone-outline', colors)} />
+                        <Ionicons name="megaphone-outline" size={28} color={colors.textDisabled} />
                         <Text style={[styles.emptyCardTitle, { color: colors.textPrimary }]}>
                             No notices
                         </Text>

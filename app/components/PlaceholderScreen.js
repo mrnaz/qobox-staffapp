@@ -21,8 +21,8 @@ export default function PlaceholderScreen({
             contentContainerStyle={styles.container}
         >
             <Card style={styles.card}>
-                <View style={[styles.iconWrap, { backgroundColor: iconColor(icon, colors) + '22' }]}>
-                    <Ionicons name={icon} size={28} color={iconColor(icon, colors)} />
+                <View style={[styles.iconWrap, { backgroundColor: colors.textDisabled + '22' }]}>
+                    <Ionicons name={icon} size={28} color={colors.textDisabled} />
                 </View>
                 <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
                 {description ? (

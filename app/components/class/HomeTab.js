@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { iconColor } from '../../utils/iconColors';
 import api from '../../services/api';
 import Theme from '../../context/ThemeContext';
 import NoticeCard from '../NoticeCard';
@@ -67,7 +66,7 @@ export default function HomeTab({ classId }) {
     if (error && notices.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="megaphone-outline" size={32} color={iconColor('megaphone-outline', colors)} />
+                <Ionicons name="megaphone-outline" size={32} color={colors.textDisabled} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
             </View>
         );
@@ -82,7 +81,7 @@ export default function HomeTab({ classId }) {
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
                 <View style={styles.center}>
-                    <Ionicons name="megaphone-outline" size={32} color={iconColor('megaphone-outline', colors)} />
+                    <Ionicons name="megaphone-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No class notices yet.</Text>
                     <Text style={[styles.emptySub, { color: colors.textDisabled }]}>
                         Announcements for this class will appear here.

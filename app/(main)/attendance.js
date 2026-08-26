@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
-import { iconColor } from '../utils/iconColors';
 import DailyAttendanceModal from '../components/DailyAttendanceModal';
 import Toast from '../components/Toast';
 import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
@@ -187,7 +186,7 @@ export default function AttendanceScreen() {
                 </View>
             ) : error && items.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>

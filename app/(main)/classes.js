@@ -97,7 +97,7 @@ export default function ClassesScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
+                    <Ionicons name="person-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -174,7 +174,7 @@ export default function ClassesScreen() {
                 </View>
             ) : error && classes.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -189,7 +189,7 @@ export default function ClassesScreen() {
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="school-outline" size={32} color={iconColor('school-outline', colors)} />
+                            <Ionicons name="school-outline" size={32} color={colors.textDisabled} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {period?.label
                                     ? `No classes in ${period.label}.`

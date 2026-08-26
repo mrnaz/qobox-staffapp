@@ -14,7 +14,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import { iconColor } from '../utils/iconColors';
 import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 
 const startOfMonth = (d) => {
@@ -243,7 +242,7 @@ export default function CalendarScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
+                    <Ionicons name="person-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -380,7 +379,7 @@ export default function CalendarScreen() {
                 </View>
             ) : error && events.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -393,7 +392,7 @@ export default function CalendarScreen() {
                     contentContainerStyle={styles.center}
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 >
-                    <Ionicons name="calendar-outline" size={32} color={iconColor('calendar-outline', colors)} />
+                    <Ionicons name="calendar-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No events this month.</Text>
                 </ScrollView>
             ) : (

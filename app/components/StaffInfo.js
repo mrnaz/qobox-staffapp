@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Image, ActivityIndicator, TouchableOpacity, Modal, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Theme from '../context/ThemeContext';
 import { iconColor } from '../utils/iconColors';
 import Avatar from './Avatar';
@@ -24,20 +24,17 @@ const JUMP_TABS = [
     { name: 'Albums',     route: 'albums',     path: '/(main)/albums',     icon: 'photo' },
 ];
 
+const KNOWN_ROUTES = JUMP_TABS.map(t => t.route).filter(r => r !== 'index');
+
 export default function StaffInfo() {
     const { useTheme } = Theme;
     const { theme, mode } = useTheme();
     const { colors } = theme;
     const segments = useSegments();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     const isMessagesTab = segments.includes('messages');
-
-    // Every tile in "Jump to" carries the same green — the tone the Students
-    // icon already used. The menu is navigation, not content, so the per-concept
-    // colours from iconColors would only add noise here. The current page is
-    // deliberately NOT highlighted: you open this menu to leave it.
-    const menuTint = colors.turquoise?.text || colors.success || colors.primary;
 
     const [staff, setStaff] = useState(null);
     const [currentSite, setCurrentSite] = useState(null);
@@ -80,6 +77,9 @@ export default function StaffInfo() {
             setLoading(false);
         }
     };
+
+    const lastSegment = segments[segments.length - 1] || '';
+    const currentRoute = KNOWN_ROUTES.includes(lastSegment) ? lastSegment : 'index';
 
     const handleTabPress = (tab) => {
         router.push(tab.path);
@@ -161,36 +161,48 @@ export default function StaffInfo() {
                 ) : null}
             </View>
 
-            {/* Jump To modal — slides down from the top */}
-            <Modal visible={isJumpVisible} transparent animationType="fade" onRequestClose={() => setIsJumpVisible(false)}>
+            {/* Jump To modal */}
+            <Modal visible={isJumpVisible} transparent onRequestClose={() => setIsJumpVisible(false)}>
                 <TouchableOpacity
                     style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-start' }}
                     activeOpacity={1}
                     onPress={() => setIsJumpVisible(false)}
                 >
                     <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-                        <SafeAreaView edges={['top']} style={{ backgroundColor: colors.cardBackground }}>
-                            <View style={{
-                                backgroundColor: colors.cardBackground,
-                                borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
-                                borderBottomWidth: 1, borderColor: colors.border,
-                                paddingTop: 8,
-                            }}>
-                                {/* Title */}
-                                <View style={{
-                                    alignItems: 'center', paddingTop: 12, paddingBottom: 16,
-                                    borderBottomWidth: 1, borderBottomColor: colors.border,
-                                }}>
-                                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700' }}>Jump to</Text>
-                                </View>
-
-                                {/* 3-column grid */}
-                                <View style={{
-                                    flexDirection: 'row', flexWrap: 'wrap',
-                                    justifyContent: 'center',
-                                    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20, gap: 12,
-                                }}>
-                                    {JUMP_TABS.map(tab => (
+                        <View style={{ paddingTop: Platform.OS === 'ios' ? insets.top : 0, backgroundColor: colors.background, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, overflow: 'hidden' }}>
+                            {/* Current user header */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12, marginBottom: 12, backgroundColor: colors.surface }}>
+                                <TouchableOpacity
+                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
+                                >
+                                    <Avatar
+                                        uri={staff?.photo}
+                                        name={avatarName(staff) || fullName}
+                                        id={staff?.id}
+                                        size={40}
+                                        textSize={15}
+                                    />
+                                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+                                        {fullName || 'Staff'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => { setIsJumpVisible(false); router.push('/messages'); }}
+                                    style={{ width: 40, height: 40, borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <FontAwesome name="envelope" size={24} color={colors.primary} />
+                                    {unreadCount > 0 && (
+                                        <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: colors.error, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 }}>
+                                            <Text style={{ color: colors.onPrimary, fontSize: 9, fontWeight: 'bold' }}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                            {/* 3-column grid */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingHorizontal: 16, paddingBottom: 16, gap: 12 }}>
+                                {JUMP_TABS.map(tab => {
+                                    const isActive = currentRoute === tab.route;
+                                    return (
                                         <TouchableOpacity
                                             key={tab.route}
                                             onPress={() => { setIsJumpVisible(false); handleTabPress(tab); }}
@@ -199,32 +211,34 @@ export default function StaffInfo() {
                                                 paddingVertical: 16,
                                                 borderRadius: 16,
                                                 backgroundColor: colors.surface,
-                                                borderWidth: 1,
-                                                borderColor: colors.border,
+                                                borderWidth: 1.5,
+                                                borderColor: isActive ? colors.primary : colors.border,
                                                 alignItems: 'center',
                                             }}
                                         >
                                             <View style={{
-                                                width: 40, height: 40, borderRadius: 20,
-                                                backgroundColor: menuTint + '18',
-                                                alignItems: 'center', justifyContent: 'center',
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 20,
+                                                backgroundColor: isActive ? colors.primary : colors.primary + '18',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
                                                 marginBottom: 6,
                                             }}>
-                                                <FontAwesome name={tab.icon} size={18} color={menuTint} />
+                                                <FontAwesome name={tab.icon} size={18} color={isActive ? colors.onPrimary : colors.primary} />
                                             </View>
-                                            <Text style={{
-                                                color: colors.textPrimary,
-                                                fontSize: 12,
-                                                fontWeight: '500',
-                                                textAlign: 'center',
-                                            }}>
+                                            <Text style={{ color: isActive ? colors.primary : colors.textPrimary, fontSize: 12, fontWeight: isActive ? '700' : '500', textAlign: 'center' }}>
                                                 {tab.name}
                                             </Text>
                                         </TouchableOpacity>
-                                    ))}
-                                </View>
+                                    );
+                                })}
                             </View>
-                        </SafeAreaView>
+                            {/* Handle + title */}
+                            <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 16, borderTopWidth: 1, borderTopColor: colors.borderStrong }}>
+                                <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.primary, marginBottom: 12 }} />
+                            </View>
+                        </View>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>

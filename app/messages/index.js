@@ -22,7 +22,6 @@ import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ComposeModal from '../components/messages/ComposeModal';
 import { stripHtml, fmtMessageDate, recipientsSummary, persistUnreadCount } from '../utils/messages';
-import { iconColor } from '../utils/iconColors';
 
 const FOLDERS = [
     { key: 'inbox', label: 'Inbox' },
@@ -339,7 +338,7 @@ export default function MessagesScreen() {
                 </View>
             ) : error && rows.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -363,7 +362,7 @@ export default function MessagesScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="mail-open-outline" size={32} color={iconColor('mail-open-outline', colors)} />
+                            <Ionicons name="mail-open-outline" size={32} color={colors.textDisabled} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {search
                                     ? 'No messages match your search.'

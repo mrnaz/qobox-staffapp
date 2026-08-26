@@ -238,14 +238,14 @@ export default function ProgressReportSummaryScreen() {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             ) : details.length === 0 ? (
                 // Zero-state — no assessments yet. Show a big CTA so the staff
                 // member can jump straight into the first one.
                 <View style={styles.center}>
-                    <Ionicons name="document-text-outline" size={36} color={iconColor('document-text-outline', colors)} />
+                    <Ionicons name="document-text-outline" size={36} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No assessments yet for this student.
                     </Text>

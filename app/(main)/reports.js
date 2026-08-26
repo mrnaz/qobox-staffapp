@@ -14,7 +14,6 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Card, { cardGap } from '../components/Card';
 import { ensureAcademicPeriod } from '../utils/academicPeriod';
-import { iconColor } from '../utils/iconColors';
 
 const formatDate = (s) => {
     if (!s) return '—';
@@ -194,7 +193,7 @@ export default function ReportsScreen() {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -217,7 +216,7 @@ export default function ReportsScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="document-text-outline" size={32} color={iconColor('document-text-outline', colors)} />
+                            <Ionicons name="document-text-outline" size={32} color={colors.textDisabled} />
                             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                                 {debouncedSearch ? 'No reports match your search.' : 'No scheduled reports yet.'}
                             </Text>

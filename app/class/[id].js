@@ -11,7 +11,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGoBack } from '../utils/nav';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { iconColor } from '../utils/iconColors';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import HomeTab from '../components/class/HomeTab';
@@ -159,7 +158,7 @@ export default function ClassProfileScreen() {
                 </View>
             ) : error && !classData ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             ) : (

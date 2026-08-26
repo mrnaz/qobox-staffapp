@@ -28,7 +28,6 @@ import {
     STATUS_META,
     deriveStatus,
 } from '../utils/tickets';
-import { iconColor } from '../utils/iconColors';
 import { parseApiDate } from '../utils/datetime';
 import { capturePhotoCompressed, pickPhotoCompressed, appendPhotoToForm } from '../utils/photo';
 
@@ -228,7 +227,7 @@ export default function TicketDetailScreen() {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={{ color: colors.textSecondary, paddingHorizontal: 24, textAlign: 'center' }}>
                         {error || 'Ticket not found.'}
                     </Text>

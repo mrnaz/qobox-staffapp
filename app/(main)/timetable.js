@@ -4,7 +4,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
-import { iconColor } from '../utils/iconColors';
 import TimetableWeekView from '../components/TimetableWeekView';
 
 export default function TimetableScreen() {
@@ -36,7 +35,7 @@ export default function TimetableScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
+                    <Ionicons name="person-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>

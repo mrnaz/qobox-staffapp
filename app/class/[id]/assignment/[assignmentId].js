@@ -12,7 +12,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
-import { iconColor } from '../../../utils/iconColors';
 import api from '../../../services/api';
 import Theme from '../../../context/ThemeContext';
 import Card, { cardBodyPadding } from '../../../components/Card';
@@ -166,7 +165,7 @@ export default function AssignmentDetailScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
+                            <Ionicons name="people-outline" size={32} color={colors.textDisabled} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>No students on this assignment.</Text>
                         </View>
                     }

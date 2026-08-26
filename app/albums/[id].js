@@ -160,7 +160,7 @@ export default function AlbumDetailScreen() {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={{ color: colors.textSecondary, paddingHorizontal: 24, textAlign: 'center' }}>
                         {error || 'Album not found.'}
                     </Text>

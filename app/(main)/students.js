@@ -18,7 +18,6 @@ import Avatar from '../components/Avatar';
 import Card, { CardHeader, cardGap } from '../components/Card';
 import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
 import PeriodPicker from '../components/PeriodPicker';
-import { iconColor } from '../utils/iconColors';
 
 export default function MyStudentsScreen() {
     const { useTheme } = Theme;
@@ -133,7 +132,7 @@ export default function MyStudentsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
+                    <Ionicons name="person-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -201,7 +200,7 @@ export default function MyStudentsScreen() {
                 </View>
             ) : error && students.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -223,7 +222,7 @@ export default function MyStudentsScreen() {
                     refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
+                            <Ionicons name="people-outline" size={32} color={colors.textDisabled} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {search
                                     ? 'No students match your search.'

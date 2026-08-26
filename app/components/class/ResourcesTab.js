@@ -238,7 +238,7 @@ export default function ResourcesTab({ classId }) {
     if (error && resources.length === 0) {
         return (
             <View style={styles.center}>
-                <Ionicons name="folder-outline" size={32} color={iconColor('folder-outline', colors)} />
+                <Ionicons name="folder-outline" size={32} color={colors.textDisabled} />
                 <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                     <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -256,7 +256,7 @@ export default function ResourcesTab({ classId }) {
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             ListEmptyComponent={
                 <View style={styles.center}>
-                    <Ionicons name="folder-outline" size={32} color={iconColor('folder-outline', colors)} />
+                    <Ionicons name="folder-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>No resources for this class.</Text>
                 </View>
             }

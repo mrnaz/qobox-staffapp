@@ -5,7 +5,6 @@ import { useLocalSearchParams } from 'expo-router';
 import { useGoBack } from '../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
 import RenderHtml from 'react-native-render-html';
-import { iconColor } from '../../../utils/iconColors';
 import Theme from '../../../context/ThemeContext';
 import Card, { CardHeader, cardBodyPadding, cardGap } from '../../../components/Card';
 import { lessonDuration, lessonWhen } from '../../../utils/lessons';
@@ -62,7 +61,7 @@ export default function LessonDetailScreen() {
             <ScrollView contentContainerStyle={styles.body}>
                 {!lesson ? (
                     <View style={styles.center}>
-                        <Ionicons name="document-outline" size={32} color={iconColor('document-outline', colors)} />
+                        <Ionicons name="document-outline" size={32} color={colors.textDisabled} />
                         <Text style={[styles.empty, { color: colors.textSecondary }]}>Lesson data unavailable.</Text>
                     </View>
                 ) : (

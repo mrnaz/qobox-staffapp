@@ -243,7 +243,7 @@ export default function FillProgressReportScreen() {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                 </View>
             </SafeAreaView>

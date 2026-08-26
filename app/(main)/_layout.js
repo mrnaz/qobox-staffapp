@@ -7,11 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
 import StaffInfo from '../components/StaffInfo';
-import { iconColor } from '../utils/iconColors';
 
 // Title + icon per route. The icons are the same ones the "Jump to" grid uses
 // for each tab, so the glyph at the top of a page matches the one you tapped
-// to get there, and iconColor gives each its concept colour.
+// to get there. Plain textPrimary, matching the client app's PageTitle.
 const PAGE_TITLES = {
     index: { label: 'Dashboard', icon: 'home' },
     attendance: { label: 'Attendance', icon: 'check-square-o' },
@@ -65,7 +64,7 @@ function PageTitle() {
             paddingBottom: 8,
             backgroundColor: colors.background,
         }}>
-            <FontAwesome name={icon} size={18} color={iconColor(icon, colors)} />
+            <FontAwesome name={icon} size={18} color={colors.textPrimary} />
             <Text
                 style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '700', flex: 1 }}
                 numberOfLines={1}

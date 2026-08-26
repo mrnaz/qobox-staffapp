@@ -14,7 +14,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useGoBack } from '../../../../utils/nav';
 import { Ionicons } from '@expo/vector-icons';
-import { iconColor } from '../../../../utils/iconColors';
 import api from '../../../../services/api';
 import Theme from '../../../../context/ThemeContext';
 import Avatar from '../../../../components/Avatar';
@@ -231,7 +230,7 @@ export default function ReportStudentRosterScreen() {
                 </View>
             ) : error && students.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -267,7 +266,7 @@ export default function ReportStudentRosterScreen() {
                     >
                         {rows.length === 0 ? (
                             <View style={styles.center}>
-                                <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
+                                <Ionicons name="people-outline" size={32} color={colors.textDisabled} />
                                 <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                     {search ? 'No students match your search.' : 'No students enrolled in this class.'}
                                 </Text>

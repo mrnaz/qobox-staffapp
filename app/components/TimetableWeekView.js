@@ -279,7 +279,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
                 <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
             ) : error && items.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -308,7 +308,7 @@ export default function TimetableWeekView({ loader, enabled = true }) {
 
                         {placedItems.length === 0 ? (
                             <View style={styles.emptyDay}>
-                                <Ionicons name="calendar-outline" size={36} color={iconColor('calendar-outline', colors)} />
+                                <Ionicons name="calendar-outline" size={36} color={colors.textDisabled} />
                                 <Text style={[styles.empty, { color: colors.textSecondary, fontSize: 14 }]}>
                                     Nothing scheduled.
                                 </Text>

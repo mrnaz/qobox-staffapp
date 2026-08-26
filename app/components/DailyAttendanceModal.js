@@ -19,7 +19,6 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from './Avatar';
 import Card from './Card';
-import { iconColor } from '../utils/iconColors';
 
 // Daily attendance marking modal — mobile counterpart of the staff web
 // DailyAttendanceMarkingDialog.vue. The scope/course selector is ported —
@@ -439,7 +438,7 @@ export default function DailyAttendanceModal({
                     </View>
                 ) : error ? (
                     <View style={styles.center}>
-                        <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                        <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                         <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                         <TouchableOpacity onPress={loadData} style={[styles.retry, { borderColor: colors.primary }]}>
                             <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -454,7 +453,7 @@ export default function DailyAttendanceModal({
                         ListEmptyComponent={
                             scopesError ? (
                                 <View style={styles.center}>
-                                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                         {scopesError}
                                     </Text>
@@ -464,14 +463,14 @@ export default function DailyAttendanceModal({
                                 </View>
                             ) : scopeOptions.length === 0 && !isGlobalAttendance ? (
                                 <View style={styles.center}>
-                                    <Ionicons name="school-outline" size={32} color={iconColor('school-outline', colors)} />
+                                    <Ionicons name="school-outline" size={32} color={colors.textDisabled} />
                                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                         You are not assigned as a teacher or assistant to any course or class.
                                     </Text>
                                 </View>
                             ) : (
                                 <View style={styles.center}>
-                                    <Ionicons name="people-outline" size={32} color={iconColor('people-outline', colors)} />
+                                    <Ionicons name="people-outline" size={32} color={colors.textDisabled} />
                                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                         {search || filterStatus ? 'No students match your filter.' : 'No students found.'}
                                     </Text>

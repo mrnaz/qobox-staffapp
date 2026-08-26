@@ -149,7 +149,7 @@ export default function ProgressReportsScreen() {
         return (
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={styles.center}>
-                    <Ionicons name="person-outline" size={32} color={iconColor('person-outline', colors)} />
+                    <Ionicons name="person-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>
                         No profile loaded. Please sign in again.
                     </Text>
@@ -226,7 +226,7 @@ export default function ProgressReportsScreen() {
                 </View>
             ) : error && rows.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
                         <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
@@ -243,7 +243,7 @@ export default function ProgressReportsScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <FontAwesome name="file-text-o" size={32} color={iconColor('file-text-o', colors)} />
+                            <FontAwesome name="file-text-o" size={32} color={colors.textDisabled} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 None of your classes have progress reports linked yet.
                             </Text>

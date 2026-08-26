@@ -503,7 +503,7 @@ export default function RosterScreen() {
                 </View>
             ) : error && shifts.length === 0 ? (
                 <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={iconColor('alert-circle-outline', colors)} />
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
                     <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
                     <TouchableOpacity
                         onPress={() => fetchPage({ targetPage: 1, mode: 'initial' })}
@@ -550,7 +550,7 @@ export default function RosterScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name="calendar-outline" size={32} color={iconColor('calendar-outline', colors)} />
+                            <Ionicons name="calendar-outline" size={32} color={colors.textDisabled} />
                             <Text style={[styles.empty, { color: colors.textSecondary }]}>
                                 {showPast ? 'No past shifts.' : 'No upcoming shifts.'}
                             </Text>
