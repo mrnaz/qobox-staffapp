@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ActivityIndicator, TouchableOpacity, Modal, Platform } from 'react-native';
+import { View, Text, Image, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSegments, useRouter } from 'expo-router';
@@ -169,7 +169,7 @@ export default function StaffInfo() {
                     onPress={() => setIsJumpVisible(false)}
                 >
                     <TouchableOpacity activeOpacity={1} onPress={() => {}}>
-                        <View style={{ paddingTop: Platform.OS === 'ios' ? insets.top : 0, backgroundColor: colors.background, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, overflow: 'hidden' }}>
+                        <View style={{ paddingTop: insets.top, backgroundColor: colors.background, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, overflow: 'hidden' }}>
                             {/* Current user header */}
                             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12, marginBottom: 12, backgroundColor: colors.surface }}>
                                 <TouchableOpacity

@@ -75,7 +75,7 @@ export default function StudentDetailScreen() {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
                 <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
         alignItems: 'center', justifyContent: 'center', marginLeft: 4,
     },
     tabBarWrap: { borderBottomWidth: 1 },
-    tabBar: { paddingHorizontal: 8 },
+    tabBar: { flexGrow: 1, paddingHorizontal: 8, justifyContent: 'center' },
     tabBtn: {
         paddingHorizontal: 12,
         height: 56,

@@ -16,6 +16,7 @@ import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
 import Avatar from './Avatar';
 import Card from './Card';
+import { avatarColors } from '../utils/colors';
 import api from '../services/api';
 import endpoints from '../constants/endpoints';
 
@@ -122,7 +123,7 @@ const htmlStyles = (colors) => ({
 // drops into any list without the screen having to track any of it.
 export default function NoticeCard({ notice }) {
     const { useTheme } = Theme;
-    const { theme } = useTheme();
+    const { theme, mode } = useTheme();
     const { colors } = theme;
 
     const [isExpanded, setIsExpanded] = useState(false);
@@ -223,7 +224,7 @@ export default function NoticeCard({ notice }) {
                     name={notice.author_name}
                     id={notice.author_id}
                     size={38}
-                    borderColor={colors.borderStrong || colors.border}
+                    borderColor={avatarColors(notice.author_id, notice.author_name, mode).text}
                 />
                 <View style={styles.headerText}>
                     <Text style={[styles.author, { color: colors.textPrimary }]} numberOfLines={1}>

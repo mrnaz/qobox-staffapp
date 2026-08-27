@@ -221,7 +221,7 @@ export default function TicketDetailScreen() {
     if (error || !ticket) {
         return (
             <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
                     <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
@@ -249,7 +249,7 @@ export default function TicketDetailScreen() {
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
                     <TouchableOpacity onPress={() => goBack()} style={styles.iconBtn}>
                         <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>

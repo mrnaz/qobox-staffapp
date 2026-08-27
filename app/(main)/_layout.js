@@ -10,7 +10,7 @@ import StaffInfo from '../components/StaffInfo';
 
 // Title + icon per route. The icons are the same ones the "Jump to" grid uses
 // for each tab, so the glyph at the top of a page matches the one you tapped
-// to get there. Plain textPrimary, matching the client app's PageTitle.
+// to get there, tinted the same primary colour as that grid's icons.
 const PAGE_TITLES = {
     index: { label: 'Dashboard', icon: 'home' },
     attendance: { label: 'Attendance', icon: 'check-square-o' },
@@ -64,7 +64,7 @@ function PageTitle() {
             paddingBottom: 8,
             backgroundColor: colors.background,
         }}>
-            <FontAwesome name={icon} size={18} color={colors.textPrimary} />
+            <FontAwesome name={icon} size={18} color={colors.primary} />
             <Text
                 style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '700', flex: 1 }}
                 numberOfLines={1}

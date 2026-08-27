@@ -102,7 +102,7 @@ export default function ClassProfileScreen() {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
                 <TouchableOpacity onPress={() => goBack()} style={styles.iconButton}>
                     <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
