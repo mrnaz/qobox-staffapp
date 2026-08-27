@@ -15,14 +15,16 @@ import { avatarText } from '../utils/displayName';
 //                             this person (see avatarColors)
 //   bgColor  string          — override the computed background
 //   textColor string         — override the computed initials color
-//   borderColor string       — draws a ring around the avatar; without it the
+//   bordered boolean         — draws a ring around the avatar; without it the
 //                              avatar is borderless as before. A pale photo or
 //                              a light tint otherwise bleeds into the card
-//                              behind it, and the ring gives it an edge.
-//   borderWidth number       — ring thickness, default 1 when borderColor is set
+//                              behind it, and the ring gives it an edge. The
+//                              colour follows the client app's rule: neutral
+//                              on a photo, the avatar's own tint on initials.
+//   borderWidth number       — ring thickness, default 1 when bordered is set
 
 
-export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, borderColor, borderWidth }) {
+export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, bordered, borderWidth }) {
     const { useTheme } = Theme;
     const { theme, mode } = useTheme();
     const { colors } = theme;
@@ -35,8 +37,8 @@ export default function Avatar({ uri, name, id, size = 36, bgColor, textColor, b
 
     const radius = size / 2;
     const showImage = uri && !failed;
-    const ring = borderColor
-        ? { borderWidth: borderWidth ?? 1, borderColor }
+    const ring = bordered
+        ? { borderWidth: borderWidth ?? 1, borderColor: showImage ? colors.border : tint.border }
         : null;
 
     if (showImage) {

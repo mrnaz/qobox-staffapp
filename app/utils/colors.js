@@ -79,8 +79,8 @@ export function avatarColors(id, name, mode = 'light') {
     }
     const key = AVATAR_KEYS[(Math.abs(n) % 13) + 1];
     const palette = mode === 'dark' ? darkColors : lightColors;
-    const { background, text } = palette[key];
-    return { bg: background, text };
+    const { background, text, border } = palette[key];
+    return { bg: background, text, border };
 }
 
 // Flatten a tint onto a background so the result is fully opaque.
