@@ -223,7 +223,6 @@ export default function NoticeCard({ notice }) {
                     name={notice.author_name}
                     id={notice.author_id}
                     size={38}
-                    bordered
                 />
                 <View style={styles.headerText}>
                     <Text style={[styles.author, { color: colors.textPrimary }]} numberOfLines={1}>
