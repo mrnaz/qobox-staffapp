@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { View } from 'react-native';
 import api from '../../services/api';
 import CalendarView from '../CalendarView';
 
@@ -28,5 +29,9 @@ export default function CalendarTab({ classId }) {
         }));
     }, [classId]);
 
-    return <CalendarView loadEvents={loadEvents} reloadKey={classId} />;
+    return (
+        <View style={{ flex: 1, paddingTop: 16 }}>
+            <CalendarView loadEvents={loadEvents} reloadKey={classId} />
+        </View>
+    );
 }
