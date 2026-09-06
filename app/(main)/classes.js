@@ -14,8 +14,7 @@ import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Card, { cardGap } from '../components/Card';
-import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
-import PeriodPicker from '../components/PeriodPicker';
+import { useAcademicPeriod } from '../context/AcademicPeriodContext';
 import { iconColor } from '../utils/iconColors';
 
 export default function ClassesScreen() {
@@ -23,11 +22,11 @@ export default function ClassesScreen() {
     const { theme } = useTheme();
     const { colors } = theme;
     const router = useRouter();
+    const { academicPeriodId, periods, isReady: periodReady } = useAcademicPeriod();
+    const period = periods.find((p) => String(p.id) === String(academicPeriodId)) || null;
 
     const [staff, setStaff] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
-    const [period, setPeriod] = useState(null);
-    const [periods, setPeriods] = useState([]);
     const [classes, setClasses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -43,20 +42,13 @@ export default function ClassesScreen() {
 
     const load = useCallback(
         async (opts = {}) => {
-            if (!staff?.id) return;
+            if (!staff?.id || !periodReady) return;
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
-                let activePeriod = period;
-                if (!activePeriod) {
-                    const { period: p, periods: list } = await ensureAcademicPeriod();
-                    activePeriod = p;
-                    setPeriod(p);
-                    setPeriods(Array.isArray(list) ? list : []);
-                }
                 // Without a period the endpoint would silently return nothing —
                 // surface that instead of an empty "no classes" list.
-                if (!activePeriod?.id) {
+                if (!academicPeriodId) {
                     setClasses([]);
                     setError('We could not determine your academic period. Pull to refresh or contact your administrator.');
                     return;
@@ -64,7 +56,7 @@ export default function ClassesScreen() {
                 const res = await api.getStaffClasses(staff.id, {
                     // Backend `staff/classes/{staff_id}` controller uses
                     // $request->query('academic_period'), not period_id.
-                    academic_period: activePeriod.id,
+                    academic_period: academicPeriodId,
                 });
                 const list = res?.classes || res?.data || res || [];
                 setClasses(Array.isArray(list) ? list : []);
@@ -76,7 +68,7 @@ export default function ClassesScreen() {
                 setIsRefreshing(false);
             }
         },
-        [staff, period]
+        [staff, periodReady, academicPeriodId]
     );
 
     useEffect(() => { load(); }, [load]);
@@ -84,13 +76,6 @@ export default function ClassesScreen() {
     const onRefresh = () => {
         setIsRefreshing(true);
         load({ refresh: true });
-    };
-
-    // Switching period persists the choice and reloads (load depends on `period`).
-    const handlePeriodChange = (p) => {
-        if (!p || p.id === period?.id) return;
-        setAcademicPeriod(p.id);
-        setPeriod(p);
     };
 
     if (profileLoaded && !staff?.id) {
@@ -160,14 +145,6 @@ export default function ClassesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {periods.length > 0 ? (
-                <PeriodPicker
-                    periods={periods}
-                    selectedId={period?.id}
-                    onChange={handlePeriodChange}
-                />
-            ) : null}
-
             {isLoading && classes.length === 0 ? (
                 <View style={styles.center}>
                     <ActivityIndicator color={colors.primary} />
@@ -197,7 +174,7 @@ export default function ClassesScreen() {
                             </Text>
                             {periods.length > 1 ? (
                                 <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-                                    Teaching in a different period? Tap the period above to switch.
+                                    Teaching in a different period? Switch it from your profile menu.
                                 </Text>
                             ) : null}
                         </View>

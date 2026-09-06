@@ -16,19 +16,18 @@ import api from '../services/api';
 import Theme from '../context/ThemeContext';
 import Avatar from '../components/Avatar';
 import Card, { CardHeader, cardGap } from '../components/Card';
-import { ensureAcademicPeriod, setAcademicPeriod } from '../utils/academicPeriod';
-import PeriodPicker from '../components/PeriodPicker';
+import { useAcademicPeriod } from '../context/AcademicPeriodContext';
 
 export default function MyStudentsScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
     const { colors } = theme;
     const router = useRouter();
+    const { academicPeriodId, periods, isReady: periodReady } = useAcademicPeriod();
+    const period = periods.find((p) => String(p.id) === String(academicPeriodId)) || null;
 
     const [staff, setStaff] = useState(null);
     const [profileLoaded, setProfileLoaded] = useState(false);
-    const [period, setPeriod] = useState(null);
-    const [periods, setPeriods] = useState([]);
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -45,24 +44,17 @@ export default function MyStudentsScreen() {
 
     const load = useCallback(
         async (opts = {}) => {
-            if (!staff?.id) return;
+            if (!staff?.id || !periodReady) return;
             try {
                 if (!opts.refresh) setIsLoading(true);
                 setError('');
-                let activePeriod = period;
-                if (!activePeriod) {
-                    const { period: p, periods: list } = await ensureAcademicPeriod();
-                    activePeriod = p;
-                    setPeriod(p);
-                    setPeriods(Array.isArray(list) ? list : []);
-                }
-                if (!activePeriod?.id) {
+                if (!academicPeriodId) {
                     setClasses([]);
                     setError('We could not determine your academic period. Pull to refresh or contact your administrator.');
                     return;
                 }
                 const res = await api.getStaffClasses(staff.id, {
-                    academic_period: activePeriod.id,
+                    academic_period: academicPeriodId,
                 });
                 const list = res?.classes || res?.data || res || [];
                 setClasses(Array.isArray(list) ? list : []);
@@ -74,7 +66,7 @@ export default function MyStudentsScreen() {
                 setIsRefreshing(false);
             }
         },
-        [staff, period]
+        [staff, periodReady, academicPeriodId]
     );
 
     useEffect(() => { load(); }, [load]);
@@ -82,12 +74,6 @@ export default function MyStudentsScreen() {
     const onRefresh = () => {
         setIsRefreshing(true);
         load({ refresh: true });
-    };
-
-    const handlePeriodChange = (p) => {
-        if (!p || p.id === period?.id) return;
-        setAcademicPeriod(p.id);
-        setPeriod(p);
     };
 
     // Aggregate unique students across all classes the user teaches. The
@@ -169,14 +155,6 @@ export default function MyStudentsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {periods.length > 0 ? (
-                <PeriodPicker
-                    periods={periods}
-                    selectedId={period?.id}
-                    onChange={handlePeriodChange}
-                />
-            ) : null}
-
             {/* Search */}
             <View style={[styles.searchWrap, { borderColor: colors.borderStrong || colors.border, backgroundColor: colors.cardBackground }]}>
                 <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
@@ -232,7 +210,7 @@ export default function MyStudentsScreen() {
                             </Text>
                             {!search && periods.length > 1 ? (
                                 <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-                                    Teaching in a different period? Tap the period above to switch.
+                                    Teaching in a different period? Switch it from your profile menu.
                                 </Text>
                             ) : null}
                         </View>

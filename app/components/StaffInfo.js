@@ -10,6 +10,8 @@ import Avatar from './Avatar';
 import { avatarName } from '../utils/displayName';
 import ThemeToggle from './ThemeToggle';
 import LogoutButton from './LogoutButton';
+import { useAcademicPeriod } from '../context/AcademicPeriodContext';
+import AcademicPeriodModal from './AcademicPeriodModal';
 
 const JUMP_TABS = [
     { name: 'Dashboard',  route: 'index',      path: '/(main)/',           icon: 'home' },
@@ -41,8 +43,10 @@ export default function StaffInfo() {
     const [loading, setLoading] = useState(true);
     const [isMenuVisible, setIsMenuVisible] = useState(false);
     const [isJumpVisible, setIsJumpVisible] = useState(false);
+    const [isPeriodModalVisible, setIsPeriodModalVisible] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isSysadmin, setIsSysadmin] = useState(false);
+    const { academicPeriodId, periods, switchAcademicPeriod } = useAcademicPeriod();
 
     useEffect(() => { loadStaffData(); }, []);
 
@@ -331,6 +335,23 @@ export default function StaffInfo() {
                                 <FontAwesome name="chevron-right" size={12} color={colors.textDisabled} />
                             </TouchableOpacity>
 
+                            {/* Academic Period reselection */}
+                            <TouchableOpacity
+                                onPress={() => { setIsMenuVisible(false); setIsPeriodModalVisible(true); }}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                                    paddingHorizontal: 20, paddingVertical: 14,
+                                    borderBottomWidth: 1, borderBottomColor: colors.border,
+                                }}
+                            >
+                                <FontAwesome name="calendar-o" size={16} color={colors.primary} />
+                                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '500' }}>
+                                    Academic Period
+                                </Text>
+                                <View style={{ flex: 1 }} />
+                                <FontAwesome name="chevron-right" size={12} color={colors.textDisabled} />
+                            </TouchableOpacity>
+
                             {/* Site context */}
                             {currentSite ? (
                                 <View style={{
@@ -366,6 +387,14 @@ export default function StaffInfo() {
                     </TouchableOpacity>
                 </TouchableOpacity>
             </Modal>
+
+            <AcademicPeriodModal
+                visible={isPeriodModalVisible}
+                periods={periods}
+                selectedId={academicPeriodId}
+                onSelect={(p) => { switchAcademicPeriod(p.id); setIsPeriodModalVisible(false); }}
+                onClose={() => setIsPeriodModalVisible(false)}
+            />
         </View>
     );
 }

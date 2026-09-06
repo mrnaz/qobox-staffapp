@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
 import StaffInfo from '../components/StaffInfo';
+import { AcademicPeriodProvider, useAcademicPeriod } from '../context/AcademicPeriodContext';
+import AcademicPeriodModal from '../components/AcademicPeriodModal';
 
 // Title + icon per route. The icons are the same ones the "Jump to" grid uses
 // for each tab, so the glyph at the top of a page matches the one you tapped
@@ -52,6 +54,41 @@ function PageTitle() {
         const h = new Date().getHours();
         const greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
         title = `${greet}, ${fname || 'Staff'}`;
+    }
+
+    if (route === 'index') {
+        return (
+            <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8, backgroundColor: colors.background }}>
+                <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderRadius: 16,
+                    backgroundColor: colors.warning + '18',
+                    borderWidth: 1,
+                    borderColor: colors.warning + '40',
+                }}>
+                    <View style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: colors.warning + '2A',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        <FontAwesome name={icon} size={16} color={colors.warning} />
+                    </View>
+                    <Text
+                        style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '700', flex: 1 }}
+                        numberOfLines={1}
+                    >
+                        {title}
+                    </Text>
+                </View>
+            </View>
+        );
     }
 
     return (
@@ -109,7 +146,8 @@ function ThemeBackground({ children }) {
     );
 }
 
-export default function MainLayout() {
+function MainTabs() {
+    const { appRefreshKey, needsSelection, candidates, switchAcademicPeriod } = useAcademicPeriod();
     const renderTabBar = useCallback(() => null, []);
     const renderHeader = useCallback(() => <Header />, []);
     const screenOptions = useMemo(
@@ -118,8 +156,8 @@ export default function MainLayout() {
     );
 
     return (
-        <ThemeBackground>
-            <Tabs tabBar={renderTabBar} screenOptions={screenOptions}>
+        <>
+            <Tabs key={appRefreshKey} tabBar={renderTabBar} screenOptions={screenOptions}>
                 <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
                 <Tabs.Screen name="attendance" options={{ title: 'Attendance' }} />
                 <Tabs.Screen name="roster" options={{ title: 'Roster' }} />
@@ -135,6 +173,21 @@ export default function MainLayout() {
                     Classes, not a top-level item. */}
                 <Tabs.Screen name="reports" options={{ title: 'Reports', href: null }} />
             </Tabs>
-        </ThemeBackground>
+            <AcademicPeriodModal
+                visible={needsSelection}
+                periods={candidates}
+                onSelect={(p) => switchAcademicPeriod(p.id)}
+            />
+        </>
+    );
+}
+
+export default function MainLayout() {
+    return (
+        <AcademicPeriodProvider>
+            <ThemeBackground>
+                <MainTabs />
+            </ThemeBackground>
+        </AcademicPeriodProvider>
     );
 }

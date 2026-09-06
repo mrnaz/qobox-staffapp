@@ -340,8 +340,6 @@ function Section({ title, children, colors }) {
 
 const styles = StyleSheet.create({
     container: { padding: 20, paddingBottom: 40 },
-    greeting: { marginBottom: 20 },
-    greetingName: { fontSize: 26, fontWeight: '700' },
     sectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
     emptyCard: { padding: 24, alignItems: 'center', gap: 6 },
     emptyCardTitle: { fontSize: 14, fontWeight: '600' },

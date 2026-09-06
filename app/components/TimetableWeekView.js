@@ -1,590 +1,405 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    ActivityIndicator,
-    TouchableOpacity,
-    RefreshControl,
-    Modal,
-    Dimensions,
-    PanResponder,
-    Animated,
-} from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Theme from '../context/ThemeContext';
-import { iconColor } from '../utils/iconColors';
+import moment from 'moment';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
-// Shared week-grid timetable view used by both the staff "My Timetable" tab
+// How many days on each side of the fetch anchor to load in one window.
+const WINDOW_RADIUS_DAYS = 15;
+// Give up looking for a non-empty day after this many days in a single direction.
+const MAX_SEARCH_DAYS = 30;
+
+const isRealPeriod = (period) =>
+    !!period.class_title &&
+    period.class_title.toLowerCase() !== 'no class' &&
+    period.allow_classes !== false;
+
+// Shared day-card timetable view used by both the staff "My Timetable" tab
 // and the student-detail Timetable tab. The parent owns *what* to fetch via
-// the `loader` callback; this component owns the week/day chrome, the
-// time-grid layout, the swipe-between-days gesture, and the detail modal.
+// the `loader` callback; this component owns the day switcher, the windowed
+// fetch, the skip-empty-days swipe search, and the card/list layout — ported
+// directly from qobox-clientapp/app/components/Timetable.js (same window
+// size, same skip-empty-day search, same day-card rendering), adapted to
+// fetch through a generic `loader({ startDate, endDate })` prop instead of
+// calling the client API directly, since this component is shared by two
+// different staff-side screens with two different data sources.
 //
 // loader signature:
 //   ({ startDate, endDate }) => Promise<Array<sessionRow>>
 // where `sessionRow` matches StudentTimetableTransformer/staff timetable:
 //   { id, session_start, session_end, class_title, room_name, class_id, ... }
-
-// ---- date helpers ----------------------------------------------------------
-const startOfWeek = (date) => {
-    const d = new Date(date);
-    const dow = d.getDay();
-    const diff = (dow + 6) % 7; // Mon = 0
-    d.setDate(d.getDate() - diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-};
-const addDays = (d, n) => {
-    const x = new Date(d);
-    x.setDate(x.getDate() + n);
-    return x;
-};
-const fmtApi = (d) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const isSameDay = (a, b) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
-// ---- constants -------------------------------------------------------------
-const HOUR_HEIGHT = 64;
-const HOUR_AXIS_WIDTH = 56;
-const DEFAULT_DAY_START = 8;
-const DEFAULT_DAY_END = 18;
-const PALETTE = ['azure', 'teal', 'turquoise', 'emerald', 'amber', 'rose', 'indigo', 'cyan', 'lime', 'tangerine'];
-
-// Stable color from a string so the same class always gets the same color.
-const colorKey = (s) => {
-    let h = 0;
-    const str = String(s || '');
-    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-    return PALETTE[h % PALETTE.length];
-};
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
 export default function TimetableWeekView({ loader, enabled = true }) {
     const { useTheme } = Theme;
     const { theme } = useTheme();
     const { colors } = theme;
+    const router = useRouter();
 
-    const [weekStart, setWeekStart] = useState(startOfWeek(new Date()));
-    const [selectedDay, setSelectedDay] = useState(new Date());
-    const [items, setItems] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [error, setError] = useState('');
-    const [picked, setPicked] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isSearching, setIsSearching] = useState(false);
+    const [currentDate, setCurrentDate] = useState(moment());
+    const [timetableData, setTimetableData] = useState({});
+    const [dayData, setDayData] = useState(null);
 
-    // ---- swipe between days (pan on the grid) -----------------------------
-    const slideX = useRef(new Animated.Value(0)).current;
-    const isAnimating = useRef(false);
+    // Initialize the ref with the initial currentDate
+    const currentDateRef = useRef(moment());
 
-    const goToDay = useCallback(
-        (newDay) => {
-            if (isAnimating.current) return;
-            const nextWeek = startOfWeek(newDay);
-            if (nextWeek.getTime() !== weekStart.getTime()) setWeekStart(nextWeek);
-            setSelectedDay(newDay);
+    // Use ref to track if initial data has been loaded
+    const initialLoadRef = useRef(false);
+
+    // Mirrors of state that the async skip-search loop can read synchronously
+    const timetableDataRef = useRef({});
+    const windowStartRef = useRef(null);
+    const windowEndRef = useRef(null);
+
+    // Swipe navigation hook with fade animations
+    const { panResponder, slideAnim, fadeAnim, isTransitioning } = useSwipeNavigation({
+        onNavigatePrev: () => {
+            navigateSkippingEmptyDays('prev');
         },
-        [weekStart]
-    );
+        onNavigateNext: () => {
+            navigateSkippingEmptyDays('next');
+        },
+        enableFade: true,
+        threshold: 0.3,
+    });
 
-    const panResponder = useMemo(
-        () =>
-            PanResponder.create({
-                onMoveShouldSetPanResponder: (_, g) =>
-                    Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy),
-                onPanResponderGrant: () => {
-                    slideX.setValue(0);
-                },
-                onPanResponderMove: (_, g) => {
-                    slideX.setValue(g.dx);
-                },
-                onPanResponderRelease: (_, g) => {
-                    const threshold = SCREEN_WIDTH / 4;
-                    if (g.dx > threshold) {
-                        isAnimating.current = true;
-                        Animated.timing(slideX, { toValue: SCREEN_WIDTH, duration: 150, useNativeDriver: true }).start(() => {
-                            slideX.setValue(0);
-                            isAnimating.current = false;
-                            goToDay(addDays(selectedDay, -1));
-                        });
-                    } else if (g.dx < -threshold) {
-                        isAnimating.current = true;
-                        Animated.timing(slideX, { toValue: -SCREEN_WIDTH, duration: 150, useNativeDriver: true }).start(() => {
-                            slideX.setValue(0);
-                            isAnimating.current = false;
-                            goToDay(addDays(selectedDay, 1));
-                        });
-                    } else {
-                        Animated.spring(slideX, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
-                    }
-                },
-                onPanResponderTerminate: () => {
-                    Animated.spring(slideX, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
-                },
-            }),
-        [selectedDay, goToDay, slideX]
-    );
+    // Initialize data
+    useEffect(() => {
+        if (enabled && typeof loader === 'function' && !initialLoadRef.current) {
+            initialLoadRef.current = true;
+            initializeData();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enabled, loader]);
 
-    // ---- fetch ------------------------------------------------------------
-    const load = useCallback(
-        async (opts = {}) => {
-            if (!enabled || typeof loader !== 'function') return;
-            try {
-                if (!opts.refresh) setIsLoading(true);
-                setError('');
-                const startDate = fmtApi(weekStart);
-                // The backend filters `whereBetween('session_start', [start, end])`
-                // treating each bare date as midnight in the site timezone, so the
-                // upper bound `end` excludes that whole day's sessions. Request the
-                // day *after* the visible week (Mon of next week) so all 7 days —
-                // including Sunday — fall inside the range. `todaysItems` re-filters
-                // to the selected day, so over-fetching one boundary day is harmless.
-                // (Mirrors the dashboard's documented +1-day workaround.)
-                const endDate = fmtApi(addDays(weekStart, 7));
-                const data = await loader({ startDate, endDate });
-                setItems(Array.isArray(data) ? data : []);
-            } catch (err) {
-                console.error('Timetable load error', err);
-                setError(err.body?.message || err.message || 'Failed to load timetable.');
-            } finally {
-                setIsLoading(false);
-                setIsRefreshing(false);
+    // Update day data when currentDate changes; only fetch if it fell outside the loaded window
+    // (e.g. jumping via the Home button after the screen has been open for a while).
+    useEffect(() => {
+        if (currentDate) {
+            currentDateRef.current = currentDate;
+            generateDayData();
+            if (isOutsideWindow(currentDate)) {
+                fetchWindowData(currentDate);
             }
-        },
-        [loader, enabled, weekStart]
-    );
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentDate]);
 
-    useEffect(() => { load(); }, [load]);
-
-    const onRefresh = () => {
-        setIsRefreshing(true);
-        load({ refresh: true });
+    const initializeData = async () => {
+        try {
+            setLoading(true);
+            generateDayData();
+            await fetchWindowData(currentDate);
+        } catch (error) {
+            console.error('Error initializing timetable data:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // ---- grouped & day-filtered -------------------------------------------
-    const todaysItems = useMemo(() => {
-        return items
-            .filter((it) => {
-                const start = it.session_start || it.start;
-                if (!start) return false;
-                return isSameDay(new Date(start), selectedDay);
-            })
-            .map((it) => {
-                const start = new Date(it.session_start || it.start);
-                const end = new Date(it.session_end || it.end);
-                const startMin = start.getHours() * 60 + start.getMinutes();
-                const endMin = end.getHours() * 60 + end.getMinutes();
-                return { ...it, _startMin: startMin, _endMin: endMin };
-            })
-            .sort((a, b) => a._startMin - b._startMin);
-    }, [items, selectedDay]);
+    const isOutsideWindow = (date) => {
+        if (!windowStartRef.current || !windowEndRef.current) return true;
+        return date.isBefore(windowStartRef.current, 'day') || date.isAfter(windowEndRef.current, 'day');
+    };
 
-    // Auto-extend the visible hour range so all sessions fit.
-    const { dayStartHour, dayEndHour } = useMemo(() => {
-        let minH = DEFAULT_DAY_START * 60;
-        let maxH = DEFAULT_DAY_END * 60;
-        todaysItems.forEach((it) => {
-            if (it._startMin < minH) minH = it._startMin;
-            if (it._endMin > maxH) maxH = it._endMin;
-        });
-        return {
-            dayStartHour: Math.max(0, Math.floor(minH / 60)),
-            dayEndHour: Math.min(24, Math.ceil(maxH / 60)),
-        };
-    }, [todaysItems]);
+    // Fetches a +/- WINDOW_RADIUS_DAYS window of sessions around anchorDate and merges it into the cache.
+    const fetchWindowData = async (anchorDate) => {
+        if (!enabled || typeof loader !== 'function') return {};
+        const windowStart = moment(anchorDate).subtract(WINDOW_RADIUS_DAYS, 'days');
+        const windowEnd = moment(anchorDate).add(WINDOW_RADIUS_DAYS, 'days');
 
-    const totalHours = Math.max(1, dayEndHour - dayStartHour);
-    const gridHeight = totalHours * HOUR_HEIGHT;
-
-    // Overlap detection — assigns each event a "column" if needed.
-    const placedItems = useMemo(() => {
-        const placed = [];
-        todaysItems.forEach((it) => {
-            const overlaps = placed.filter(
-                (p) => !(p._endMin <= it._startMin || p._startMin >= it._endMin)
-            );
-            const usedCols = new Set(overlaps.map((p) => p._col));
-            let col = 0;
-            while (usedCols.has(col)) col++;
-            const groupCols = Math.max(col + 1, ...overlaps.map((p) => (p._cols || 1)));
-            overlaps.forEach((p) => {
-                if ((p._cols || 1) < groupCols) p._cols = groupCols;
+        try {
+            const data = await loader({
+                startDate: windowStart.format('YYYY-MM-DD'),
+                endDate: windowEnd.format('YYYY-MM-DD'),
             });
-            placed.push({ ...it, _col: col, _cols: groupCols });
+
+            const transformed = transformData(Array.isArray(data) ? data : []);
+
+            const merged = { ...timetableDataRef.current, ...transformed };
+            timetableDataRef.current = merged;
+            setTimetableData(merged);
+
+            windowStartRef.current = windowStartRef.current
+                ? moment.min(windowStartRef.current, windowStart)
+                : windowStart;
+            windowEndRef.current = windowEndRef.current
+                ? moment.max(windowEndRef.current, windowEnd)
+                : windowEnd;
+
+            return transformed;
+        } catch (error) {
+            console.error('Error fetching timetable window:', error);
+            return {};
+        }
+    };
+
+    // Groups the loader's flat session rows by calendar date ('YYYY-MM-DD'),
+    // using each session's real start time. Timeslots with no session in the
+    // requested range carry no date information and are left out — the
+    // corresponding dates simply have no entries, which is correctly treated
+    // as "empty".
+    const transformData = (sessions) => {
+        const transformed = {};
+        sessions.forEach((session) => {
+            const start = session.session_start || session.start;
+            if (!start) return;
+            const dateKey = moment(start).format('YYYY-MM-DD');
+            if (!transformed[dateKey]) transformed[dateKey] = [];
+            transformed[dateKey].push(session);
         });
-        return placed;
-    }, [todaysItems]);
+        return transformed;
+    };
 
-    const today = new Date();
-    const showingToday = isSameDay(selectedDay, today);
-    const nowMinutes = today.getHours() * 60 + today.getMinutes();
-    const nowTopOffset = (nowMinutes - dayStartHour * 60) * (HOUR_HEIGHT / 60);
-    const nowVisible = showingToday && nowMinutes >= dayStartHour * 60 && nowMinutes <= dayEndHour * 60;
+    const generateDayData = () => {
+        setDayData({
+            date: currentDate,
+            dayName: currentDate.format('dddd'),
+            dayNumber: currentDate.format('Do'),
+            monthName: currentDate.format('MMMM'),
+            year: currentDate.format('YYYY'),
+            isToday: currentDate.isSame(moment(), 'day'),
+        });
+    };
+
+    const isDayEmpty = (date) => {
+        const items = timetableDataRef.current[date.format('YYYY-MM-DD')] || [];
+        return !items.some(isRealPeriod);
+    };
+
+    // Walks day-by-day in the given direction (in-memory while inside the loaded window,
+    // fetching a fresh window whenever it walks past an edge) until it finds a day with
+    // classes, or gives up after MAX_SEARCH_DAYS.
+    const findNextNonEmptyDate = async (fromDate, direction) => {
+        let candidate = moment(fromDate);
+
+        for (let daysSearched = 0; daysSearched < MAX_SEARCH_DAYS; daysSearched++) {
+            candidate = direction === 'next'
+                ? candidate.clone().add(1, 'days')
+                : candidate.clone().subtract(1, 'days');
+
+            if (isOutsideWindow(candidate)) {
+                setIsSearching(true);
+                await fetchWindowData(candidate);
+            }
+
+            if (!isDayEmpty(candidate)) {
+                setIsSearching(false);
+                return candidate;
+            }
+        }
+
+        setIsSearching(false);
+        return candidate;
+    };
+
+    const navigateSkippingEmptyDays = async (direction) => {
+        const nextDate = await findNextNonEmptyDate(currentDateRef.current, direction);
+        setCurrentDate(nextDate);
+    };
+
+    const goToToday = () => {
+        if (currentDateRef.current.isSame(moment(), 'day')) return; // Already on today
+
+        Animated.timing(fadeAnim, {
+            toValue: 0.3,
+            duration: 150,
+            useNativeDriver: true,
+        }).start(() => {
+            setCurrentDate(moment());
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 200,
+                useNativeDriver: true,
+            }).start();
+        });
+    };
+
+    const formatTime = (iso) => (iso ? moment(iso).format('h:mma') : '');
+
+    const dayTimetable = useMemo(() => {
+        const dateKey = currentDate.format('YYYY-MM-DD');
+        const allPeriods = timetableData[dateKey] || [];
+        return allPeriods.filter(isRealPeriod);
+    }, [currentDate, timetableData]);
+
+    if (loading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={{ color: colors.textPrimary, marginTop: 10 }}>Loading timetable...</Text>
+            </View>
+        );
+    }
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {/* Week navigator */}
-            <View style={[styles.weekBar, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => goToDay(addDays(selectedDay, -7))} style={styles.navBtn}>
-                    <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => goToDay(new Date())}>
-                    <Text style={[styles.weekLabel, { color: colors.textPrimary }]}>
-                        {selectedDay.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => goToDay(addDays(selectedDay, 7))} style={styles.navBtn}>
-                    <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
-                </TouchableOpacity>
-            </View>
-
-            {/* Day chip strip */}
-            <View style={[styles.dayStrip, { borderBottomColor: colors.border }]}>
-                {Array.from({ length: 7 }).map((_, i) => {
-                    const d = addDays(weekStart, i);
-                    const active = isSameDay(d, selectedDay);
-                    const isToday = isSameDay(d, today);
-                    return (
-                        <TouchableOpacity
-                            key={d.toISOString()}
-                            onPress={() => goToDay(d)}
-                            style={[
-                                styles.dayChip,
-                                active && { backgroundColor: colors.primary },
-                            ]}
-                        >
-                            <Text style={[
-                                styles.dayChipDow,
-                                {
-                                    color: active ? colors.onPrimary : (isToday ? colors.primary : colors.textSecondary),
-                                    fontWeight: isToday || active ? '700' : '500',
-                                },
-                            ]}>
-                                {d.toLocaleDateString(undefined, { weekday: 'short' })}
-                            </Text>
-                            <Text style={[
-                                styles.dayChipNum,
-                                { color: active ? colors.onPrimary : colors.textPrimary },
-                            ]}>
-                                {d.getDate()}
-                            </Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
-
-            {isLoading && items.length === 0 ? (
-                <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
-            ) : error && items.length === 0 ? (
-                <View style={styles.center}>
-                    <Ionicons name="alert-circle-outline" size={32} color={colors.textDisabled} />
-                    <Text style={[styles.empty, { color: colors.textSecondary }]}>{error}</Text>
-                    <TouchableOpacity onPress={() => load()} style={[styles.retry, { borderColor: colors.primary }]}>
-                        <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <Animated.View
-                    style={{ flex: 1, transform: [{ translateX: slideX }] }}
-                    {...panResponder.panHandlers}
-                >
-                    <ScrollView
-                        contentContainerStyle={{ paddingBottom: 24 }}
-                        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-                    >
-                        {/* Selected day label */}
-                        <View style={styles.dayHeader}>
-                            <Text style={[styles.dayLabel, { color: showingToday ? colors.primary : colors.textPrimary }]}>
-                                {selectedDay.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
-                            </Text>
-                            {showingToday ? (
-                                <View style={[styles.todayPill, { borderColor: colors.primary, backgroundColor: colors.primary + '22' }]}>
-                                    <Text style={[styles.todayPillText, { color: colors.primary }]}>Today</Text>
-                                </View>
-                            ) : null}
-                        </View>
-
-                        {placedItems.length === 0 ? (
-                            <View style={styles.emptyDay}>
-                                <Ionicons name="calendar-outline" size={36} color={colors.textDisabled} />
-                                <Text style={[styles.empty, { color: colors.textSecondary, fontSize: 14 }]}>
-                                    Nothing scheduled.
-                                </Text>
-                            </View>
-                        ) : (
-                            <View style={[styles.gridWrap, { height: gridHeight }]}>
-                                {/* Hour rows */}
-                                {Array.from({ length: totalHours + 1 }).map((_, i) => {
-                                    const hour = dayStartHour + i;
-                                    const top = i * HOUR_HEIGHT;
-                                    return (
-                                        <View key={hour} style={[styles.hourRow, { top, borderTopColor: colors.divider }]}>
-                                            <Text style={[styles.hourLabel, { color: colors.textSecondary }]}>
-                                                {formatHour(hour)}
-                                            </Text>
-                                        </View>
-                                    );
-                                })}
-
-                                {/* Blocks layer */}
-                                <View style={styles.blocksLayer}>
-                                    {nowVisible ? (
-                                        <View style={[styles.nowLine, { top: nowTopOffset, borderTopColor: colors.error }]}>
-                                            <View style={[styles.nowDot, { backgroundColor: colors.error }]} />
-                                        </View>
-                                    ) : null}
-
-                                    {placedItems.map((it, i) => {
-                                        const palette = colors[colorKey(it.class_id || it.class?.title || it.class_title || i)];
-                                        const top = (it._startMin - dayStartHour * 60) * (HOUR_HEIGHT / 60);
-                                        const heightPx = Math.max(28, (it._endMin - it._startMin) * (HOUR_HEIGHT / 60));
-                                        const cols = it._cols || 1;
-                                        const colWidthPct = 100 / cols;
-                                        const leftPct = it._col * colWidthPct;
-                                        const classTitle = it.class?.title || it.class_title || it.title || 'Class';
-                                        const roomName = it.room?.name || it.room_name;
-                                        const compact = heightPx < 50;
-                                        return (
-                                            <TouchableOpacity
-                                                key={`${it.id ?? i}-${it._col}`}
-                                                onPress={() => setPicked(it)}
-                                                activeOpacity={0.85}
-                                                style={[
-                                                    styles.block,
-                                                    {
-                                                        top,
-                                                        height: heightPx,
-                                                        left: `${leftPct}%`,
-                                                        width: `${colWidthPct}%`,
-                                                        backgroundColor: palette?.background || colors.cardBackground,
-                                                        borderLeftColor: palette?.text || colors.primary,
-                                                        borderColor: palette?.border || colors.border,
-                                                    },
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[styles.blockTitle, { color: palette?.text || colors.textPrimary }]}
-                                                    numberOfLines={compact ? 1 : 2}
-                                                >
-                                                    {classTitle}
-                                                </Text>
-                                                {!compact ? (
-                                                    <Text style={[styles.blockMeta, { color: palette?.text || colors.textSecondary }]}>
-                                                        {formatTime(it.session_start)} – {formatTime(it.session_end)}
-                                                        {roomName ? ` · ${roomName}` : ''}
-                                                    </Text>
-                                                ) : null}
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </View>
-                            </View>
-                        )}
-                    </ScrollView>
-                </Animated.View>
-            )}
-
-            {/* Detail modal */}
-            <Modal
-                visible={!!picked}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setPicked(null)}
+        <View style={{ flex: 1, backgroundColor: colors.background }} {...panResponder.panHandlers}>
+            <Animated.View
+                style={{
+                    flex: 1,
+                    opacity: fadeAnim,
+                    transform: [{ translateX: slideAnim }],
+                }}
             >
-                <TouchableOpacity
-                    style={[styles.modalOverlay, { backgroundColor: colors.overlay }]}
-                    activeOpacity={1}
-                    onPress={() => setPicked(null)}
+                {isSearching ? (
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                    </View>
+                ) : (
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingTop: 0, paddingBottom: 8 }}
+                    showsVerticalScrollIndicator={false}
+                    scrollEnabled={!isTransitioning}
                 >
-                    <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 460 }}>
-                        <View style={[styles.modal, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                            {picked ? (() => {
-                                const palette = colors[colorKey(picked.class_id || picked.class?.title || picked.class_title)];
-                                const classTitle = picked.class?.title || picked.class_title || picked.title || 'Class';
-                                const courseTitle = picked.class?.description || picked.course_title;
-                                const roomName = picked.room?.name || picked.room_name;
-                                const duration = picked._endMin - picked._startMin;
-                                return (
-                                    <>
-                                        <View style={[styles.modalAccent, { backgroundColor: palette?.text || colors.primary }]} />
-                                        <View style={styles.modalBody}>
-                                            <View style={styles.modalHeader}>
-                                                <Text style={[styles.modalTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+                    {dayData && (
+                        <View
+                            style={{
+                                marginHorizontal: 16,
+                                marginTop: 8,
+                                marginBottom: 6,
+                                borderRadius: 16,
+                                backgroundColor: colors.cardBackground,
+                                borderWidth: 1,
+                                borderColor: colors.borderStrong,
+                                shadowColor: colors.cardShadow,
+                                shadowOffset: colors.cardShadowOffset,
+                                shadowOpacity: colors.cardShadowOpacity,
+                                elevation: colors.cardElevation,
+                            }}
+                        >
+                            {/* Day header, with Home button */}
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 14,
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: colors.border,
+                                    backgroundColor: dayData.isToday ? colors.primary + '15' : colors.surface,
+                                    borderTopLeftRadius: 16,
+                                    borderTopRightRadius: 16,
+                                }}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                                    <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: 'bold' }}>
+                                        {dayData.dayName}
+                                    </Text>
+                                    <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                                        {dayData.dayNumber} {dayData.monthName}, {dayData.year}
+                                    </Text>
+                                </View>
+
+                                <TouchableOpacity
+                                    onPress={goToToday}
+                                    style={{
+                                        padding: 8,
+                                        backgroundColor: dayData.isToday ? colors.primary : colors.background,
+                                        borderRadius: 8,
+                                    }}
+                                >
+                                    <Ionicons
+                                        name="home"
+                                        size={20}
+                                        color={dayData.isToday ? colors.onPrimary : colors.textSecondary}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
+                            {dayTimetable.length > 0 ? (
+                                dayTimetable.map((period, periodIndex) => {
+                                    const classTitle = period.class?.title || period.class_title || period.title || 'Class';
+                                    const roomName = period.room?.name || period.room_name;
+                                    const classId = period.class_id ?? period.class?.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={period.id ?? periodIndex}
+                                            disabled={!classId}
+                                            activeOpacity={classId ? 0.7 : 1}
+                                            onPress={() => classId && router.push(`/class/${classId}`)}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'flex-start',
+                                                gap: 12,
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 14,
+                                                borderBottomWidth: periodIndex < dayTimetable.length - 1 ? 1 : 0,
+                                                borderBottomColor: colors.border,
+                                            }}
+                                        >
+                                            <View style={{
+                                                width: 48,
+                                                height: 48,
+                                                borderRadius: 24,
+                                                backgroundColor: colors.primary,
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                            }}>
+                                                <Text style={{ color: colors.onPrimary, fontSize: 24, fontWeight: '600' }}>
+                                                    {classTitle.charAt(0) || '?'}
+                                                </Text>
+                                            </View>
+
+                                            {/* Class Details */}
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{
+                                                    color: colors.textPrimary,
+                                                    fontSize: 16,
+                                                    fontWeight: '700',
+                                                    marginBottom: 4
+                                                }}>
                                                     {classTitle}
                                                 </Text>
-                                                <TouchableOpacity onPress={() => setPicked(null)} style={{ padding: 4 }}>
-                                                    <Ionicons name="close" size={20} color={colors.textSecondary} />
-                                                </TouchableOpacity>
-                                            </View>
-                                            {courseTitle ? (
-                                                <Text style={[styles.modalSub, { color: colors.textSecondary }]}>
-                                                    {courseTitle}
+
+                                                <Text style={{
+                                                    color: colors.textSecondary,
+                                                    fontSize: 12,
+                                                    opacity: 0.8
+                                                }}>
+                                                    {formatTime(period.session_start)} – {formatTime(period.session_end)}
+                                                    {roomName ? ` • ${roomName}` : ''}
                                                 </Text>
+                                            </View>
+
+                                            {classId ? (
+                                                <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                                             ) : null}
-                                            <View style={[styles.modalDivider, { backgroundColor: colors.divider }]} />
-                                            <ModalRow icon="time-outline" colors={colors}
-                                                value={`${formatTime(picked.session_start)} – ${formatTime(picked.session_end)} · ${duration} min`} />
-                                            {roomName ? (
-                                                <ModalRow icon="location-outline" colors={colors} value={roomName} />
-                                            ) : null}
-                                            <ModalRow icon="calendar-outline" colors={colors}
-                                                value={selectedDay.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
-                                        </View>
-                                    </>
-                                );
-                            })() : null}
+                                        </TouchableOpacity>
+                                    );
+                                })
+                            ) : (
+                                /* No Classes */
+                                <View style={{
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 32,
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <Ionicons
+                                        name="calendar-outline"
+                                        size={40}
+                                        color={colors.textSecondary}
+                                        style={{ marginBottom: 12, opacity: 0.5 }}
+                                    />
+                                    <Text style={{
+                                        color: colors.textSecondary,
+                                        fontSize: 16,
+                                        fontWeight: '500',
+                                        textAlign: 'center'
+                                    }}>
+                                        No classes on this date
+                                    </Text>
+                                </View>
+                            )}
                         </View>
-                    </TouchableOpacity>
-                </TouchableOpacity>
-            </Modal>
+                    )}
+                </ScrollView>
+                )}
+            </Animated.View>
         </View>
     );
 }
-
-function ModalRow({ icon, value, colors }) {
-    return (
-        <View style={styles.modalRow}>
-            <Ionicons name={icon} size={16} color={iconColor(icon, colors, colors.textSecondary)} />
-            <Text style={[styles.modalRowText, { color: colors.textPrimary }]}>{value}</Text>
-        </View>
-    );
-}
-
-function formatHour(h) {
-    if (h === 0) return '12 AM';
-    if (h === 12) return '12 PM';
-    return h < 12 ? `${h} AM` : `${h - 12} PM`;
-}
-
-function formatTime(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-}
-
-const styles = StyleSheet.create({
-    container: { flex: 1 },
-    weekBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-    },
-    navBtn: { padding: 6 },
-    weekLabel: { fontSize: 14, fontWeight: '600' },
-    dayStrip: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 8,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-    },
-    dayChip: {
-        flex: 1,
-        marginHorizontal: 2,
-        alignItems: 'center',
-        paddingVertical: 6,
-        borderRadius: 10,
-    },
-    dayChipDow: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
-    dayChipNum: { fontSize: 16, fontWeight: '700', marginTop: 2 },
-    dayHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 8,
-    },
-    dayLabel: { fontSize: 16, fontWeight: '700' },
-    todayPill: {
-        paddingHorizontal: 8,
-        paddingVertical: 1,
-        borderRadius: 999,
-        borderWidth: 1,
-    },
-    todayPillText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-    emptyDay: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, gap: 8 },
-    gridWrap: {
-        position: 'relative',
-        marginHorizontal: 8,
-    },
-    hourRow: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        height: 1,
-        borderTopWidth: 1,
-    },
-    hourLabel: {
-        position: 'absolute',
-        top: -8,
-        left: 0,
-        width: HOUR_AXIS_WIDTH - 8,
-        textAlign: 'right',
-        fontSize: 11,
-        fontWeight: '500',
-    },
-    blocksLayer: {
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: HOUR_AXIS_WIDTH,
-        right: 4,
-    },
-    nowLine: {
-        position: 'absolute',
-        left: -4,
-        right: 0,
-        height: 1,
-        borderTopWidth: 2,
-        zIndex: 5,
-    },
-    nowDot: {
-        position: 'absolute',
-        left: -4,
-        top: -5,
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    block: {
-        position: 'absolute',
-        borderWidth: 1,
-        borderLeftWidth: 4,
-        borderRadius: 8,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        overflow: 'hidden',
-    },
-    blockTitle: { fontSize: 12, fontWeight: '700' },
-    blockMeta: { fontSize: 10, marginTop: 2 },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 },
-    empty: { fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
-    retry: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-    },
-    modal: {
-        flexDirection: 'row',
-        borderWidth: 1,
-        borderRadius: 14,
-        overflow: 'hidden',
-    },
-    modalAccent: { width: 5 },
-    modalBody: { flex: 1, padding: 16, gap: 6 },
-    modalHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-    modalTitle: { flex: 1, fontSize: 17, fontWeight: '700' },
-    modalSub: { fontSize: 13, marginTop: -2 },
-    modalDivider: { height: 1, marginVertical: 8 },
-    modalRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-    modalRowText: { fontSize: 14 },
-});

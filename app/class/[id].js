@@ -119,7 +119,7 @@ export default function ClassProfileScreen() {
             </View>
 
             {/* Sub-tabs — horizontal scroll (7 tabs), matches the client app */}
-            <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
+            <View style={[styles.tabBar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
