@@ -64,13 +64,17 @@ export default function ProgressReportSummaryScreen() {
             setIsLoading(true);
             setError('');
 
-            // Pull the template, all class results, and the class roster
+            // Pull the template, this report's results, and the class roster
             // in parallel. The roster gives us a name+photo fallback when
             // the student has zero results yet (otherwise the header would
-            // just say "Student").
+            // just say "Student"). Scoping by report_id — instead of pulling
+            // every result for every report template the whole class has
+            // ever had — is what keeps this fast as a class's history grows;
+            // without it we were downloading the entire class's report
+            // history just to keep the handful of rows for one student.
             const [tplRes, classResults, classStudents] = await Promise.all([
                 api.getProgressReportTemplate(reportId),
-                api.getClassProgressReportResults(classId),
+                api.getClassProgressReportResults(classId, { report_id: reportId }),
                 api.getClassStudents(classId, { all: 'true', scope: 'linked' }).catch(() => null),
             ]);
             setTemplate(tplRes?.data || tplRes);

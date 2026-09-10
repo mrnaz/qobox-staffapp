@@ -7,7 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import Theme from '../context/ThemeContext';
 import StaffInfo from '../components/StaffInfo';
+import TicketsFilterToggle from '../components/header/TicketsFilterToggle';
 import { AcademicPeriodProvider, useAcademicPeriod } from '../context/AcademicPeriodContext';
+import { TicketsFilterProvider } from '../context/TicketsFilterContext';
 import AcademicPeriodModal from '../components/AcademicPeriodModal';
 
 // Title + icon per route. The icons are the same ones the "Jump to" grid uses
@@ -108,6 +110,7 @@ function PageTitle() {
             >
                 {title}
             </Text>
+            {route === 'tickets' ? <TicketsFilterToggle /> : null}
         </View>
     );
 }
@@ -185,9 +188,11 @@ function MainTabs() {
 export default function MainLayout() {
     return (
         <AcademicPeriodProvider>
-            <ThemeBackground>
-                <MainTabs />
-            </ThemeBackground>
+            <TicketsFilterProvider>
+                <ThemeBackground>
+                    <MainTabs />
+                </ThemeBackground>
+            </TicketsFilterProvider>
         </AcademicPeriodProvider>
     );
 }

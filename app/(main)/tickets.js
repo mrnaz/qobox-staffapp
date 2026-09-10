@@ -14,6 +14,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import Theme from '../context/ThemeContext';
+import { useTicketsFilter } from '../context/TicketsFilterContext';
 import Card, { CardHeader, cardBodyPadding, cardGap } from '../components/Card';
 import TicketFormModal from '../components/TicketFormModal';
 import { iconColor } from '../utils/iconColors';
@@ -40,8 +41,10 @@ export default function TicketsScreen() {
     const [staff, setStaff] = useState(null);
     const [tickets, setTickets] = useState([]);
     const [search, setSearch] = useState('');
-    // 'submitted' = tickets I reported · 'assigned' = tickets assigned to me
-    const [filter, setFilter] = useState('submitted');
+    // Submitted/Assigned now lives next to the "Tickets" title in the shared
+    // page header (see TicketsFilterToggle in (main)/_layout.js) since both
+    // this screen and that header need to read/drive the same filter.
+    const { filter } = useTicketsFilter();
     const [createOpen, setCreateOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -165,30 +168,6 @@ export default function TicketsScreen() {
                         </TouchableOpacity>
                     ) : null}
                 </View>
-                <View style={styles.filterRow}>
-                    <TouchableOpacity
-                        onPress={() => setFilter('submitted')}
-                        style={[styles.tab, filter === 'submitted' && { borderColor: colors.primary }]}
-                    >
-                        <Text style={{
-                            color: filter === 'submitted' ? colors.primary : colors.textSecondary,
-                            fontWeight: filter === 'submitted' ? '600' : '400',
-                        }}>
-                            Submitted
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setFilter('assigned')}
-                        style={[styles.tab, filter === 'assigned' && { borderColor: colors.primary }]}
-                    >
-                        <Text style={{
-                            color: filter === 'assigned' ? colors.primary : colors.textSecondary,
-                            fontWeight: filter === 'assigned' ? '600' : '400',
-                        }}>
-                            Assigned
-                        </Text>
-                    </TouchableOpacity>
-                </View>
             </View>
 
             {isLoading && tickets.length === 0 ? (
@@ -254,14 +233,6 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     searchInput: { flex: 1, fontSize: 14, padding: 0 },
-    filterRow: { flexDirection: 'row', gap: 6 },
-    tab: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 999,
-        borderWidth: 1.5,
-        borderColor: 'transparent',
-    },
     list: { padding: 16, paddingTop: 8, paddingBottom: 100, gap: cardGap },
     cardBody: { gap: 6 },
     // The status pill pushes itself right with marginLeft:'auto', so the icon

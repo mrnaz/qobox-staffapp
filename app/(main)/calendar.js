@@ -5,6 +5,9 @@ import Theme from '../context/ThemeContext';
 import CalendarView from '../components/CalendarView';
 import api from '../services/api';
 
+const fmtDate = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function CalendarScreen() {
     const { useTheme } = Theme;
     const { theme } = useTheme();
@@ -29,10 +32,13 @@ export default function CalendarScreen() {
     const loadEvents = useCallback(async ({ from, to }) => {
         if (!staff?.id) return [];
         // Backend (CalendarEventsController::index_query) expects `from`/`to`
-        // and `org_id` (not start/end/organisation_id).
+        // and `org_id` (not start/end/organisation_id). Format using local
+        // date parts, not toISOString() — that converts to UTC first, which
+        // silently shifts the month boundary back a day in any timezone
+        // ahead of UTC and drops/misaligns events at the edge of the month.
         const res = await api.getCalendarEvents({
-            from: from.toISOString().slice(0, 10),
-            to: to.toISOString().slice(0, 10),
+            from: fmtDate(from),
+            to: fmtDate(to),
             staff_id: staff.id,
             org_id: organisationId,
         });

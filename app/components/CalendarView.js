@@ -61,6 +61,7 @@ export default function CalendarView({ loadEvents, loadEventTypes, reloadKey }) 
     const [isEventDialogVisible, setIsEventDialogVisible] = useState(false);
     const [visibleCount, setVisibleCount] = useState(100);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadError, setLoadError] = useState('');
 
     // ── Event-type visibility filter ──
     const [specialSelected, setSpecialSelected] = useState(
@@ -105,6 +106,7 @@ export default function CalendarView({ loadEvents, loadEventTypes, reloadKey }) 
         const requestId = ++loadRequestIdRef.current;
         try {
             setIsLoading(true);
+            setLoadError('');
             const from = moment(currentDate).startOf('month').toDate();
             const to = moment(currentDate).endOf('month').toDate();
             const [events, types] = await Promise.all([
@@ -122,6 +124,9 @@ export default function CalendarView({ loadEvents, loadEventTypes, reloadKey }) 
             setCalendarEvents(Array.isArray(events) ? events : []);
         } catch (error) {
             console.error('Error loading calendar data:', error);
+            if (requestId === loadRequestIdRef.current) {
+                setLoadError(error?.body?.message || error?.message || 'Failed to load calendar.');
+            }
         } finally {
             if (requestId === loadRequestIdRef.current) setIsLoading(false);
         }
@@ -320,6 +325,14 @@ export default function CalendarView({ loadEvents, loadEventTypes, reloadKey }) 
                     <ActivityIndicator size="small" color={theme.colors.primary} />
                     <Text style={[styles.noEventsText, { color: theme.colors.textSecondary, marginTop: 8 }]}>Loading events...</Text>
                 </View>
+            ) : loadError ? (
+                <View style={styles.noEventsContainer}>
+                    <Ionicons name="alert-circle-outline" size={32} color={theme.colors.textDisabled} />
+                    <Text style={[styles.noEventsText, { color: theme.colors.textSecondary, marginTop: 8 }]}>{loadError}</Text>
+                    <TouchableOpacity onPress={loadCalendarData} style={[styles.retryButton, { borderColor: theme.colors.primary }]}>
+                        <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
             ) : (
                 <View style={styles.noEventsContainer}>
                     <Text style={[styles.noEventsText, { color: theme.colors.textSecondary }]}>No events this month</Text>
@@ -418,6 +431,15 @@ export default function CalendarView({ loadEvents, loadEventTypes, reloadKey }) 
                             </TouchableOpacity>
                         </View>
                     </View>
+
+                    {loadError && view === 'month' ? (
+                        <View style={[styles.monthErrorBanner, { backgroundColor: (theme.colors.error || theme.colors.warning) + '15', borderColor: theme.colors.error || theme.colors.warning }]}>
+                            <Text style={[styles.monthErrorText, { color: theme.colors.textPrimary }]} numberOfLines={2}>{loadError}</Text>
+                            <TouchableOpacity onPress={loadCalendarData}>
+                                <Text style={{ color: theme.colors.primary, fontWeight: '700' }}>Retry</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
 
                     {view === 'month' ? renderMonthView() : renderAgendaView()}
                 </View>
@@ -521,7 +543,13 @@ const styles = StyleSheet.create({
     viewToggle: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, borderWidth: 1, overflow: 'hidden' },
     viewToggleOption: { paddingHorizontal: 10, paddingVertical: 8, alignItems: 'center', justifyContent: 'center' },
     viewToggleDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch' },
-    calendarContent: { flex: 1 },
+    // No flex here: the month grid has a fixed intrinsic height (6 rows) and
+    // this ScrollView only exists as an overflow safety net. `flex: 1` would
+    // need a flex-bounded ancestor to fill, but the card/cardInner wrapper is
+    // only expanded (cardExpanded) in day/agenda view — in month view that
+    // left this ScrollView with nothing to fill and it collapsed to zero
+    // height, hiding the whole grid behind just the header.
+    calendarContent: {},
     dayViewContent: { flex: 1 },
     eventsListContainer: { paddingHorizontal: 0, paddingVertical: 0 },
     eventListItem: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1 },
@@ -534,7 +562,10 @@ const styles = StyleSheet.create({
     eventCountBadge: { borderRadius: 10, minWidth: 18, height: 18, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
     eventCountText: { fontSize: 11, fontWeight: '700' },
     noEventsContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
-    noEventsText: { fontSize: 16, fontStyle: 'italic' },
+    noEventsText: { fontSize: 16, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 32 },
+    retryButton: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+    monthErrorBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginHorizontal: 16, marginTop: 12, padding: 10, borderRadius: 10, borderWidth: 1 },
+    monthErrorText: { flex: 1, fontSize: 12 },
     filterOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, backgroundColor: 'rgba(0,0,0,0.5)' },
     filterCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
     filterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
