@@ -23,6 +23,7 @@ const PAGE_TITLES = {
     tickets: { label: 'Tickets', icon: 'ticket' },
     albums: { label: 'Albums', icon: 'photo' },
     reports: { label: 'Reports', icon: 'file-text-o' },
+    'student-attendance': { label: 'Student Attendance', icon: 'qrcode' },
 };
 
 function PageTitle() {
@@ -130,6 +131,7 @@ export default function MainLayout() {
                 <Tabs.Screen name="progress-reports" options={{ title: 'Reports' }} />
                 <Tabs.Screen name="tickets" options={{ title: 'Tickets' }} />
                 <Tabs.Screen name="albums" options={{ title: 'Albums' }} />
+                <Tabs.Screen name="student-attendance" options={{ title: 'Student Attendance' }} />
                 {/* Reports stays registered (still navigable) but hidden from the tab bar
                     since the client's spec lists Progress Reports as a sub-feature of
                     Classes, not a top-level item. */}

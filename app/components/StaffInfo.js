@@ -22,6 +22,7 @@ const JUMP_TABS = [
     { name: 'Reports',    route: 'progress-reports', path: '/(main)/progress-reports', icon: 'file-text-o' },
     { name: 'Tickets',    route: 'tickets',    path: '/(main)/tickets',    icon: 'ticket' },
     { name: 'Albums',     route: 'albums',     path: '/(main)/albums',     icon: 'photo' },
+    { name: 'Student Attendance', route: 'student-attendance', path: '/(main)/student-attendance', icon: 'qrcode' },
 ];
 
 const KNOWN_ROUTES = JUMP_TABS.map(t => t.route).filter(r => r !== 'index');

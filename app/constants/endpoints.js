@@ -47,6 +47,7 @@ export const endpoints = {
     CREATE_DAILY_ATTENDANCE: 'attendances/daily',
     TOGGLE_DAILY_ATTENDANCE: 'attendances/daily/toggle',
     SUBMIT_DAILY_ATTENDANCE: 'attendances/daily/submit',
+    LOG_STUDENT_ATTENDANCE: 'attendances/student-log', // scan a student card → one student_attendance_log row
     GET_DAILY_ATTENDANCE_CLIENTS: 'attendances/daily/{id}/clients',
     GET_DAILY_ATTENDANCE_SCOPES: 'attendances/daily/scopes',
     GET_DAILY_ATTENDANCE_STUDENTS: 'attendances/daily/students',
