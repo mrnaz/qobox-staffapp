@@ -236,6 +236,11 @@ class ApiService {
         return this.post(endpoints.SUBMIT_DAILY_ATTENDANCE, data);
     }
 
+    async logStudentAttendance(data) {
+        // POST { token: "QBXSTUDENT:<uuid>", direction: "in"|"out", comments? }
+        return this.post(endpoints.LOG_STUDENT_ATTENDANCE, data);
+    }
+
     async getDailyAttendanceClients(id) {
         return this.get(endpoints.GET_DAILY_ATTENDANCE_CLIENTS.replace('{id}', id));
     }
