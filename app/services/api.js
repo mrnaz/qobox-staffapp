@@ -157,6 +157,15 @@ class ApiService {
         return this.get(endpoints.GET_USER);
     }
 
+    // System doc agreements
+    async getSystemDocAgreements() {
+        return this.get(endpoints.GET_SYSTEM_DOC_AGREEMENTS);
+    }
+
+    async agreeToSystemDoc(data) {
+        return this.post(endpoints.STORE_SYSTEM_DOC_AGREEMENT, data);
+    }
+
     // Academic periods
     async getAcademicPeriods() {
         return this.get(endpoints.GET_ACADEMIC_PERIODS);

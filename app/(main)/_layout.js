@@ -11,6 +11,7 @@ import TicketsFilterToggle from '../components/header/TicketsFilterToggle';
 import { AcademicPeriodProvider, useAcademicPeriod } from '../context/AcademicPeriodContext';
 import { TicketsFilterProvider } from '../context/TicketsFilterContext';
 import AcademicPeriodModal from '../components/AcademicPeriodModal';
+import SystemDocAgreementsModal from '../components/SystemDocAgreementsModal';
 
 // Title + icon per route. The icons are the same ones the "Jump to" grid uses
 // for each tab, so the glyph at the top of a page matches the one you tapped
@@ -183,6 +184,8 @@ function MainTabs() {
                 periods={candidates}
                 onSelect={(p) => switchAcademicPeriod(p.id)}
             />
+            {/* iOS presents one Modal at a time, so this waits for the period picker. */}
+            {needsSelection ? null : <SystemDocAgreementsModal />}
         </>
     );
 }

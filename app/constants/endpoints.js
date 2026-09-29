@@ -13,6 +13,10 @@ export const endpoints = {
     // User
     GET_USER: 'me',
 
+    // System docs (Terms, Privacy Policy, ...) the user must agree to
+    GET_SYSTEM_DOC_AGREEMENTS: 'system-doc-agreements',
+    STORE_SYSTEM_DOC_AGREEMENT: 'system-doc-agreements',
+
     // Academic periods
     GET_ACADEMIC_PERIODS: 'academic-periods',
 
